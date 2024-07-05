@@ -2,6 +2,7 @@ local library = loadstring(game:HttpGet("https://pastebin.com/raw/vff1bQ9F"))()
 local window = library.CreateLib("Made by Novaz#5792, Modded by PurpleApple#9562", _G.Theme)
 local main = window:NewTab("Auto Farm")
 local section = main:NewSection("Auto Farm")
+local toggles = {}
 local plr = game.Players.LocalPlayer
 local cha = plr.Character
 local hrp = cha.HumanoidRootPart
@@ -56,13 +57,13 @@ section:NewToggle("Auto Egg", "", function(lpr)
   while lit and task.wait() do
     local args = {
       [1] = {
-        [1] = "Dragon Egg"
+        [1] = p
       }
     }
     game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_buyegg:InvokeServer(unpack(args))
   end
 end)
 
-section:NewDropdown("Select Egg", "", {"Beach Egg", "Forest Egg", "Dominus Egg", "Dragon Egg"}, function(l)
-p = l
+section:NewDropdown("Select Egg", "", {"Beach Egg", "Forest Egg", "Dominus Egg", "Dragon Egg", "Alien Egg", "Arctic Egg", "Zomie Egg", "Hell Egg", "Heaven Egg"}, function(l)
+  p = l
 end)
