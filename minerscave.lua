@@ -2,17 +2,101 @@ loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newinde
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local Window = OrionLib:MakeWindow({Name = "Minecraft (Byte Hub)", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroEnabled = false})
 
-
---val
-getgenv().KillAura = false
-
 --func
 function KillAura()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/killaura.lua",true))()
+  spawn(function()
+    while ka and task.wait() do
+      for i,v in pairs(game.Players:GetPlayers()) do
+        if v ~= game.Players.LocalPlayer and v.Character and game.Players.LocalPlayer:DistanceFromCharacter(v.Character.HumanoidRootPart.Position) < 16 then
+          game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(v.Character)
+        end
+      end
+      for i,v in pairs(game:GetService("Workspace").Animals:GetChildren()) do
+        if v:FindFirstChild("HumanoidRootPart") and game.Players.LocalPlayer:DistanceFromCharacter(v.HumanoidRootPart.Position) < 16 then
+          game.ReplicatedStorage.GameRemotes.AttackMob:InvokeServer(v)
+        end
+      end
+      wait()
+    end
+  end)
 end
 
-local function toggleChestEsp()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/ChestESP.lua",true))()
+function ChestESP()
+  if ce then
+    spawn(function()
+      while ce and task.wait() do
+        local parentFolder = workspace.Blocks
+
+        local function checkFolderForChildParts(folder)
+          local childParts = {}
+          local children = folder:GetChildren()
+          for _, child in pairs(children) do
+            if child.Name == "Chest" then
+              table.insert(childParts, child)
+            end
+          end
+          return childParts
+        end
+
+        local function outlinePart(part)
+          if not part:FindFirstChild("CHEST_out") then
+            local a = Instance.new("BoxHandleAdornment")
+            a.Name = "CHEST_out"
+            a.Parent = part
+            a.Adornee = part
+            a.AlwaysOnTop = true
+            a.ZIndex = 0
+            a.Size = part.Size
+            a.Transparency = 0.3
+            a.Color = BrickColor.new("Bright orange")
+          end
+        end
+
+        local function iterateAndCheckFolders(parent)
+          for _, folder in pairs(parent:GetChildren()) do
+            if folder:IsA("Folder") then
+              local childParts = checkFolderForChildParts(folder)
+              for _, childPart in ipairs(childParts) do
+                outlinePart(childPart)
+              end
+              iterateAndCheckFolders(folder)
+            end
+          end
+        end
+
+        iterateAndCheckFolders(parentFolder)
+        wait()
+      end
+    end)
+  else
+    for _, part in ipairs(workspace:GetDescendants()) do
+      if part:FindFirstChild("CHEST_out") then
+        part.CHEST_out:Destroy()
+      end
+    end
+  end
+end
+
+function Jesus()
+  if je then
+    spawn(function()
+      while je and task.wait() do
+        local pF = workspace.Fluid
+        local results = {}
+        for _, child in pairs(pF:GetChildren()) do
+          if child:FindFirstChild("Water") then
+            -- found it!
+            table.insert(results, wotah)
+            local wotah = child.Water
+          end
+        end
+        for _, obj in pairs(results) do
+          print(obj)
+          part.CanCollide = true
+        end
+      end
+    end)
+  end
 end
 
 --Credits
@@ -24,9 +108,8 @@ local Credits = Window:MakeTab({
 
 Credits:AddLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
 Credits:AddLabel("Byte Hub (Minecraft)")
-Credits:AddLabel("Version 1.8 beta 4")
+Credits:AddLabel("Version 1.9")
 Credits:AddLabel("UI Library: Orion Library")
-Credits:AddLabel("Encrypted by MoonSec")
 Credits:AddLabel("Huge thanks to BootyBandit™ for helping with the script")
 Credits:AddLabel("Dupe GUI: Argentum Exploitz")
 Credits:AddLabel("Made the script open source")
@@ -41,9 +124,9 @@ local cs = Window:MakeTab({
 cs:AddToggle({
   Name = "Kill Aura",
   Default = false,
-  Callback = function(Value)
-    getgenv().KillAura = Value
-    KillAura()
+  Callback = function(k)
+    ka = k
+    KillAura(k)
   end    
 })
 
@@ -75,10 +158,12 @@ lp:AddButton({
 })
 
 
-lp:AddButton({
+lp:AddToggle({
   Name = "Jesus",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Jesus.lua",true))()
+  Default = false,
+  Callback = function(j)
+    je = j
+    Jesus(j)
   end    
 })
 --Visuals
@@ -91,9 +176,9 @@ local Visuals = Window:MakeTab({
 Visuals:AddToggle({
   Name = "Chest ESP",
   Default = false,
-  Callback = function(Value)
-    local chestEspEnabled = Value
-    toggleChestEsp(chestEspEnabled)
+  Callback = function(c)
+    ce = c
+    ChestESP(c)
   end    
 })
 
@@ -203,3 +288,4 @@ ot:AddButton({
 })
 
 OrionLib:Init()
+--we dont talk about 1.8 :)
