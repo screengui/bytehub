@@ -2,6 +2,8 @@ loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newinde
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local Window = OrionLib:MakeWindow({Name = "Minecraft (Byte Hub)", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroEnabled = false})
 
+local player = game:GetService("Players").LocalPlayer
+
 --func
 function KillAura()
   spawn(function()
@@ -78,21 +80,44 @@ function ChestESP()
 end
 
 function Jesus()
+  local fluidFolder = game:GetService("Workspace"):FindFirstChild("Fluid")
   if je then
     spawn(function()
       while je and task.wait() do
-        local pF = workspace.Fluid
-        local results = {}
-        for _, child in pairs(pF:GetChildren()) do
-          if child:FindFirstChild("Water") then
-            -- found it!
-            table.insert(results, wotah)
-            local wotah = child.Water
+        for _, child in pairs(fluidFolder:GetChildren()) do
+          for _, grandchild in pairs(child:GetChildren()) do
+            if grandchild:IsA("BasePart") and grandchild.Name == "Water" then
+              grandchild.CanCollide = true
+            end
+            if je == false then
+              grandchild.CanCollide = false
+            end
           end
         end
-        for _, obj in pairs(results) do
-          print(obj)
-          part.CanCollide = true
+      end
+    end)
+  end
+end
+
+function combatLog()
+  if cl then
+    spawn(function()
+      while cl do
+        local function checkHealth()
+          local character = player.Character
+          if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+              local threshold = humanoid.MaxHealth * 0.3
+              if humanoid.Health <= threshold then
+                player:Kick("Combat Logged by ByteHub")
+              end
+            end
+          end
+        end
+      
+        while wait(1) do
+          checkHealth()
         end
       end
     end)
@@ -108,7 +133,7 @@ local Credits = Window:MakeTab({
 
 Credits:AddLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
 Credits:AddLabel("Byte Hub (Minecraft)")
-Credits:AddLabel("Version 1.9")
+Credits:AddLabel("Version 2.0")
 Credits:AddLabel("UI Library: Orion Library")
 Credits:AddLabel("Huge thanks to BootyBandit™ for helping with the script")
 Credits:AddLabel("Dupe GUI: Argentum Exploitz")
@@ -127,6 +152,15 @@ cs:AddToggle({
   Callback = function(k)
     ka = k
     KillAura(k)
+  end    
+})
+
+cs:AddToggle({
+  Name = "Auto Combat Log",
+  Default = false,
+  Callback = function(clf)
+    cl = clf
+    combatLog(clf)
   end    
 })
 
@@ -288,4 +322,3 @@ ot:AddButton({
 })
 
 OrionLib:Init()
---we dont talk about 1.8 :)
