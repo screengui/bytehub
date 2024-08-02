@@ -127,13 +127,13 @@ function combatLog()
   end
 end
 
-function fastbreak()
-  if fb then
+function instamine()
+  if im then
     spawn(function()
-      while fb and task.wait() do
+      while im and task.wait() do
         player.Character.Gamemode.Value = 1
       end
-      if fb == false then
+      if im == false then
         player.Character.Gamemode.Value = 0
       end
     end)
@@ -149,7 +149,7 @@ local Credits = Window:MakeTab({
 
 Credits:AddLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
 Credits:AddLabel("Byte Hub (Minecraft)")
-Credits:AddLabel("Version 2.0")
+Credits:AddLabel("Version 2.1")
 Credits:AddLabel("UI Library: Orion Library")
 Credits:AddLabel("Huge thanks to BootyBandit™ for helping with the script")
 Credits:AddLabel("Dupe GUI: Argentum Exploitz")
@@ -263,9 +263,9 @@ local World = Window:MakeTab({
 World:AddToggle({
   Name = "Insta Mine (client-sided)",
   Default = false,
-  Callback = function(f)
-    fb = f
-    fastbreak(f)
+  Callback = function(i)
+    im = i
+    instamine(i)
   end    
 })
 
