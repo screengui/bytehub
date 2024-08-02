@@ -172,7 +172,7 @@ cs:AddToggle({
 })
 
 cs:AddToggle({
-  Name = "Auto Combat Leave",
+  Name = "Auto Combat Log",
   Default = false,
   Callback = function(clf)
     cl = clf
