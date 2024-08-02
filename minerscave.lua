@@ -3,6 +3,9 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shl
 local Window = OrionLib:MakeWindow({Name = "Minecraft (Byte Hub)", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroEnabled = false})
 
 local player = game:GetService("Players").LocalPlayer
+local Gamemode = Instance.new('IntValue', player.Character)
+
+Gamemode.Name = [[Gamemode]]
 
 --func
 function KillAura()
@@ -124,6 +127,19 @@ function combatLog()
   end
 end
 
+function fastbreak()
+  if fb then
+    spawn(function()
+      while fb and task.wait() do
+        player.Character.Gamemode.Value = 1
+      end
+      if fb == false then
+        player.Character.Gamemode.Value = 0
+      end
+    end)
+  end
+end
+
 --Credits
 local Credits = Window:MakeTab({
   Name = "Credits",
@@ -235,6 +251,21 @@ Visuals:AddButton({
   Name = "ESP Button (Mobile)",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/PressB.lua",true))()
+  end    
+})
+
+local World = Window:MakeTab({
+  Name = "World",
+  Icon = "rbxassetid://4483345998",
+  PremiumOnly = false
+})
+
+World:AddToggle({
+  Name = "Insta Mine (client-sided)",
+  Default = false,
+  Callback = function(f)
+    fb = f
+    fastbreak(f)
   end    
 })
 
