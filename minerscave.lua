@@ -1,11 +1,24 @@
 loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
-local Window = OrionLib:MakeWindow({Name = "Minecraft (Byte Hub)", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroEnabled = false})
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
+game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/Hosvile/Refinement/main/MC%3AArrayfield%20Library"))()
+local Window = Rayfield:CreateWindow({
+    Name = "Minerscave | Byte Hub",
+    LoadingTitle = "Byte Hub",
+    LoadingSubtitle = "by PurpleApple",
+})
 
 local player = game:GetService("Players").LocalPlayer
 local Gamemode = Instance.new('IntValue', player.Character)
-
 Gamemode.Name = [[Gamemode]]
+local Demo = game.ReplicatedStorage.GameRemotes.Demo or game.Workspace.Demo
+local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
+local IBM = false
+local NeededIBM = false
+local BBA = false
+local abb = game.ReplicatedStorage.GameRemotes.AcceptBreakBlock
+local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
+local blocks = workspace.Blocks
 
 --func
 function KillAura()
@@ -24,6 +37,85 @@ function KillAura()
       wait()
     end
   end)
+end
+
+function combatLog()
+  if cl then
+    spawn(function()
+      while cl do
+        local function checkHealth()
+          local character = player.Character
+          if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+              local threshold = humanoid.MaxHealth * 0.4
+              if humanoid.Health <= threshold then
+                player:Kick("Combat Logged by ByteHub")
+              end
+            end
+          end
+        end
+      
+        while wait(1) do
+          checkHealth()
+        end
+      end
+    end)
+  end
+end
+
+function Jesus()
+  local fluidFolder = game:GetService("Workspace"):FindFirstChild("Fluid")
+  if je then
+    spawn(function()
+      while je and task.wait() do
+        for _, child in pairs(fluidFolder:GetChildren()) do
+          for _, grandchild in pairs(child:GetChildren()) do
+            if grandchild:IsA("BasePart") and grandchild.Name == "Water" then
+              grandchild.CanCollide = true
+            end
+            if je == false then
+              grandchild.CanCollide = false
+            end
+          end
+        end
+      end
+    end)
+  end
+end
+
+function noFall()
+    if nf then
+        while nf and task.wait() do
+            Demo.Parent = game.Workspace
+        end
+    else
+        while not nf and task.wait() do
+            if Demo.Parent == game.Workspace then
+                Demo.Parent = game.ReplicatedStorage.GameRemotes
+            end
+        end
+    end
+end
+
+function Jesus()
+  local fluidFolder = game:GetService("Workspace"):FindFirstChild("Fluid")
+  if je then
+    spawn(function()
+      while je and task.wait() do
+        for _, child in pairs(fluidFolder:GetChildren()) do
+          for _, grandchild in pairs(child:GetChildren()) do
+            if grandchild:IsA("BasePart") and grandchild.Name == "Water" then
+              grandchild.CanCollide = true
+            end
+            if je == false then
+              grandchild.CanCollide = false
+            end
+          end
+        end
+      end
+    end)
+  end
 end
 
 function ChestESP()
@@ -82,49 +174,34 @@ function ChestESP()
   end
 end
 
-function Jesus()
-  local fluidFolder = game:GetService("Workspace"):FindFirstChild("Fluid")
-  if je then
-    spawn(function()
-      while je and task.wait() do
-        for _, child in pairs(fluidFolder:GetChildren()) do
-          for _, grandchild in pairs(child:GetChildren()) do
-            if grandchild:IsA("BasePart") and grandchild.Name == "Water" then
-              grandchild.CanCollide = true
-            end
-            if je == false then
-              grandchild.CanCollide = false
-            end
-          end
+function watermark()
+    if wa then
+        while wa and task.wait() do
+            game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = true
         end
-      end
-    end)
-  end
+    elseif not wa then
+        while not wa and task.wait(0.1) do
+            game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
+        end
+    end
 end
 
-function combatLog()
-  if cl then
-    spawn(function()
-      while cl do
-        local function checkHealth()
-          local character = player.Character
-          if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-              local threshold = humanoid.MaxHealth * 0.3
-              if humanoid.Health <= threshold then
-                player:Kick("Combat Logged by ByteHub")
-              end
-            end
-          end
+function playeresp()
+    if pe then
+        while pe and task.wait() do
+            ESP:Toggle(true)
+            ESP.Players = true
+            ESP.Boxes = true
+            ESP.Names = true
         end
-      
-        while wait(1) do
-          checkHealth()
+    elseif not pe then
+        while not pe and task.wait() do
+            ESP:Toggle(false)
+            ESP.Players = false
+            ESP.Boxes = false
+            ESP.Names = false
         end
-      end
-    end)
-  end
+    end
 end
 
 function instamine()
@@ -140,216 +217,217 @@ function instamine()
   end
 end
 
---Credits
-local Credits = Window:MakeTab({
-  Name = "Credits",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-Credits:AddLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
-Credits:AddLabel("Byte Hub (Minecraft)")
-Credits:AddLabel("Version 2.1")
-Credits:AddLabel("UI Library: Orion Library")
-Credits:AddLabel("Huge thanks to BootyBandit™ for helping with the script")
-Credits:AddLabel("Dupe GUI: Argentum Exploitz")
-Credits:AddLabel("Made the script open source")
-
---Main
-local cs = Window:MakeTab({
-  Name = "Combat",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-cs:AddToggle({
-  Name = "Kill Aura",
-  Default = false,
-  Callback = function(k)
-    ka = k
-    KillAura(k)
-  end    
-})
-
-cs:AddToggle({
-  Name = "Auto Combat Log",
-  Default = false,
-  Callback = function(clf)
-    cl = clf
-    combatLog(clf)
-  end    
-})
-
-cs:AddButton({
-  Name = "Arcade Recode Client",
-  Callback = function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/b0m8gUaP",true))()
-  end    
-})
-
-cs:AddButton({
-  Name = "Dizzy Hub",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/dizyhvh/rbx_scripts/main/dizzy_hub/scripts/minerscave_15.lua",true))()
+function fastbreak()
+  if fb then
+    spawn(function()
+      while fb and task.wait() do
+        IBM = true
+        abb:InvokeServer()
+      end
+    end)
   end
-})
+end
 
-local lp = Window:MakeTab({
-  Name = "Movement",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-lp:AddButton({
-  Name = "No Fall Damage (Use rspy if not work)",
-  Callback = function()
-    game.ReplicatedStorage.GameRemotes.Demo:Destroy()
-  end    
-})
-
-
-lp:AddToggle({
-  Name = "Jesus",
-  Default = false,
-  Callback = function(j)
-    je = j
-    Jesus(j)
-  end    
-})
---Visuals
-local Visuals = Window:MakeTab({
-  Name = "Visuals",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-Visuals:AddToggle({
-  Name = "Chest ESP",
-  Default = false,
-  Callback = function(c)
-    ce = c
-    ChestESP(c)
-  end    
-})
-
-
-Visuals:AddButton({
-  Name = "Watermark",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
-  end    
-})
-
-Visuals:AddButton({
-  Name = "ESP (Press B)",
-  Callback = function()
-    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FE-ESP-1174",true))()
-  end    
-})
-
-Visuals:AddButton({
-  Name = "ESP Button (Mobile)",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/PressB.lua",true))()
-  end    
-})
-
-local World = Window:MakeTab({
-  Name = "World",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-World:AddToggle({
-  Name = "Insta Mine (client-sided)",
-  Default = false,
-  Callback = function(i)
-    im = i
-    instamine(i)
-  end    
-})
-
-local dt = Window:MakeTab({
-  Name = "Dupe",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-dt:AddButton({
-  Name = "Dupe GUI",
-  Callback = function()
-    loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+function nuker()
+  if nk then
+    spawn(function()
+      while nk and task.wait() do
+        for _, v in pairs(blocks:GetDescendants()) do
+          if v:IsA('MeshPart') then
+            pos = v.Position
+            if (player.Character.HumanoidRootPart.Position - pos).magnitude < 20 then
+              bb:FireServer(pos.x/3, pos.y/3, pos.z/3)
+              abb:InvokeServer()
+              wait()
+            end
+          end
+        end
+      end
+    end)
   end
+end
+
+local Credits = Window:CreateTab("Credits", 4483362458)
+Credits:CreateLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
+Credits:CreateLabel("Byte Hub (Minecraft)")
+Credits:CreateLabel("Version 2.2")
+Credits:CreateLabel("UI Library: Arrayfield/Rayfield UI")
+Credits:CreateLabel("Thanks to Minkasig for letting me skid his script")
+Credits:CreateLabel("Dupe GUI: Argentum Exploitz")
+Credits:CreateLabel("Open-Sourced")
+
+local cs = Window:CreateTab("Combat", 4483362458)
+
+local killaura = cs:CreateToggle({
+    Name = "Kill Aura",
+    CurrentValue = false,
+    Flag = "aurakill",
+    Callback = function(k)
+        ka = k
+        KillAura(k)
+    end,
 })
 
-dt:AddButton({
-  Name = "Dupe First Slot (Press Z)",
-  Callback = function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/TkAm8wV8",true))()
-  end
+local autolog = cs:CreateToggle({
+    Name = "Auto Combat Log",
+    CurrentValue = false,
+    Flag = "acl",
+    Callback = function(clf)
+        cl = clf
+        combatLog(clf)
+    end,
 })
 
-local ts = Window:MakeTab({
-  Name = "Themes (v1.1 only)",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
+
+local arc = cs:CreateButton({
+    Name = "Arcade Recode Client",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
+    end,
 })
 
-ts:AddButton({
-  Name = "Kavo UI Theme Selector for MineCraft (TSMC)",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/main/tsmc.lua",true))()
-  end    
+local lp = Window:CreateTab("Movement", 4483362458)
+
+local nof = lp:CreateToggle({
+    Name = "No Fall",
+    CurrentValue = false,
+    Flag = "nfall",
+    Callback = function(nfd)
+        nf = nfd
+        noFall(nfd)
+    end,
+}) 
+
+local wow = lp:CreateToggle({
+    Name = "Jesus",
+    CurrentValue = false,
+    Flag = "wow2",
+    Callback = function(j)
+        je = j
+        Jesus(j)
+    end,
+}) 
+
+local vs = Window:CreateTab("Visuals", 4483362458)
+
+local cesp = vs:CreateToggle({
+    Name = "Chest ESP",
+    CurrentValue = false,
+    Flag = "cesp1",
+    Callback = function(c)
+        ce = c
+        ChestESP(c)
+    end,
+}) 
+
+local watm = vs:CreateToggle({
+    Name = "Watermark",
+    CurrentValue = false,
+    Flag = "watmr",
+    Callback = function(w)
+        wa = w
+        watermark(w)
+    end,
 })
 
---LocalPlayer
-  
-local ot = Window:MakeTab({
-  Name = "Other",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
+local esptog = vs:CreateToggle({
+    Name = "Player ESP",
+    CurrentValue = false,
+    Flag = "pesp",
+    Callback = function(p)
+        pe = p
+        playeresp(p)
+    end,
 })
 
-ot:AddButton({
-  Name = "Infinite Yield (PC Only)",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source",true))()
-  end    
+local wr = Window:CreateTab("World", 4483362458)
+
+local imi = wr:CreateToggle({
+    Name = "Instamine",
+    CurrentValue = false,
+    Flag = "ima",
+    Callback = function(i)
+        im = i
+        instamine(i)
+    end,
 })
 
-ot:AddButton({
-  Name = "SimpleSpy V3",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpySource.lua"))()
-  end    
+local fbtog = wr:CreateToggle({
+    Name = "Fast Break",
+    CurrentValue = false,
+    Flag = "fbflag",
+    Callback = function(f)
+        fb = f
+        fastbreak(f)
+    end,
 })
 
-ot:AddButton({
-  Name = "SimpleSpy Mobile",
-  Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
-  end    
+local nukertog = wr:CreateToggle({
+    Name = "Nuker (breaks some blocks in a certain radius)",
+    CurrentValue = false,
+    Flag = "nflag",
+    Callback = function(n)
+        nk = n
+        nuker(n)
+    end,
 })
 
-ot:AddButton({
-  Name = "Dex V4",
-  Callback = function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/fPP8bZ8Z"))()
-  end    
+local dt = Window:CreateTab("Dupe", 4483362458)
+
+local dupegui = dt:CreateButton({
+    Name = "Dupe GUI",
+    Callback = function()
+        loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+    end,
 })
 
-ot:AddButton({
-  Name = "Dex Mobile (V2)",
-  Callback = function()
-    loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"))()
-  end
+local dupez = dt:CreateButton({
+    Name = "Dupe First Slot (Press Z)",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/TkAm8wV8",true))()
+    end,
 })
 
-ot:AddButton({
-  Name = "Unload GUI",
-  Callback = function()
-    OrionLib:Destroy()
-  end    
+local ot = Window:CreateTab("Others", 4483362458)
+
+local iy = ot:CreateButton({
+    Name = "Infinite Yield",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source",true))()
+    end,
 })
 
-OrionLib:Init()
+local rspy3 = ot:CreateButton({
+    Name = "SimpleSpy V3",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpySource.lua"))()
+    end,
+})
+
+local rspym = ot:CreateButton({
+    Name = "SimpleSpy Mobile",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
+    end,
+})
+
+local dexpc = ot:CreateButton({
+    Name = "Dex V4",
+    Callback = function()
+        loadstring(game:HttpGet("https://pastebin.com/raw/fPP8bZ8Z"))()
+    end,
+})
+
+local dexv2 = ot:CreateButton({
+    Name = "Dex V2",
+    Callback = function()
+        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"))()
+    end,
+})
+
+local ug = ot:CreateButton({
+    Name = "Unload GUI",
+    Callback = function()
+        Rayfield:Destroy()
+    end,
+})
