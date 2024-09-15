@@ -3,9 +3,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/UI-Interface/ArrayField/main/Source.lua'))()
 local Window = Rayfield:CreateWindow({
-   Name = "ArrayField Example Window",
-   LoadingTitle = "ArrayField Interface Suite",
-   LoadingSubtitle = "by Arrays",
+   Name = "Minerscave | Byte Hub",
+   LoadingTitle = "Byte Hub",
+   LoadingSubtitle = "by PurpleApple",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = nil, -- Create a custom folder for your hub/game
