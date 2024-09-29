@@ -1,40 +1,13 @@
 loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/UI-Interface/ArrayField/main/Source.lua'))()
-local Window = Rayfield:CreateWindow({
-   Name = "Minerscave | Byte Hub",
-   LoadingTitle = "Byte Hub",
-   LoadingSubtitle = "by PurpleApple",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = nil, -- Create a custom folder for your hub/game
-      FileName = "ArrayField"
-   },
-   Discord = {
-      Enabled = false,
-      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ABCD would be ABCD
-      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
-   },
-   KeySystem = false, -- Set this to true to use our key system
-   KeySettings = {
-      Title = "Untitled",
-      Subtitle = "Key System",
-      Note = "No method of obtaining the key is provided",
-      FileName = "Key", -- It is recommended to use something unique as other scripts using ArrayField may overwrite your key file
-      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
-      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like ArrayField to get the key from
-      Actions = {
-            [1] = {
-                Text = 'Click here to copy the key link <--',
-                OnPress = function()
-                    print('Pressed')
-                end,
-                }
-            },
-      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
-   }
-})
+local syn = getgenv().syn
+getgenv().syn = false
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+getgenv().syn = syn
+
+local Window = OrionLib:MakeWindow({Name = "Minerscave | Byte Hub", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroEnabled = false})
+-- vars
 
 local player = game:GetService("Players").LocalPlayer
 local Gamemode = Instance.new('IntValue', player.Character)
@@ -49,6 +22,7 @@ local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
 local blocks = workspace.Blocks
 
 --func
+
 function KillAura()
   spawn(function()
     while ka and task.wait() do
@@ -275,187 +249,183 @@ function nuker()
   end
 end
 
-local Credits = Window:CreateTab("Credits", 4483362458)
-Credits:CreateLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
-Credits:CreateLabel("Byte Hub (Minecraft)")
-Credits:CreateLabel("Version 2.2")
-Credits:CreateLabel("UI Library: Arrayfield/Rayfield UI")
-Credits:CreateLabel("Thanks to Minkasig for letting me skid his script")
-Credits:CreateLabel("Dupe GUI: Argentum Exploitz")
-Credits:CreateLabel("Open-Sourced")
-
-local cs = Window:CreateTab("Combat", 4483362458)
-
-local killaura = cs:CreateToggle({
-    Name = "Kill Aura",
-    CurrentValue = false,
-    Flag = "aurakill",
-    Callback = function(k)
-        ka = k
-        KillAura(k)
-    end,
+--tabs
+local Credits = Window:MakeTab({
+	Name = "Credits",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
 })
 
-local autolog = cs:CreateToggle({
-    Name = "Auto Combat Log",
-    CurrentValue = false,
-    Flag = "acl",
-    Callback = function(clf)
-        cl = clf
-        combatLog(clf)
-    end,
+Credits:AddLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
+Credits:AddLabel("Byte Hub (Minecraft)")
+Credits:AddLabel("Version 2.3")
+Credits:AddLabel("UI Library: Orion UI")
+Credits:AddLabel("Thanks to Minkasig for letting me skid his script")
+Credits:AddLabel("Dupe GUI: Argentum Exploitz")
+Credits:AddLabel("Open-Sourced")
+
+local cs = Window:MakeTab({
+  Name = "Combat",
+  Icon = "rbxassetid://4483345998",
+  PremiumOnly = false
 })
 
-
-local arc = cs:CreateButton({
-    Name = "Arcade Recode Client",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
-    end,
+cs:AddToggle({
+  Name = "Kill Aura",
+  Default = false,
+  Callback = function(k)
+    ka = k
+    KillAura(k)
+	end    
 })
 
-local lp = Window:CreateTab("Movement", 4483362458)
-
-local nof = lp:CreateToggle({
-    Name = "No Fall",
-    CurrentValue = false,
-    Flag = "nfall",
-    Callback = function(nfd)
-        nf = nfd
-        noFall(nfd)
-    end,
-}) 
-
-local wow = lp:CreateToggle({
-    Name = "Jesus",
-    CurrentValue = false,
-    Flag = "wow2",
-    Callback = function(j)
-        je = j
-        Jesus(j)
-    end,
-}) 
-
-local vs = Window:CreateTab("Visuals", 4483362458)
-
-local cesp = vs:CreateToggle({
-    Name = "Chest ESP",
-    CurrentValue = false,
-    Flag = "cesp1",
-    Callback = function(c)
-        ce = c
-        ChestESP(c)
-    end,
-}) 
-
-local watm = vs:CreateToggle({
-    Name = "Watermark",
-    CurrentValue = false,
-    Flag = "watmr",
-    Callback = function(w)
-        wa = w
-        watermark(w)
-    end,
+cs:AddButton({
+  Name = "Arcade Recode Client",
+  Callback = function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
+  end    
 })
 
-local esptog = vs:CreateToggle({
-    Name = "Player ESP",
-    CurrentValue = false,
-    Flag = "pesp",
-    Callback = function(p)
-        pe = p
-        playeresp(p)
-    end,
+local lp = Window:MakeTab({
+  Name = "Movement",
+  Icon = "rbxassetid://4483345998",
+  PremiumOnly = false
 })
 
-local wr = Window:CreateTab("World", 4483362458)
-
-local imi = wr:CreateToggle({
-    Name = "Instamine",
-    CurrentValue = false,
-    Flag = "ima",
-    Callback = function(i)
-        im = i
-        instamine(i)
-    end,
+lp:AddToggle({
+  Name = "No Fall",
+  Default = false,
+  Callback = function(nfd)
+    nf = nfd
+    noFall(nfd)
+	end    
 })
 
-local fbtog = wr:CreateToggle({
-    Name = "Fast Break",
-    CurrentValue = false,
-    Flag = "fbflag",
-    Callback = function(f)
-        fb = f
-        fastbreak(f)
-    end,
+lp:AddToggle({
+  Name = "Jesus",
+  Default = false,
+  Callback = function(j)
+    je = j
+    Jesus(j)
+	end    
 })
 
-local nukertog = wr:CreateToggle({
-    Name = "Nuker (breaks some blocks in a certain radius)",
-    CurrentValue = false,
-    Flag = "nflag",
-    Callback = function(n)
-        nk = n
-        nuker(n)
-    end,
+local vs = Window:MakeTab({
+  Name = "Visuals",
+  Icon = "rbxassetid://4483345998",
+  PremiumOnly = false
 })
 
-local dt = Window:CreateTab("Dupe", 4483362458)
-
-local dupegui = dt:CreateButton({
-    Name = "Dupe GUI",
-    Callback = function()
-        loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
-    end,
+vs:AddToggle({
+  Name = "Chest ESP",
+  Default = false,
+  Callback = function(c)
+    ce = c
+    ChestESP(c)
+	end    
 })
 
-local dupez = dt:CreateButton({
-    Name = "Dupe First Slot (Press Z)",
-    Callback = function()
-        loadstring(game:HttpGet("https://pastebin.com/raw/TkAm8wV8",true))()
-    end,
+vs:AddToggle({
+  Name = "Player ESP",
+  Default = false,
+  Callback = function(p)
+    pe = p
+    playeresp(p)
+	end    
 })
 
-local ot = Window:CreateTab("Others", 4483362458)
-
-local iy = ot:CreateButton({
-    Name = "Infinite Yield",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source",true))()
-    end,
+vs:AddToggle({
+  Name = "Watermark",
+  Default = false,
+  Callback = function(w)
+    wa = w
+    watermark(w)
+	end    
 })
 
-local rspy3 = ot:CreateButton({
-    Name = "SimpleSpy V3",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpySource.lua"))()
-    end,
+local wr = Window:MakeTab({
+  Name = "World",
+  Icon = "rbxassetid://4483345998",
+  PremiumOnly = false
 })
 
-local rspym = ot:CreateButton({
-    Name = "SimpleSpy Mobile",
-    Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
-    end,
+wr:AddToggle({
+  Name = "Instamine (Client-sided)",
+  Default = false,
+  Callback = function(i)
+    im = i
+    instamine(i)
+	end    
 })
 
-local dexpc = ot:CreateButton({
-    Name = "Dex V4",
-    Callback = function()
-        loadstring(game:HttpGet("https://pastebin.com/raw/fPP8bZ8Z"))()
-    end,
+wr:AddToggle({
+  Name = "Fast Break",
+  Default = false,
+  Callback = function(f)
+    fb = f
+    fastbreak(f)
+	end    
 })
 
-local dexv2 = ot:CreateButton({
-    Name = "Dex V2",
-    Callback = function()
-        loadstring(game:HttpGet("https://cdn.wearedevs.net/scripts/Dex%20Explorer.txt"))()
-    end,
+wr:AddToggle({
+  Name = "Nuker",
+  Default = false,
+  Callback = function(n)
+    nk = n
+    nuker(n)
+	end    
 })
 
-local ug = ot:CreateButton({
-    Name = "Unload GUI",
-    Callback = function()
-        Rayfield:Destroy()
-    end,
+local dt = Window:MakeTab({
+  Name = "Dupe",
+  Icon = "rbxassetid://4483345998",
+  PremiumOnly = false
+})
+
+dt:AddButton({
+  Name = "Dupe GUI",
+  Callback = function()
+    loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+  end    
+})
+
+dt:AddButton({
+  Name = "Dupe First Chest Slot (Press Z)",
+  Callback = function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/TkAm8wV8",true))()
+  end    
+})
+
+local ot = Window:MakeTab({
+  Name = "Other",
+  Icon = "rbxassetid://4483345998",
+  PremiumOnly = false
+})
+
+ot:AddButton({
+  Name = "Infinite Yield",
+  Callback = function()
+    loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+  end    
+})
+
+ot:AddButton({
+  Name = "SimplySpy V3",
+  Callback = function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpySource.lua"))()
+  end    
+})
+
+ot:AddButton({
+  Name = "SimplySpy Mobile",
+  Callback = function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
+  end    
+})
+
+ot:AddButton({
+  Name = "Unload GUI",
+  Callback = function()
+    OrionLib:Destroy()
+  end    
 })
