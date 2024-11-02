@@ -1,12 +1,17 @@
 loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
-local syn = getgenv().syn
-getgenv().syn = false
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
-getgenv().syn = syn
+local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Window = Fluent:CreateWindow({
+  Title = "Minecraft (Byte Hub) 2.4",
+  SubTitle = "by PurpleApple",
+  TabWidth = 160,
+  Size = UDim2.fromOffset(580, 460),
+  Acrylic = false, -- The blur may be detectable, setting this to false disables blur entirely
+  Theme = "Dark",
+  MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+})
 
-local Window = OrionLib:MakeWindow({Name = "Minerscave | Byte Hub", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroEnabled = false})
 -- vars
 
 local player = game:GetService("Players").LocalPlayer
@@ -87,17 +92,17 @@ function Jesus()
 end
 
 function noFall()
-    if nf then
-        while nf and task.wait() do
-            Demo.Parent = game.Workspace
-        end
-    else
-        while not nf and task.wait() do
-            if Demo.Parent == game.Workspace then
-                Demo.Parent = game.ReplicatedStorage.GameRemotes
-            end
-        end
+  if nf and Demo.Parent == game.ReplicatedStorage.GameRemotes then
+    while nf and task.wait() do
+      Demo.Parent = game.Workspace
     end
+  else
+    while not nf and task.wait() do
+      if Demo.Parent == game.Workspace then
+        Demo.Parent = game.ReplicatedStorage.GameRemotes
+      end
+    end
+  end
 end
 
 function Jesus()
@@ -249,183 +254,213 @@ function nuker()
   end
 end
 
---tabs
-local Credits = Window:MakeTab({
-	Name = "Credits",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
+local Tabs = {
+  Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
+  cs = Window:AddTab({ Title = "Combat", Icon = "swords" }),
+  lp = Window:AddTab({ Title = "Movement", Icon = "circle-user-round" }),
+  vs = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+  wr = Window:AddTab({ Title = "World", Icon = "earth" }),
+  dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
+  ot = Window:AddTab({ Title = "Others", Icon = "ellipsis" })
+}
+
+Tabs.Credits:AddParagraph({
+  Title = "Made by PurpleApple",
+  Content = "UI Library: Fluent\nVersion 2.4\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
-Credits:AddLabel("Made by PurpleApple#9562/@inconsistenttutorialuploader")
-Credits:AddLabel("Byte Hub (Minecraft)")
-Credits:AddLabel("Version 2.3")
-Credits:AddLabel("UI Library: Orion UI")
-Credits:AddLabel("Thanks to Minkasig for letting me skid his script")
-Credits:AddLabel("Dupe GUI: Argentum Exploitz")
-Credits:AddLabel("Open-Sourced")
-
-local cs = Window:MakeTab({
-  Name = "Combat",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
+Tabs.Credits:AddButton({
+  Title = "YouTube",
+  Description = "My YouTube Channel",
+  Callback = function()
+    setclipboard("https://youtube.com/@inconsistenttutorialuploader")
+  end
+})
+Tabs.Credits:AddButton({
+  Title = "Discord",
+  Description = "My Discord Server",
+  Callback = function()
+    setclipboard("https://discord.gg/9y7JM7Anne")
+  end
 })
 
-cs:AddToggle({
-  Name = "Kill Aura",
+Tabs.Credits:AddButton({
+  Title = "GitHub",
+  Description = "My GitHub Page",
+  Callback = function()
+    setclipboard("https://github.com/screengui")
+  end
+})
+
+Tabs.Credits:AddButton({
+  Title = "ScriptBlox",
+  Description = "My ScriptBlox Account",
+  Callback = function()
+    setclipboard("https://scriptblox.com/u/tycoonman95")
+  end
+})
+
+local katoggle = Tabs.cs:AddToggle("Kill Aura",
+{
+  Title = "Kill Aura", 
+  Description = "Attacks people within your reach",
   Default = false,
   Callback = function(k)
     ka = k
     KillAura(k)
-	end    
-})
+  end 
+}) 
 
-cs:AddButton({
-  Name = "Arcade Recode Client",
+local acltoggle = Tabs.cs:AddToggle("Auto Combat Log",
+{
+  Title = "Auto Combat Log", 
+  Description = "Automatically leaves when you have less than 30% hp",
+  Default = false,
+  Callback = function(c)
+    cl = c
+    combatLog(c)
+  end 
+}) 
+
+Tabs.cs:AddButton({
+  Title = "Arcade Recode Client",
+  Description = "",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
-  end    
+  end
 })
 
-local lp = Window:MakeTab({
-  Name = "Movement",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-lp:AddToggle({
-  Name = "No Fall",
+local nftog = Tabs.lp:AddToggle("No Fall",
+{
+  Title = "No Fall", 
+  Description = "Removes Fall Damage",
   Default = false,
-  Callback = function(nfd)
-    nf = nfd
-    noFall(nfd)
-	end    
-})
+  Callback = function(n)
+    nf = n
+    noFall(n)
+  end 
+}) 
 
-lp:AddToggle({
-  Name = "Jesus",
+local jetog = Tabs.lp:AddToggle("Jesus",
+{
+  Title = "Jesus", 
+  Description = "Walk On Water",
   Default = false,
   Callback = function(j)
     je = j
     Jesus(j)
-	end    
-})
+  end 
+}) 
 
-local vs = Window:MakeTab({
-  Name = "Visuals",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-vs:AddToggle({
-  Name = "Chest ESP",
+local cesptog = Tabs.vs:AddToggle("Chest DSP",
+{
+  Title = "Chest ESP", 
+  Description = "Makes you see chests through blocks",
   Default = false,
   Callback = function(c)
-    ce = c
+    cesp = c
     ChestESP(c)
-	end    
-})
+  end 
+}) 
 
-vs:AddToggle({
-  Name = "Player ESP",
+local pesptog = Tabs.vs:AddToggle("Player ESP",
+{
+  Title = "Player ESP", 
+  Description = "Makes you see players through blocks",
   Default = false,
   Callback = function(p)
-    pe = p
-    playeresp(p)
-	end    
-})
-
-vs:AddToggle({
-  Name = "Watermark",
+    pesp = p
+    PlayerESP(p)
+  end 
+}) 
+local wtog = Tabs.vs:AddToggle("Watermark",
+{
+  Title = "Watermark", 
+  Description = "Adds the Byte Hub watermark",
   Default = false,
   Callback = function(w)
     wa = w
-    watermark(w)
-	end    
-})
+    Watermark(w)
+  end 
+}) 
 
-local wr = Window:MakeTab({
-  Name = "World",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-wr:AddToggle({
-  Name = "Instamine (Client-sided)",
+local imtog = Tabs.vs:AddToggle("Instamine",
+{
+  Title = "Instamine", 
+  Description = "Instantly Mines, but client-sided",
   Default = false,
   Callback = function(i)
     im = i
     instamine(i)
-	end    
-})
+  end 
+}) 
 
-wr:AddToggle({
-  Name = "Fast Break",
+local fbtog = Tabs.vs:AddToggle("Fast Break",
+{
+  Title = "Fast Break", 
+  Description = "Breaks blocks fast (with the correct tools)",
   Default = false,
   Callback = function(f)
     fb = f
     fastbreak(f)
-	end    
+  end 
 })
 
-wr:AddToggle({
-  Name = "Nuker",
+local nktog = Tabs.vs:AddToggle("Nuker",
+{
+  Title = "Nuker", 
+  Description = "Breaks blocks around you in a radius",
   Default = false,
   Callback = function(n)
     nk = n
     nuker(n)
-	end    
-})
+  end 
+}) 
 
-local dt = Window:MakeTab({
-  Name = "Dupe",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-dt:AddButton({
-  Name = "Dupe GUI",
+Tabs.dt:AddButton({
+  Title = "Dupe GUI",
+  Description = "Loads the Dupe GUI by Argentum Exploitz",
   Callback = function()
     loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
-  end    
+  end
 })
 
-dt:AddButton({
-  Name = "Dupe First Chest Slot (Press Z)",
-  Callback = function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/TkAm8wV8",true))()
-  end    
-})
-
-local ot = Window:MakeTab({
-  Name = "Other",
-  Icon = "rbxassetid://4483345998",
-  PremiumOnly = false
-})
-
-ot:AddButton({
-  Name = "Infinite Yield",
+Tabs.dt:AddButton({
+  Title = "Dupe First Chest Slot",
+  Description = "Dupes the first chest slot by pressing Z",
   Callback = function()
     loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
-  end    
+  end
 })
 
-ot:AddButton({
-  Name = "SimplySpy V3",
+Tabs.ot:AddButton({
+  Title = "Infinite Yield",
+  Description = "Loads Infinite Yield admin commands",
   Callback = function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpySource.lua"))()
-  end    
+    loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+  end
 })
 
-ot:AddButton({
-  Name = "SimplySpy Mobile",
+Tabs.ot:AddButton({
+  Title = "Mobile Keyboard",
+  Description = "Loads a mobile OSK",
+  Callback = function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", true))()
+  end
+})
+
+Tabs.ot:AddButton({
+  Title = "Remote Spy (Mobile & PC)",
+  Description = "Loads a Mobile & PC RemoteSpy",
   Callback = function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
-  end    
+  end
 })
 
-ot:AddButton({
-  Name = "Unload GUI",
+Tabs.ot:AddButton({
+  Title = "Destroy UI",
+  Description = "Loads a Mobile & PC RemoteSpy",
   Callback = function()
-    OrionLib:Destroy()
-  end    
+    Fluent:Destroy()
+  end
 })
