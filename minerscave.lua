@@ -3,7 +3,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-  Title = "Minecraft (Byte Hub) 2.4",
+  Title = "Minecraft (Byte Hub) 2.5",
   SubTitle = "by PurpleApple",
   TabWidth = 160,
   Size = UDim2.fromOffset(580, 460),
@@ -266,7 +266,7 @@ local Tabs = {
 
 Tabs.Credits:AddParagraph({
   Title = "Made by PurpleApple",
-  Content = "UI Library: Fluent\nVersion 2.4\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+  Content = "UI Library: Fluent\nVersion 2.5\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -437,7 +437,7 @@ Tabs.ot:AddButton({
   Title = "Infinite Yield",
   Description = "Loads Infinite Yield admin commands",
   Callback = function()
-    loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
   end
 })
 
