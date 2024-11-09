@@ -266,7 +266,7 @@ local Tabs = {
 
 Tabs.Credits:AddParagraph({
   Title = "Made by PurpleApple",
-  Content = "UI Library: Fluent\nVersion 2.4\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+  Content = "UI Library: Fluent\nVersion 2.6\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -330,7 +330,7 @@ Tabs.cs:AddButton({
   end
 })
 
-Tabs.Credits:AddParagraph({
+Tabs.lp:AddParagraph({
   Title = "IMPORTANT!!!",
   Content = "If things dont load, turn No Fall on and off"
 })
@@ -464,8 +464,9 @@ Tabs.ot:AddButton({
 
 Tabs.ot:AddButton({
   Title = "Destroy UI",
-  Description = "Loads a Mobile & PC RemoteSpy",
+  Description = "Destroys Fluent UI",
   Callback = function()
     Fluent:Destroy()
+    game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark:Destroy()
   end
 })
