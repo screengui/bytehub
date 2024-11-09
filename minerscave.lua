@@ -3,7 +3,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-  Title = "Minecraft (Byte Hub) 2.5",
+  Title = "Minecraft (Byte Hub) 2.6",
   SubTitle = "by PurpleApple",
   TabWidth = 160,
   Size = UDim2.fromOffset(580, 460),
@@ -266,7 +266,7 @@ local Tabs = {
 
 Tabs.Credits:AddParagraph({
   Title = "Made by PurpleApple",
-  Content = "UI Library: Fluent\nVersion 2.5\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+  Content = "UI Library: Fluent\nVersion 2.4\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -330,6 +330,11 @@ Tabs.cs:AddButton({
   end
 })
 
+Tabs.Credits:AddParagraph({
+  Title = "IMPORTANT!!!",
+  Content = "If things dont load, turn No Fall on and off"
+})
+
 local nftog = Tabs.lp:AddToggle("No Fall",
 {
   Title = "No Fall", 
@@ -384,7 +389,7 @@ local wtog = Tabs.vs:AddToggle("Watermark",
   end 
 }) 
 
-local imtog = Tabs.vs:AddToggle("Instamine",
+local imtog = Tabs.wr:AddToggle("Instamine",
 {
   Title = "Instamine", 
   Description = "Instantly Mines, but client-sided",
@@ -395,7 +400,7 @@ local imtog = Tabs.vs:AddToggle("Instamine",
   end 
 }) 
 
-local fbtog = Tabs.vs:AddToggle("Fast Break",
+local fbtog = Tabs.wr:AddToggle("Fast Break",
 {
   Title = "Fast Break", 
   Description = "Breaks blocks fast (with the correct tools)",
@@ -406,7 +411,7 @@ local fbtog = Tabs.vs:AddToggle("Fast Break",
   end 
 })
 
-local nktog = Tabs.vs:AddToggle("Nuker",
+local nktog = Tabs.wr:AddToggle("Nuker",
 {
   Title = "Nuker", 
   Description = "Breaks blocks around you in a radius",
