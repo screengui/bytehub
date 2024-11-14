@@ -238,10 +238,9 @@ end
 function nuker()
   if nk then
     spawn(function()
-      while nk and task.wait() do
-        for _, v in pairs(blocks:GetDescendants()) do
-          local function breakBlocksBelowPlayer()
-          local playerPos = player.Character.HumanoidRootPart.Position / 3
+      while nk and task.wait() do  
+				local function breakBlocksBelowPlayer()
+					local playerPos = player.Character.HumanoidRootPart.Position / 3
           
           local roundedX = math.floor(playerPos.x)
           local roundedY = math.floor(playerPos.y - 1)
@@ -249,9 +248,8 @@ function nuker()
           
           bb:FireServer(roundedX, roundedY, roundedZ)
           abb:InvokeServer()
-        end
+				end
         breakBlocksBelowPlayer()
-        end
       end
     end)
   end
@@ -261,7 +259,8 @@ local Tabs = {
   Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
   cs = Window:AddTab({ Title = "Combat", Icon = "swords" }),
   lp = Window:AddTab({ Title = "Movement", Icon = "user" }),
-  vs = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+  vs = Window:
+AddTab({ Title = "Visuals", Icon = "eye" }),
   wr = Window:AddTab({ Title = "World", Icon = "globe" }),
   dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
   ot = Window:AddTab({ Title = "Others", Icon = "list" })
