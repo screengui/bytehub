@@ -1,4 +1,3 @@
-print("Successfully Loaded!")
 loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
@@ -26,10 +25,6 @@ local BBA = false
 local abb = game.ReplicatedStorage.GameRemotes.AcceptBreakBlock
 local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
 local blocks = workspace.Blocks
-local playerPos = player.Character.HumanoidRootPart.Position / 3
-local roundedX = math.floor(playerPos.x)
-local roundedY = math.floor(playerPos.y - 1)
-local roundedZ = math.floor(playerPos.z)
 
 --func
 
@@ -243,8 +238,18 @@ end
 function nuker()
   if nk then
     spawn(function()
-      while nk and task.wait() do  
-	print("yes!")
+      while nk and task.wait() do
+        local function breakBlocksBelowPlayer()
+          local playerPos = player.Character.HumanoidRootPart.Position / 3
+          
+          local roundedX = math.floor(playerPos.x)
+          local roundedY = math.floor(playerPos.y - 1)
+          local roundedZ = math.floor(playerPos.z)
+          
+          bb:FireServer(roundedX, roundedY, roundedZ)
+            abb:InvokeServer()
+          end
+        breakBlocksBelowPlayer()
       end
     end)
   end
@@ -254,13 +259,11 @@ local Tabs = {
   Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
   cs = Window:AddTab({ Title = "Combat", Icon = "swords" }),
   lp = Window:AddTab({ Title = "Movement", Icon = "user" }),
-  vs = Window:
-AddTab({ Title = "Visuals", Icon = "eye" }),
+  vs = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
   wr = Window:AddTab({ Title = "World", Icon = "globe" }),
   dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
-  ot = Window:AddTab({ Title = "Others", Icon = "list" })
+  ot = Window:AddTab({ Title = "Others", Icon = "list" }),
   debug = Window:AddTab({ Title = "Debugging", Icon = "bug" })
-  newitems = Window:AddTab({ Title = "New Items", Icon = "plus" })
 }
 
 Tabs.Credits:AddParagraph({
@@ -474,8 +477,6 @@ Tabs.debug:AddButton({
   Title = "Print Player Position",
   Description = "Prints the player's position in the console",
   Callback = function()
-    -- Step 1: Get the player's in-game coordinates from the HUD GUI
-    local player = game:GetService("Players").LocalPlayer
     local coordString = player.PlayerGui.HUDGui.DataFrame.Coord.Text
     
     -- Step 2: Extract the X, Y, Z coordinates by removing any extra text
