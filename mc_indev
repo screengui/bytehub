@@ -25,6 +25,10 @@ local BBA = false
 local abb = game.ReplicatedStorage.GameRemotes.AcceptBreakBlock
 local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
 local blocks = workspace.Blocks
+local playerPos = player.Character.HumanoidRootPart.Position / 3
+local roundedX = math.floor(playerPos.x)
+local roundedY = math.floor(playerPos.y - 1)
+local roundedZ = math.floor(playerPos.z)
 
 --func
 
@@ -240,15 +244,9 @@ function nuker()
     spawn(function()
       while nk and task.wait() do
         local function breakBlocksBelowPlayer()
-          local playerPos = player.Character.HumanoidRootPart.Position / 3
-          
-          local roundedX = math.floor(playerPos.x)
-          local roundedY = math.floor(playerPos.y - 1)
-          local roundedZ = math.floor(playerPos.z)
-          
           bb:FireServer(roundedX, roundedY, roundedZ)
-            abb:InvokeServer()
-          end
+          abb:InvokeServer()
+        end
         breakBlocksBelowPlayer()
       end
     end)
@@ -263,7 +261,7 @@ local Tabs = {
   wr = Window:AddTab({ Title = "World", Icon = "globe" }),
   dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
   ot = Window:AddTab({ Title = "Others", Icon = "list" }),
-  debug = Window:AddTab({ Title = "Debugging", Icon = "bug" })
+  debug = Window:AddTab({ Title = "Debugging", Icon = "bug" }),
 }
 
 Tabs.Credits:AddParagraph({
@@ -470,25 +468,5 @@ Tabs.ot:AddButton({
   Callback = function()
     Fluent:Destroy()
     game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark:Destroy()
-  end
-})
-
-Tabs.debug:AddButton({
-  Title = "Print Player Position",
-  Description = "Prints the player's position in the console",
-  Callback = function()
-    local coordString = player.PlayerGui.HUDGui.DataFrame.Coord.Text
-    
-    -- Step 2: Extract the X, Y, Z coordinates by removing any extra text
-    -- (Assumes the text format is like "Coordinates: x, y, z")
-    local blockPosX, blockPosY, blockPosZ = coordString:match("(-?%d+),%s*(-?%d+),%s*(-?%d+)")
-    blockPosX, blockPosY, blockPosZ = tonumber(blockPosX), tonumber(blockPosY), tonumber(blockPosZ)
-    
-    -- Step 3: Verify that we successfully extracted the coordinates
-    if not (blockPosX and blockPosY and blockPosZ) then
-    	print("Failed to get player's in-game coordinates")
-    else
-    	print("Player's in-game coordinates:", blockPosX, blockPosY, blockPosZ)
-    end
   end
 })
