@@ -26,6 +26,10 @@ local BBA = false
 local abb = game.ReplicatedStorage.GameRemotes.AcceptBreakBlock
 local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
 local blocks = workspace.Blocks
+local playerPos = player.Character.HumanoidRootPart.Position / 3
+local roundedX = math.floor(playerPos.x)
+local roundedY = math.floor(playerPos.y - 1)
+local roundedZ = math.floor(playerPos.z)
 
 --func
 
@@ -240,16 +244,10 @@ function nuker()
   if nk then
     spawn(function()
       while nk and task.wait() do  
-				local function breakBlocksBelowPlayer()
-					local playerPos = player.Character.HumanoidRootPart.Position / 3
-          
-          local roundedX = math.floor(playerPos.x)
-          local roundedY = math.floor(playerPos.y - 1)
-          local roundedZ = math.floor(playerPos.z)
-          
-          bb:FireServer(roundedX, roundedY, roundedZ)
-          abb:InvokeServer()
-				end
+	local function breakBlocksBelowPlayer()
+	bb:FireServer(roundedX, roundedY, roundedZ)
+        abb:InvokeServer()
+	end
         breakBlocksBelowPlayer()
       end
     end)
