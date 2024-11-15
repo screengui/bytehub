@@ -1,3 +1,4 @@
+print("Successfully Loaded!")
 loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
