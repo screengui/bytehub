@@ -244,11 +244,7 @@ function nuker()
   if nk then
     spawn(function()
       while nk and task.wait() do  
-	local function breakBlocksBelowPlayer()
-	bb:FireServer(roundedX, roundedY, roundedZ)
-        abb:InvokeServer()
-	end
-        breakBlocksBelowPlayer()
+	print("yes!")
       end
     end)
   end
