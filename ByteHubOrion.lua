@@ -33,8 +33,8 @@ local OrionLib = {
 		ByteHub = {
 			Main = Color3.fromRGB(184, 28, 28),
 			Second = Color3.fromRGB(219, 48, 48),
-			Stroke = Color3.fromRGB(168, 40, 40),
-			Divider = Color3.fromRGB(168, 40, 40),
+			Stroke = Color3.fromRGB(232, 97, 97),
+			Divider = Color3.fromRGB(232, 97, 97),
 			Text = Color3.fromRGB(240, 240, 240),
 			TextDark = Color3.fromRGB(150, 150, 150)
 		},
