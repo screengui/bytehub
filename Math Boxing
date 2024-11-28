@@ -1,0 +1,100 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+local Window = OrionLib:MakeWindow({Name = "🔢Math Boxing🥊 (Byte Hub)", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroText = "Byte Hub"})
+OrionLib:MakeNotification({
+	Name = "Credits",
+	Content = "Credits to OuterTrees\nMade by PurpleApple",
+	Image = "rbxassetid://4483345998",
+	Time = 3
+})
+
+_G.AF = 'N'
+wait()
+_G.AF = 'Y'
+local lp = game.Players.LocalPlayer
+local ring
+local answering = game.ReplicatedStorage.Events.Answer
+local rs = game:GetService("RunService")
+local oldText, expression, prompt = ''
+local pos = 0
+
+--creds to OuterTrees
+
+function autoans()
+while aans and wait() do
+    ring = nil
+    for _, v in pairs(workspace:GetChildren()) do
+        if v.Name == "Ring" then
+            if v.Player1.Value == lp or v.Player2.Value == lp then
+                ring = v
+                break
+            end
+        end
+    end
+    if ring ~= nil then
+        prompt = ring.Prompt.BillboardGui.TextLabel.Text
+        if oldText ~= prompt and prompt:find("?") then
+            expression = prompt:gsub("%s+", ""):gsub("=%?", "")
+            
+            pos = expression:find("+")
+            if pos then
+                answering:FireServer(tonumber(expression:sub(1, pos - 1)) + tonumber(expression:sub(pos + 1)))
+            else 
+                pos = expression:find("x")
+                answering:FireServer(tonumber(expression:sub(1, pos - 1)) * tonumber(expression:sub(pos + 1)))
+            end
+				
+            oldText = prompt
+        end
+    end
+    wait()
+end
+end
+
+function autofuck()
+    while awns do
+        for i=0,9 do
+            answering:FireServer('')
+        end
+        rs.Stepped:Wait()
+    end
+end
+
+local mn = Window:MakeTab({
+    Name = "Exploits👨‍💻",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+mn:AddToggle({
+  Name = "Auto Answer✅",
+  Default = false,
+  Callback = function(ans) 
+    aans = ans
+    autoans(ans)
+  end
+})
+
+mn:AddToggle({
+  Name = "Auto Wrong Answer❌",
+  Default = false,
+  Callback = function(wns) 
+    awns = wns
+    autofuck(wns)
+  end
+})
+
+mn:AddTextbox({
+	Name = "Custom Answer Input📝",
+	Default = "default box input",
+    TextDisappear = true,
+    Callback = function(ai)
+        cai = ai
+    end	  
+})
+
+mn:AddButton({
+    Name = "Send Custom Answer ▶",
+    Callback = function(Value)
+        answering:FireServer(cai)
+    end
+})
