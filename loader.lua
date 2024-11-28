@@ -7,5 +7,5 @@ elseif game.PlaceId == 6741970382 then
 elseif game.ReplicatedStorage.Blocks == not nil then
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/minerscave.lua",true))()
 elseif game.ReplicatedStorage.Game == not nil then
-	
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/mmchub.lua",true))()
 end
