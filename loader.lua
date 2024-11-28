@@ -4,10 +4,6 @@ elseif game.PlaceId == 10476933477 then
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Strong%20Ninja%20Simulator%20Modded.lua",true))()
 elseif game.PlaceId == 6741970382 then
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/zombielab.lua",true))()
-end
-	
-if game.ReplicatedStorage.:FindFirstChild("VampireStuff") ~= nil then
-        pcall(function()
-                        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/mmchub.lua",true))()
-        end)
+elseif game.ReplicatedStorage.:FindFirstChild("VampireStuff") ~= nil then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/mmchub.lua",true))()
 end
