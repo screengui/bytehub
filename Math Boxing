@@ -1,4 +1,5 @@
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/ByteHubOrion.lua",true))()
+OrionLib.SelectedTheme = "ByteHub"
 local Window = OrionLib:MakeWindow({Name = "🔢Math Boxing🥊 (Byte Hub)", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroText = "Byte Hub"})
 OrionLib:MakeNotification({
 	Name = "Credits",
