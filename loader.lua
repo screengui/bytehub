@@ -5,7 +5,7 @@ elseif game.PlaceId == 10476933477 then
 elseif game.PlaceId == 6741970382 then
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/zombielab.lua",true))()
 elseif game.ReplicatedStorage.Blocks == not nil then
-
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/minerscave.lua",true))()
 elseif game.ReplicatedStorage.Game == not nil then
 	
 end
