@@ -1,111 +1,174 @@
-local library = loadstring(game:HttpGet("https://pastebin.com/raw/vff1bQ9F"))()
-local window = library.CreateLib("Made by Novaz#5792, Modded by PurpleApple#9562", _G.Theme)
-local main = window:NewTab("Auto Farm")
-local section = main:NewSection("Auto Farm")
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+local Window = OrionLib:MakeWindow({Name = "Strong Ninja Simulator (Byte Hub)", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroText = "Byte Hub"})
+OrionLib:MakeNotification({
+	Name = "Credits",
+	Content = "Made by Novaz#5792\nModded by PurpleApple",
+	Image = "rbxassetid://4483345998",
+	Time = 5
+})
+
+local mn = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
 local toggles = {}
 local plr = game.Players.LocalPlayer
 local cha = plr.Character
 local hrp = cha.HumanoidRootPart
 
-section:NewButton("Redeem Codes", "Redeem All Codes", function()
-  local args = {[1] = {[1] = "FREESTRENGTH"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-  wait()
-  local args = {[1] = {[1] = "HELL"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-  wait()
-  local args = {[1] = {[1] = "HEAVEN"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-  wait()
-  local args = {[1] = {[1] = "BELUGA"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-  wait()
-  local args = {[1] = {[1] = "VOID"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-  wait()
-  local args = {[1] = {[1] = "ANIME"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-  wait()
-  local args = {[1] = {[1] = "FREELUCK"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-  wait()
-  local args = {[1] = {[1] = "ILIKEGEMS"}}
-  game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
-end)
+mn:AddButton({
+    Name = "Redeem All Codes",
+    Callback = function(Value)
+      local args = {[1] = {[1] = "FREESTRENGTH"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+      wait()
+      local args = {[1] = {[1] = "HELL"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+      wait()
+      local args = {[1] = {[1] = "HEAVEN"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+      wait()
+      local args = {[1] = {[1] = "BELUGA"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+      wait()
+      local args = {[1] = {[1] = "VOID"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+      wait()
+      local args = {[1] = {[1] = "ANIME"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+      wait()
+      local args = {[1] = {[1] = "FREELUCK"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+      wait()
+      local args = {[1] = {[1] = "ILIKEGEMS"}}
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_redeemcode:InvokeServer(unpack(args))
+    end
+})
 
-section:NewToggle("Auto Attack", "Auto Clicks the sword", function(a)
-  b = a
-  while b and wait(0.0001) do
-    for i,v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
-      if v:IsA("Tool") then
-        v:Activate()
+mn:AddToggle({
+  Name = "Auto Attack",
+  Default = false,
+  Callback = function(a) 
+    b = a
+    while b and wait() do
+      for i,v in pairs(game.Players.LocalPlayer.Character:GetDescendants()) do
+        if v:IsA("Tool") then
+          v:Activate()
+        end
       end
     end
   end
-end)
+})
 
-section:NewToggle("Auto Rebirth", "Automatically Rebirths", function(lor)
-  por = lor
-  while por and task.wait() do
-    game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_rebirth:InvokeServer({})
-    plr.PlayerGui.Main:FindFirstChild("Rebirth").Visible = false
+mn:AddToggle({
+  Name = "Auto Rebirth",
+  Default = false,
+  Callback = function(lor) 
+    por = lor
+    while por and wait() do
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_rebirth:InvokeServer({})
+      plr.PlayerGui.Main:FindFirstChild("Rebirth").Visible = false
+    end
   end
-end)
+})
 
-section:NewToggle("Auto Egg", "Auto Hatches Selected Egg", function(lpr)
-  lit = lpr
-  while lit and task.wait() do
-    local args = {
-      [1] = {
-        [1] = p
+mn:AddDropdown({
+  Name = "Select Egg",
+  Default = "Select Egg",
+  Options = {"Beach Egg", "Forest Egg", "Dominus Egg", "Dragon Egg", "Alien Egg", "Arctic Egg", "Zomie Egg", "Hell Egg", "Heaven Egg"},
+  Callback = function(l)
+    p = l
+  	end    
+})
+
+mn:AddToggle({
+  Name = "Auto Hatch Egg",
+  Default = false,
+  Callback = function(lpr) 
+    lit = lpr
+    while lit and wait() do
+      local args = {
+        [1] = {
+          [1] = p
+        }
       }
-    }
-    game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_buyegg:InvokeServer(unpack(args))
-  end
-end)
-
-section:NewDropdown("Select Egg", "Select an Egg", {"Beach Egg", "Forest Egg", "Dominus Egg", "Dragon Egg", "Alien Egg", "Arctic Egg", "Zomie Egg", "Hell Egg", "Heaven Egg"}, function(l)
-  p = l
-end)
-
-section:NewButton("Give Best Pet", "Made by PurpleApple. Gives best pet", function()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/shitass%20fe%20script",true))()
-end)
-
-section:NewToggle("Remove Lag", "Removes stuff that causes lag", function(rl)
-  rl2 = rl
-  while rl2 and task.wait() do
-    local function delemitters(parent)
-      for _, child in ipairs(parent:GetChildren()) do
-        if child:IsA("ParticleEmitter") then
-          child:Destroy()
-        end
-        delemitters(child)
-      end
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules:FindFirstChild("2 | Network").Remotes.s_controller_buyegg:InvokeServer(unpack(args))
     end
-
-    delemitters(workspace)
-    
-    local function delbbg(parent)
-      for _, child in ipairs(parent:GetChildren()) do
-        if child:IsA("BillboardGui") then
-          child:Destroy()
-        end
-        delbbg(child)
-      end
-    end
-    local path = workspace:WaitForChild("__DEBRIS")
-    
-    delbbg(path)
   end
-end)
-section:NewButton("Remove Bloat", "Removes useless stuff that doesnt affect gameplay", function()
-  game:GetService("Players").LocalPlayer.PlayerGui.Main.HUD.Right:Destroy()
-  game:GetService("Players").LocalPlayer.PlayerGui.Main.AutoClicker:Destroy()
-  game:GetService("Players").LocalPlayer.PlayerGui.Main.FloppaBtn:Destroy()
-  game:GetService("Players").LocalPlayer.PlayerGui.Main.DarkMatter:Destroy()
-  game:GetService("Players").LocalPlayer.PlayerGui.Main.Limited2:Destroy()
-  game:GetService("Players").LocalPlayer.PlayerGui.Main.LimitedTime:Destroy()
-  game:GetService("Players").LocalPlayer.PlayerGui.Main.Sunburst:Destroy()
-  game:GetService("Players").LocalPlayer.PlayerGui.Items.ElectricKatana:Destroy()
-end)
+})
+
+mn:AddButton({
+    Name = "Give Best Pet (must complete dominus quest)",
+    Callback = function(Value)
+      local args = {
+        [1] = {}
+      }
+      
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules["2 | Network"].Remotes.s_controller_claimchallenge:InvokeServer(unpack(args))
+    end
+})
+
+mn:AddToggle({
+  Name = "Auto Give Best Pet",
+  Default = false,
+  Callback = function(gp) 
+    gbp = gp
+    while gbp and wait() do
+      local args = {
+        [1] = {}
+      }
+      
+      game:GetService("ReplicatedStorage").Framework.Modules.Shared.Internal.Modules["2 | Network"].Remotes.s_controller_claimchallenge:InvokeServer(unpack(args))
+    end
+  end
+})
+
+
+mn:AddToggle({
+  Name = "Remove Lag",
+  Default = false,
+  Callback = function(rl) 
+    rl2 = rl
+    while rl2 and wait() do
+      local function delemitters(parent)
+        for _, child in ipairs(parent:GetChildren()) do
+          if child:IsA("ParticleEmitter") then
+            child:Destroy()
+          end
+          delemitters(child)
+        end
+      end
+      
+      delemitters(workspace)
+    
+      local function delbbg(parent)
+        for _, child in ipairs(parent:GetChildren()) do
+          if child:IsA("BillboardGui") then
+            child:Destroy()
+          end
+          delbbg(child)
+        end
+      end
+      local path = workspace:WaitForChild("__DEBRIS")
+      delbbg(path)
+    end
+  end
+})
+
+mn:AddButton({
+    Name = "Remove Bloat",
+    Callback = function(Value)
+      game:GetService("Players").LocalPlayer.PlayerGui.Main.HUD.Right.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.Main.AutoClicker.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.Main.FloppaBtn.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.Main.DarkMatter.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.Main.Limited2.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.Main.LimitedTime.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.Main.Sunburst.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.Items.ElectricKatana.Visible = false
+    end
+})
+
+OrionLib:Init()
