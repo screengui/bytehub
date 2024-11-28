@@ -6,13 +6,13 @@ elseif game.PlaceId == 6741970382 then
 	loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/zombielab.lua",true))()
 end
 
-if game.ReplicatedStorage.AssetsMod ~= nil then
+if game.ReplicatedStorage:FindFirstChild("AssetsMod") ~= nil then
 	pcall(function()
 			loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/minerscave.lua",true))()
 		end)
 end
 	
-if game.ReplicatedStorage.VampireStuff ~= nil then
+if game.ReplicatedStorage.:FindFirstChild("VampireStuff") ~= nil then
         pcall(function()
                         loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/mmchub.lua",true))()
         end)
