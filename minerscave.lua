@@ -3,13 +3,13 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-  Title = "Minecraft (Byte Hub) 2.6",
+  Title = "Minecraft (Byte Hub) 2.7",
   SubTitle = "by PurpleApple",
   TabWidth = 160,
   Size = UDim2.fromOffset(580, 460),
   Acrylic = false, -- The blur may be detectable, setting this to false disables blur entirely
   Theme = "Dark",
-  MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+  MinimizeKey = ck -- Used when theres no MinimizeKeybind
 })
 
 -- vars
@@ -25,6 +25,7 @@ local BBA = false
 local abb = game.ReplicatedStorage.GameRemotes.AcceptBreakBlock
 local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
 local blocks = workspace.Blocks
+local ckeybind = ck
 
 --func
 
@@ -239,16 +240,16 @@ function nuker()
   if nk then
     spawn(function()
       while nk and task.wait() do
-        for _, v in pairs(blocks:GetDescendants()) do
-          if v:IsA('MeshPart') then
-            pos = v.Position
-            if (player.Character.HumanoidRootPart.Position - pos).magnitude < 20 then
-              bb:FireServer(pos.x/3, pos.y/3, pos.z/3)
-              abb:InvokeServer()
-              wait()
-            end
-          end
+        local function breakBlocksBelowPlayer()
+          local playerPos = player.Character.HumanoidRootPart.Position / 3
+          local roundedX = math.floor(playerPos.x)
+          local roundedY = math.floor(playerPos.y - 1)
+          local roundedZ = math.floor(playerPos.z)
+          
+          bb:FireServer(roundedX, roundedY, roundedZ)
+          abb:InvokeServer()
         end
+        breakBlocksBelowPlayer()
       end
     end)
   end
@@ -257,16 +258,16 @@ end
 local Tabs = {
   Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
   cs = Window:AddTab({ Title = "Combat", Icon = "swords" }),
-  lp = Window:AddTab({ Title = "Movement", Icon = "circle-user-round" }),
+  lp = Window:AddTab({ Title = "Movement", Icon = "user" }),
   vs = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
-  wr = Window:AddTab({ Title = "World", Icon = "earth" }),
+  wr = Window:AddTab({ Title = "World", Icon = "globe" }),
   dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
-  ot = Window:AddTab({ Title = "Others", Icon = "ellipsis" })
+  ot = Window:AddTab({ Title = "Others", Icon = "list" }),
 }
 
 Tabs.Credits:AddParagraph({
   Title = "Made by PurpleApple",
-  Content = "UI Library: Fluent\nVersion 2.6\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+  Content = "UI Library: Fluent\nv2.7\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
