@@ -3,13 +3,13 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-  Title = "Minecraft (Byte Hub) 2.7",
+  Title = "Minecraft (Byte Hub) v2.7",
   SubTitle = "by PurpleApple",
   TabWidth = 160,
   Size = UDim2.fromOffset(580, 460),
   Acrylic = false, -- The blur may be detectable, setting this to false disables blur entirely
   Theme = "Dark",
-  MinimizeKey = ck -- Used when theres no MinimizeKeybind
+  MinimizeKey = "LeftControl" -- Used when theres no MinimizeKeybind
 })
 
 -- vars
