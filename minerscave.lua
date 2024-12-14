@@ -1,15 +1,16 @@
 loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
 game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-  Title = "Minecraft (Byte Hub) v2.7",
+  Title = "Minecraft (Byte Hub) v2.8",
   SubTitle = "by PurpleApple",
   TabWidth = 160,
   Size = UDim2.fromOffset(580, 460),
   Acrylic = false, -- The blur may be detectable, setting this to false disables blur entirely
   Theme = "Dark",
-  MinimizeKey = "LeftControl" -- Used when theres no MinimizeKeybind
+  MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
 })
 
 -- vars
@@ -25,9 +26,51 @@ local BBA = false
 local abb = game.ReplicatedStorage.GameRemotes.AcceptBreakBlock
 local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
 local blocks = workspace.Blocks
-local ckeybind = ck
+local strafeEnabled = false
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameRemotes = ReplicatedStorage:WaitForChild("GameRemotes")
+local Attack = GameRemotes:WaitForChild("Attack")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local features = {}
+local gameremotes = game:GetService("ReplicatedStorage").GameRemotes
+local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
+local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
+local usetables = false
 
+local oldhmmi
+local oldhmmnc
+oldhmmi = hookmetamethod(game, "__index", function(self, method)
+  if self == player and method:lower() == "kick" then
+    return error("Expected ':' not '.' calling member function Kick", 2)
+  end
+  return oldhmmi(self, method)
+end)
+oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
+	  if self == player and getnamecallmethod():lower() == "kick" then
+	    return
+	  end
+  return oldhmmnc(self, ...)
+	end)
 --func
+
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
+            local distance = (v.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
+            if distance < shortestDistance then
+                closestPlayer = v.Character
+                shortestDistance = distance
+            end
+        end
+    end
+
+    return closestPlayer
+end
 
 function KillAura()
   spawn(function()
@@ -255,6 +298,7 @@ function nuker()
   end
 end
 
+
 local Tabs = {
   Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
   cs = Window:AddTab({ Title = "Combat", Icon = "swords" }),
@@ -267,7 +311,7 @@ local Tabs = {
 
 Tabs.Credits:AddParagraph({
   Title = "Made by PurpleApple",
-  Content = "UI Library: Fluent\nv2.7\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+  Content = "UI Library: Fluent\nv2.8\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -378,7 +422,8 @@ local pesptog = Tabs.vs:AddToggle("Player ESP",
     pesp = p
     PlayerESP(p)
   end 
-}) 
+})
+
 local wtog = Tabs.vs:AddToggle("Watermark",
 {
   Title = "Watermark", 
@@ -389,6 +434,14 @@ local wtog = Tabs.vs:AddToggle("Watermark",
     Watermark(w)
   end 
 }) 
+
+Tabs.vs:AddButton({
+  Title = "XRay GUI",
+  Description = "Loads the XRay GUI by creepypro123",
+  Callback = function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/bBaDHZKn"))()
+  end
+})
 
 local imtog = Tabs.wr:AddToggle("Instamine",
 {
@@ -438,6 +491,30 @@ Tabs.dt:AddButton({
     loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
   end
 })
+
+Tabs.dt:AddButton({
+  Title = "Get Infinite Items",
+  Description = "Select the item first then execute this",
+  Callback = function()
+    local args = {
+      [1] = -1,
+      [2] = 0,
+      [3] = true,
+      [4] = -99e99+100
+    }
+    local args2 = {[1] = {}}
+    if usetables then
+      args2[1][1] = args[1]
+      args2[1][2] = args[2]
+      args2[1][3] = args[3]
+      args2[1][4] = args[4]
+      moveitems:InvokeServer(unpack(args2))
+    else
+      moveitems:InvokeServer(unpack(args))
+    end
+  end
+})
+
 
 Tabs.ot:AddButton({
   Title = "Infinite Yield",
