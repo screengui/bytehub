@@ -4,7 +4,7 @@ game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-  Title = "Minecraft (Byte Hub) v2.8",
+  Title = "Minecraft (Byte Hub) v2.9",
   SubTitle = "by PurpleApple",
   TabWidth = 160,
   Size = UDim2.fromOffset(580, 460),
@@ -115,6 +115,32 @@ function combatLog()
   end
 end
 
+function combatTp()
+  if ct then
+    spawn(function()
+      while ct do
+        local function checkHealth2()
+          local character = player.Character
+          if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+              local threshold = humanoid.MaxHealth * 0.4
+              if humanoid.Health <= threshold then
+                character.HumanoidRootPart.CFrame = CFrame.new(math.floor(1000 * 3), math.floor(60 * 3), math.floor(1000 * 3))
+              end
+            end
+          end
+        end
+      
+        while wait(1) do
+          checkHealth2()
+        end
+      end
+    end)
+  end
+end
+
+
 function Jesus()
   local fluidFolder = game:GetService("Workspace"):FindFirstChild("Fluid")
   if je then
@@ -170,7 +196,7 @@ function Jesus()
 end
 
 function ChestESP()
-  if ce then
+  if cesp then
     spawn(function()
       while ce and task.wait() do
         local parentFolder = workspace.Blocks
@@ -220,6 +246,62 @@ function ChestESP()
     for _, part in ipairs(workspace:GetDescendants()) do
       if part:FindFirstChild("CHEST_out") then
         part.CHEST_out:Destroy()
+      end
+    end
+  end
+end
+
+function lavaESP()
+  if lesp then
+    spawn(function()
+      while lesp and task.wait() do
+        local rootFolder = workspace.Fluid
+        
+        local function findChestParts(folder)
+          local foundParts = {}
+          local children = folder:GetChildren()
+          for _, item in pairs(children) do
+            if item.Name == "Lava" then
+              table.insert(foundParts, item)
+            end
+          end
+          return foundParts
+        end
+
+        local function createOutline(target)
+          if not target:FindFirstChild("LAVA_out") then
+            local outline = Instance.new("BoxHandleAdornment")
+            outline.Name = "LAVA_out"
+            outline.Parent = target
+            outline.Adornee = target
+            outline.AlwaysOnTop = true
+            outline.ZIndex = 0
+            outline.Size = target.Size
+            outline.Transparency = 0.3
+            outline.Color = BrickColor.new("Deep orange")
+          end
+        end
+
+        local function exploreFolders(folder)
+          for _, subfolder in pairs(folder:GetChildren()) do
+            if subfolder:IsA("Folder") then
+              local chestParts = findChestParts(subfolder)
+              for _, chest in ipairs(chestParts) do
+                createOutline(chest)
+              end
+              exploreFolders(subfolder)
+            end
+          end
+        end
+
+        exploreFolders(rootFolder)
+        wait()
+      end
+    end)
+  else
+    for _, descendant in ipairs(workspace:GetDescendants()) do
+      if descendant:FindFirstChild("LAVA_out") then
+        descendant.LAVA_out:Destroy()
       end
     end
   end
@@ -298,6 +380,29 @@ function nuker()
   end
 end
 
+function enderchest()
+  if ec then
+    while ec and wait() do
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Chest.Visible = true
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Crafting.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.ResultSlot.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot100.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot101.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot102.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot103.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot80.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot81.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot82.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot83.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot84.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot85.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot86.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot87.Visible = false
+      game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.Inventory.Slots.Slot88.Visible = false
+    end
+  end
+end
 
 local Tabs = {
   Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
@@ -311,7 +416,7 @@ local Tabs = {
 
 Tabs.Credits:AddParagraph({
   Title = "Made by PurpleApple",
-  Content = "UI Library: Fluent\nv2.8\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+  Content = "UI Library: Fluent\nv2.9\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -354,7 +459,7 @@ local katoggle = Tabs.cs:AddToggle("Kill Aura",
     ka = k
     KillAura(k)
   end 
-}) 
+})
 
 local acltoggle = Tabs.cs:AddToggle("Auto Combat Log",
 {
@@ -366,6 +471,18 @@ local acltoggle = Tabs.cs:AddToggle("Auto Combat Log",
     combatLog(c)
   end 
 }) 
+
+local atptoggle = Tabs.cs:AddToggle("Auto Combat TP",
+{
+  Title = "Auto Combat TP", 
+  Description = "Automatically teleports you to a safe zone if you have less than 30% hp",
+  Default = false,
+  Callback = function(c2)
+    ct = c2
+    combatTp(c2)
+  end 
+}) 
+
 
 Tabs.cs:AddButton({
   Title = "Arcade Recode Client",
@@ -402,7 +519,56 @@ local jetog = Tabs.lp:AddToggle("Jesus",
   end 
 }) 
 
-local cesptog = Tabs.vs:AddToggle("Chest DSP",
+local xinput = Tabs.lp:AddInput("xinput", {
+  Title = "X Coordinate:",
+  Description = "Input Description",
+  Default = "",
+  Placeholder = "Placeholder",
+  Numeric = false, -- Only allows numbers
+  Finished = false, -- Only calls callback when you press enter
+  Callback = function(xi)
+    xip = xi
+  end
+})
+
+local yinput = Tabs.lp:AddInput("yinput", {
+  Title = "Y Coordinate:",
+  Description = "Input Description",
+  Default = "",
+  Placeholder = "Placeholder",
+  Numeric = false, -- Only allows numbers
+  Finished = false, -- Only calls callback when you press enter
+  Callback = function(yi)
+    yip = yi
+  end
+})
+
+local zinput = Tabs.lp:AddInput("zinput", {
+  Title = "Z Coordinate:",
+  Description = "Input Description",
+  Default = "",
+  Placeholder = "Placeholder",
+  Numeric = false, -- Only allows numbers
+  Finished = false, -- Only calls callback when you press enter
+  Callback = function(zi)
+    zip = zi
+  end
+})
+
+Tabs.lp:AddButton({
+  Title = "Teleport to Coordinates",
+  Description = "Teleports to the given coordinatex",
+  Callback = function()
+    local xtppos = math.floor(xip * 3)
+    local ytppos = math.floor(yip * 3)
+    local ztppos = math.floor(zip * 3)
+    local humanroot = game.Players.LocalPlayer.Character.HumanoidRootPart
+    
+    humanroot.CFrame = CFrame.new(xtppos, ytppos, ztppos)
+  end
+})
+
+local cesptog = Tabs.vs:AddToggle("Chest ESP",
 {
   Title = "Chest ESP", 
   Description = "Makes you see chests through blocks",
@@ -410,6 +576,17 @@ local cesptog = Tabs.vs:AddToggle("Chest DSP",
   Callback = function(c)
     cesp = c
     ChestESP(c)
+  end 
+}) 
+
+local lesptog = Tabs.vs:AddToggle("Lava ESP",
+{
+  Title = "Lava ESP", 
+  Description = "Makes you see lavz through blocks",
+  Default = false,
+  Callback = function(l)
+    lesp = l
+    lavaESP(l)
   end 
 }) 
 
@@ -439,9 +616,20 @@ Tabs.vs:AddButton({
   Title = "XRay GUI",
   Description = "Loads the XRay GUI by creepypro123",
   Callback = function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/bBaDHZKn"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/ORE%20ESP%20creepypro123",true))()
   end
 })
+
+local ectog = Tabs.vs:AddToggle("Enderchest",
+{
+  Title = "More Slots", 
+  Description = "Gives you more inventory space",
+  Default = false,
+  Callback = function(echest)
+    ec = echest
+    enderchest(echest)
+  end 
+}) 
 
 local imtog = Tabs.wr:AddToggle("Instamine",
 {
@@ -468,13 +656,14 @@ local fbtog = Tabs.wr:AddToggle("Fast Break",
 local nktog = Tabs.wr:AddToggle("Nuker",
 {
   Title = "Nuker", 
-  Description = "Breaks blocks around you in a radius",
+  Description = "Breaks blocks below you",
   Default = false,
   Callback = function(n)
     nk = n
     nuker(n)
   end 
-}) 
+})
+
 
 Tabs.dt:AddButton({
   Title = "Dupe GUI",
