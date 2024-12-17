@@ -4,7 +4,7 @@ game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
 local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local Window = Fluent:CreateWindow({
-  Title = "Minecraft (Byte Hub) v3.0",
+  Title = "Minecraft (Byte Hub) v3.1",
   SubTitle = "by PurpleApple",
   TabWidth = 160,
   Size = UDim2.fromOffset(580, 460),
@@ -91,52 +91,39 @@ function KillAura()
 end
 
 function combatLog()
-  if cl then
-    spawn(function()
-      while cl do
-        local function checkHealth()
-          local character = player.Character
-          if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-              local threshold = humanoid.MaxHealth * 0.4
-              if humanoid.Health <= threshold then
-                player:Kick("Combat Logged by ByteHub")
-              end
-            end
-          end
-        end
-      
-        while wait(1) do
-          checkHealth()
-        end
+  while cl do
+    local function checkHealth()
+      local char = player.Character
+      local humanoid = char.Humanoid
+      local threshold = humanoid.MaxHealth * 0.4
+      if humanoid.Health <= threshold then
+        game:Shutdown()
       end
-    end)
+    end
+    while cl and wait(1) do
+      checkHealth()
+    end
   end
 end
 
 function combatTp()
-  if ct then
-    spawn(function()
-      while ct do
-        local function checkHealth2()
-          local character = player.Character
-          if character then
-            local humanoid = character:FindFirstChild("Humanoid")
-            if humanoid then
-              local threshold = humanoid.MaxHealth * 0.4
-              if humanoid.Health <= threshold then
-                character.HumanoidRootPart.CFrame = CFrame.new(math.floor(1000 * 3), math.floor(60 * 3), math.floor(1000 * 3))
-              end
-            end
+  while ct do
+    local function checkHealth2()
+      local character2 = player.Character
+      if character2 then
+        local humanoid2 = character:FindFirstChild("Humanoid")
+        if humanoid2 then
+          local threshold2 = humanoid.MaxHealth * 0.4
+          if humanoid2.Health <= threshold2 then
+            character2.HumanoidRootPart.CFrame = CFrame.new(math.floor(1000 * 3), math.floor(60 * 3), math.floor(1000 * 3))
           end
         end
-      
-        while wait(1) do
-          checkHealth2()
-        end
       end
-    end)
+    end
+      
+    while cl and wait(1) do
+      checkHealth2()
+    end
   end
 end
 
@@ -405,88 +392,38 @@ function enderchest()
 end
 
 function infhealth()
-  while infh and wait() do
-    local argsList = {
-      {101, 9, true},
-      {9, 101, true},
-    }
-
-    for _, args in ipairs(argsList) do
-      game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(unpack(args))
-    end
+  while infh do
+    game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(101, 9, true)
+    game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(9, 101, true)
+    wait()
   end
 end
 
 function cheststealer()
-    local stealArgs = {
-    {36, 9, true},
-    {37, 10, true},
-    {38, 11, true},
-    {39, 12, true},
-    {40, 13, true},
-    {41, 14, true},
-    {42, 15, true},
-    {43, 16, true},
-    {44, 17, true},
-    {45, 18, true},
-    {46, 19, true},
-    {47, 20, true},
-    {48, 21, true},
-    {49, 22, true},
-    {50, 23, true},
-    {51, 24, true},
-    {52, 25, true},
-    {53, 26, true},
-    {54, 27, true},
-    {55, 28, true},
-    {56, 29, true},
-    {57, 30, true},
-    {58, 31, true},
-    {59, 32, true},
-    {60, 33, true},
-    {61, 34, true},
-    {62, 35, true}
-    }
+  local argsList = {}
+  for i = 36, 62 do
+    table.insert(argsList, {i, i - 27, true})
+  end
 
-    for _, args in ipairs(stealArgs) do
-      game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(unpack(args))
-    end
+  for _, args in ipairs(argsList) do
+    task.spawn(function()
+        game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(unpack(args))
+    end)
+  end
 end
 
 function chestdumper()
-    local dumpArgs = {
-    {9, 36, true},
-    {10, 37, true},
-    {11, 38, true},
-    {12, 39, true},
-    {13, 40, true},
-    {14, 41, true},
-    {15, 42, true},
-    {16, 43, true},
-    {17, 44, true},
-    {18, 45, true},
-    {19, 46, true},
-    {20, 47, true},
-    {21, 48, true},
-    {22, 49, true},
-    {23, 50, true},
-    {24, 51, true},
-    {25, 52, true},
-    {26, 53, true},
-    {27, 54, true},
-    {28, 55, true},
-    {29, 56, true},
-    {30, 57, true},
-    {31, 58, true},
-    {32, 59, true},
-    {33, 60, true},
-    {34, 61, true},
-    {35, 62, true}
-      
-    }
-    for _, args in ipairs(dumpArgs) do
-      game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(unpack(args))
-    end
+  local argsList2 = {}
+  
+  for i = 9, 35 do
+    table.insert(argsList2, {i, i + 27, true})
+  end
+  
+  for _, args in ipairs(argsList2) do
+    task.spawn(function()
+        game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(unpack(args))
+    end)
+  end
 end
 
 
@@ -503,7 +440,7 @@ local Tabs = {
 
 Tabs.Credits:AddParagraph({
   Title = "Made by PurpleApple",
-  Content = "UI Library: Fluent\nv3.0\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+  Content = "UI Library: Fluent\nv3.1\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -561,8 +498,8 @@ local acltoggle = Tabs.cs:AddToggle("Auto Combat Log",
 
 local atptoggle = Tabs.cs:AddToggle("Auto Combat TP",
 {
-  Title = "Auto Combat TP", 
-  Description = "Automatically teleports you to a safe zone if you have less than 30% hp",
+  Title = "Auto Safe Zone", 
+  Description = "Auto Combat Log, but it teleports you to a safe zone.",
   Default = false,
   Callback = function(c2)
     ct = c2
