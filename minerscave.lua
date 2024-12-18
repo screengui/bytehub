@@ -694,7 +694,7 @@ if not getgenv().bytehubLoaded then
       Fluent:Destroy()
       getgenv().bytehubLoaded = false
       game.Players.LocalPlayer.PlayerGui.WatermarkGui:Destroy()
-      game.Players.LocalPlayer.DraggableFrameGui:Destroy()
+      game.Players.LocalPlayer.PlayerGui.DraggableFrameGui:Destroy()
     end
   })
 else
