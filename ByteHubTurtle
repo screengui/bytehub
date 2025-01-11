@@ -1,4 +1,3 @@
-print("Executed")
 local library = {}
 local windowCount = 0
 local sizes = {}
