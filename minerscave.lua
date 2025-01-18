@@ -486,7 +486,7 @@ if not getgenv().bytehubLoaded then
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v3.3",
+    Title = "Minecraft (Byte Hub) v3.4",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -510,7 +510,7 @@ if not getgenv().bytehubLoaded then
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent/Fluent Renewed\nv3.3\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent/Fluent Renewed\nv3.4\nCredits to 737465*** for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -609,18 +609,16 @@ if not getgenv().bytehubLoaded then
     end 
   }) 
   
-  if gameEngine == "EmeraldCraft" then
-    local infhtog = Tabs.lp:AddToggle("Infi HP",
-    {
-      Title = "Infinite Health",
-      Description = "Increases your hp (only works with emerald leggings)",
-      Default = false,
-      Callback = function(infihp)
-        infh = infihp
-        infhealth(infihp)
-      end 
-    }) 
-  end
+  local infhtog = Tabs.lp:AddToggle("Infi HP",
+  {
+    Title = "Infinite Health",
+    Description = "Increases your hp (only works with emerald leggings)",
+    Default = false,
+    Callback = function(infihp)
+      infh = infihp
+      infhealth(infihp)
+    end 
+  })
 
   local xinput = Tabs.lp:AddInput("xinput", {
     Title = "X Coordinate:",
