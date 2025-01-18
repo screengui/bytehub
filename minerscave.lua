@@ -1,29 +1,77 @@
-local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))();
+local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))(); -- Notif Library
 if not getgenv().bytehubLoaded then
   getgenv().bytehubLoaded = true
-  local player = game:GetService("Players").LocalPlayer
-  local Gamemode = Instance.new('IntValue', player.Character)
-  Gamemode.Name = [[Gamemode]]
-  local Demo = game.ReplicatedStorage.GameRemotes.Demo or game.Workspace.Demo
-  local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
-  local NeededIBM = false
-  local BBA = false
-  local abb = game.ReplicatedStorage.GameRemotes.AcceptBreakBlock
-  local bb = game.ReplicatedStorage.GameRemotes.BreakBlock
-  local blocks = workspace.Blocks
-  local strafeEnabled = false
+  
+  -- Services --
   local TweenService = game:GetService("TweenService")
-  local ReplicatedStorage = game:GetService("ReplicatedStorage")
-  local GameRemotes = ReplicatedStorage:WaitForChild("GameRemotes")
-  local Attack = GameRemotes:WaitForChild("Attack")
   local UserInputService = game:GetService("UserInputService")
   local RunService = game:GetService("RunService")
+  local ReplicatedStorage = game:GetService("ReplicatedStorage")
+  local Workspace = game:GetService("Workspace")
+  local FFC = game.FindFirstChild
+  
+  -- Variables --
+  
+  local player = game:GetService("Players").LocalPlayer
+  local Character = player.Character
+  local Gamemode = Instance.new('IntValue', player.Character)
+  Gamemode.Name = [[Gamemode]]
+  local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
+  local metaBlocks = FFC(game.ReplicatedFirst, "MetaBlocks")
+  local blocks = workspace.Blocks
+  local strafeEnabled = false
   local features = {}
-  local gameremotes = game:GetService("ReplicatedStorage").GameRemotes
+  local usetables = false
+  local isMobile
+  local isPC
+  local gameEngine
+  
+  -- Remotes --
+  local gameremotes = ReplicatedStorage.GameRemotes
+  local GameRemotes = ReplicatedStorage.GameRemotes
+  local Demo = gameremotes:FindFirstChild("Demo") or Workspace:FindFirstChild("Demo")
+  local abb = gameremotes.AcceptBreakBlock
+  local bb = gameremotes.BreakBlock
+  local Attack = gameremotes:WaitForChild("Attack")
   local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
   local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
-  local usetables = false
+  local useblock = gameremotes.UseBlock
+  
+  -- Watermark --
+  local wam = Instance.new("ScreenGui")
+  wam.Name = "WatermarkGui"
+  wam.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
+  local wm = Instance.new("TextLabel")
+  wm.Name = "Watermark"
+  wm.Text = "ByteHub"
+  wm.Size = UDim2.new(0, 170, 0, 50)
+  wm.Position = UDim2.new(1, -270, 0, 30)
+  wm.TextScaled = true
+  wm.BackgroundTransparency = 1
+  wm.Font = "FredokaOne"
+  wm.Parent = wam
+  
+  --[[
+  local function addFeature(name)
+    local placeholder = Instance.new("TextLabel")
+    placeholder.Name = name
+    placeholder.Text = name
+    placeholder.Size = UDim2.new(0, 170, 0, 30)
+    placeholder.Position = UDim2.new(0, 0, 0, #features * 30 + 10)
+    placeholder.TextScaled = true
+    placeholder.BackgroundTransparency = 1
+    placeholder.Font = "FredokaOne"
+    placeholder.TextColor3 = Color3.fromRGB(200, 200, 200)
+    placeholder.Parent = wm
+
+    table.insert(features, placeholder)
+  end]]
+  
+  
+  
+  -- Anti Kick --
+  
   local oldhmmi
   local oldhmmnc
   oldhmmi = hookmetamethod(game, "__index", function(self, method)
@@ -39,7 +87,9 @@ if not getgenv().bytehubLoaded then
     return oldhmmnc(self, ...)
   end)
   
-  local function getClosestPlayer()
+  -- Functions --
+
+  --[[function getClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = math.huge
 
@@ -54,7 +104,7 @@ if not getgenv().bytehubLoaded then
     end
     
     return closestPlayer
-  end
+  end]]
 
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
@@ -73,13 +123,14 @@ if not getgenv().bytehubLoaded then
       task.wait()
     end
   end
-
-  function combatLog()
+  
+  function CombatLog()
     local function checkHealth()
-      local char = player.Character
-      local humanoid = char.Humanoid
-      local threshold = humanoid.MaxHealth * 0.4
-      if humanoid.Health <= threshold then
+      local character = player.Character
+      local humanoid = character.Humanoid
+      local healthThreshold = humanoid.MaxHealth * 0.4
+      
+      if humanoid.Health <= healthThreshold then
         game:Shutdown()
       end
     end
@@ -90,32 +141,39 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  function combatTp()
+  function CombatTp()
     local function checkHealth2()
-      local character2 = player.Character
-      local humanoid2 = character2:FindFirstChild("Humanoid")
-      local threshold2 = humanoid2.MaxHealth * 0.4
-      if humanoid2.Health <= threshold2 then
-        character2.HumanoidRootPart.CFrame = CFrame.new(math.floor(1000 * 3), math.floor(60 * 3), math.floor(1000 * 3))
+      local character = player.Character
+      local humanoid = character:FindFirstChild("Humanoid")
+      local healthThreshold = humanoid.MaxHealth * 0.4
+      if humanoid.Health <= healthThreshold then
+        local teleportPosition = CFrame.new(math.floor(1000 * 3), math.floor(60 * 3), math.floor(1000 * 3))
+        character.HumanoidRootPart.CFrame = teleportPosition
       end
     end
     
-    while ct do
+    while ctp do
       checkHealth2()
       wait(1)
     end
   end
   
   function noFall()
-    if nf and Demo.Parent == game.ReplicatedStorage.GameRemotes then
-      Demo.Parent = game.Workspace
-    elseif not nf and Demo.Parent == game.Workspace then
-      Demo.Parent = game.ReplicatedStorage.GameRemotes
+    if nf then
+      if Demo.Parent == GameRemotes then
+        Demo.Parent = Workspace
+      end
+    else
+      if Demo.Parent == Workspace then
+        Demo.Parent = GameRemotes
+      end
     end
   end
+  
   function Jesus()
-    local fluidFolder = game:GetService("Workspace"):FindFirstChild("Fluid")
-    if not je then return end  -- Ensure fluidFolder exists and je is true
+    local fluidFolder = Workspace:FindFirstChild("Fluid")
+    
+    if not je or not fluidFolder then return end
     
     while je do
       for _, child in pairs(fluidFolder:GetChildren()) do
@@ -139,43 +197,41 @@ if not getgenv().bytehubLoaded then
   
   function ChestESP()
     if not cesp then return end
+    
     while cesp do
-      local function findChestParts()
-        local childParts = {}
+      local function findChest()
+        local chests = {}
+      
         for _, folder in pairs(workspace.Blocks:GetChildren()) do
           if folder:IsA("Folder") then
             for _, item in pairs(folder:GetChildren()) do
               if item.Name == "Chest" then
-                table.insert(childParts, item)
+                table.insert(chests, item)
               end
             end
           end
         end
-        return childParts
+        
+        return chests
       end
-
+    
       local function outlinePart(part)
         if not part:FindFirstChild("CHEST_out") then
-          local a = Instance.new("BoxHandleAdornment")
-          a.Name = "CHEST_out"
-          a.Parent = part
-          a.Adornee = part
-          a.AlwaysOnTop = true
-          a.ZIndex = 0
-          a.Size = part.Size
-          a.Transparency = 0.3
-          a.Color = BrickColor.new("Bright orange")
+          local outline = Instance.new("Highlight", part)
+          outline.Name = "CHEST_out"
+          outline.FillColor = Color3.fromRGB(139,69,19)
         end
       end
       
-      local chestParts = findChestParts()
-      
-      for _, part in ipairs(chestParts) do
+      local chestParts = findChests()
+      for _, part in ipairs(chests) do
+        task.wait()
         outlinePart(part)
       end
       
       task.wait()
     end
+    
     for _, descendant in ipairs(workspace:GetDescendants()) do
       if descendant:FindFirstChild("CHEST_out") then
         descendant.CHEST_out:Destroy()
@@ -183,45 +239,40 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  function lavaESP()
+  function LavaESP()
     if not lesp then return end
+    
     while lesp do
-      local function findLavaParts()
-        local foundParts = {}
+      local function findLava()
+        local lavaBlocks = {}
         for _, folder in pairs(workspace.Fluid:GetChildren()) do
           if folder:IsA("Folder") then
             for _, item in pairs(folder:GetChildren()) do
               if item.Name == "Lava" then
-                table.insert(foundParts, item)
+                table.insert(lavaBlocks, item)
               end
             end
           end
         end
-        return foundParts
+        return lavaBlocks
       end
-
+      
       local function createOutline(target)
         if not target:FindFirstChild("LAVA_out") then
-          local outline = Instance.new("BoxHandleAdornment")
+          local outline = Instance.new("Highlight", target)
           outline.Name = "LAVA_out"
-          outline.Parent = target
-          outline.Adornee = target
-          outline.AlwaysOnTop = true
-          outline.ZIndex = 0
-          outline.Size = target.Size
-          outline.Transparency = 0.3
-          outline.Color = BrickColor.new("Deep orange")
+          outline.Color = Color3.fromRGB(255, 176, 0)
         end
       end
       
-      local lavaParts = findLavaParts()
-      
-      for _, part in ipairs(lavaParts) do
+      local lavaParts = findLava()
+      for _, part in ipairs(lavaBlocks) do
         createOutline(part)
       end
       
       task.wait()
     end
+    
     for _, descendant in ipairs(workspace:GetDescendants()) do
       if descendant:FindFirstChild("LAVA_out") then
         descendant.LAVA_out:Destroy()
@@ -229,36 +280,74 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  function watermark()
-    game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = wa
-  end
+  --[[
+  local function featureslist()
+    return {
+      addFeature = addFeature,
+      removeFeature = removeFeature,
+    }
+  end]]
+  
+  -- local featureFunctions = featureslist()
+  
+  function Watermark(wa)
+    wm.Visible = wa
+    
+    local function rainbowFunction()
+      while wa do
+        local hue = (tick() * 30) % 360
+        local color = Color3.fromHSV(hue / 360, 1, 1)
+        
+        -- Update watermark color
+        wm.TextColor3 = color
+        wm.TextStrokeColor3 = color
 
-  function playeresp()
-    if pe then
-      ESP:Toggle(true)
-      ESP.Players = true
-      ESP.Boxes = true
-      ESP.Names = true
-    else
-      ESP:Toggle(false)
-      ESP.Players = false
-      ESP.Boxes = false
-      ESP.Names = false
+        -- Loop through each feature in the 'features' table and update their color
+        for _, placeholder in pairs(features) do
+          if placeholder:IsA("TextLabel") then
+            placeholder.TextColor3 = color
+            placeholder.TextStrokeColor3 = color
+          end
+        end
+        
+        task.wait()  -- Adjust delay as needed for smooth transition
+      end
+    end
+    
+    if wa then
+      rainbowFunction()
     end
   end
 
-  function instamine()
+  function playeresp()
+    while pesp do
+      for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= player.LocalPlayer and not player.Character:FindFirstChild("Highlight") then
+          Instance.new("Highlight", player.Character)
+        end
+      end
+      task.wait()
+    end
+    for _, player in pairs(game.Players:GetPlayers()) do
+      local highlight = player.Character:FindFirstChild("Highlight")
+      if highlight then
+        highlight:Destroy()
+      end
+    end
+  end
+
+  function Instamine()
     player.Character.Gamemode.Value = im and 1 or 0
   end
 
-  function fastbreak()
+  function FastBreak()
     while fb do
       abb:InvokeServer()
       task.wait()
     end
   end
 
-  function nuker()
+  function Nuker()
     while nk do
       local playerPos = player.Character.HumanoidRootPart.Position / 3
       local roundedX, roundedY, roundedZ =
@@ -273,7 +362,7 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  function enderchest()
+  function EnderChest()
     while ec do
       local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
       local inventory = playerGui.HUDGui.Inventory
@@ -296,16 +385,31 @@ if not getgenv().bytehubLoaded then
         end
       end
 
-      wait()
+      task.wait()
     end
   end
 
   function infhealth()
+    --[[ Disabled code
+    if infh then
+      if not table.find(features, "infhealth") then
+        table.insert(features, "infhealth")
+      end
+    end ]]
+    
     while infh do
       moveitems:InvokeServer(101, 9, true)
       moveitems:InvokeServer(9, 101, true)
       task.wait()
     end
+
+    --[[ Disabled code
+    else
+      local index = table.find(features, "infhealth")
+      if index then
+        table.remove(features, index)
+      end
+    end ]]
   end
 
   function cheststealer()
@@ -316,19 +420,79 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/main/Watermark.lua",true))()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
+  function checkgame()
+    if metaBlocks:FindFirstChild("EmeraldOre") then
+      gameEngine = "EmeraldCraft"
+    elseif metaBlocks:FindFirstChild("BismuthOre") then
+      gameEngine = "OPCraft"
+    elseif metaBlocks:FindFirstChild("UraniumOre") then
+      gameEngine = "ErrorCraft v7"
+    else
+      gameEngine = "Vanilla"
+    end
+  end
+  
+  function chestdupe(mode)
+    if mode == 1 then
+      sortitems:InvokeServer(36)
+    elseif mode == 2 then
+      for i = 36, 62 do
+        task.spawn(function()
+          sortitems:InvokeServer(i)
+        end)
+      end
+    end
+  end
+  
+  function getlava()
+    local xlp = math.floor(Character.HumanoidRootPart.Position.X / 3)
+    local ylp = math.floor(Character.HumanoidRootPart.Position.Y / 3) - 2
+    local zlp = math.floor(Character.HumanoidRootPart.Position.Z / 3)
+
+    local args = {
+      [1] = xlp,
+      [2] = ylp,
+      [3] = zlp,
+      [4] = 0
+    }
+    
+    useblock:InvokeServer(unpack(args))
+  end
+  
+  function conv(txt)
+    local str = ""
+    string.gsub(txt,"%d+",function(e)
+      str = str .. e
+    end)
+    return str;
+  end
+  
+  checkgame()
+
+  if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
+    isPC = true
+  elseif UserInputService.TouchEnabled then
+    isMobile = true
+    local Notify = AkaliNotif.Notify;
+    Notify({
+      Description = "Mobile Device Detected, executing button...";
+      Title = "Mobile Device Detected!";
+      Duration = 3;
+    });
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
+  end
+  
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
-  game.Players.LocalPlayer.PlayerGui.WatermarkGui.Watermark.Visible = false
-  local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+  local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+  local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v3.2",
+    Title = "Minecraft (Byte Hub) v3.3",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = false, -- The blur may be detectable, setting this to false disables blur entirely
+    Acrylic = false,
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Used when theres no MinimizeKeybind
+    MinimizeKey = Enum.KeyCode.LeftShift -- Used when theres no MinimizeKeybind
   })
 
   local Tabs = {
@@ -339,11 +503,14 @@ if not getgenv().bytehubLoaded then
     wr = Window:AddTab({ Title = "World", Icon = "globe" }),
     dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
     ot = Window:AddTab({ Title = "Others", Icon = "list" }),
+    st = Window:AddTab({ Title = "Settings", Icon = "settings" }),
   }
 
+  local Options = Fluent.Options
+  
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv3.2\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent/Fluent Renewed\nv3.3\nCredits to Minkasig for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -378,7 +545,7 @@ if not getgenv().bytehubLoaded then
     end
   })
 
-  local katoggle = Tabs.cs:AddToggle("Kill Aura",
+  local katog = Tabs.cs:AddToggle("Kill Aura",
   {
     Title = "Kill Aura", 
     Description = "Attacks people within your reach",
@@ -389,32 +556,32 @@ if not getgenv().bytehubLoaded then
     end 
   })
 
-  local acltoggle = Tabs.cs:AddToggle("Auto Combat Log",
+  local acltog = Tabs.cs:AddToggle("Auto Combat Log",
   {
     Title = "Auto Combat Log", 
     Description = "Automatically leaves when you have less than 30% hp",
     Default = false,
     Callback = function(c)
       cl = c
-      combatLog(c)
+      CombatLog(c)
     end 
   }) 
 
-  local atptoggle = Tabs.cs:AddToggle("Auto Combat TP",
+  local acttog = Tabs.cs:AddToggle("Auto Combat TP",
   {
     Title = "Auto Safe Zone", 
     Description = "Auto Combat Log, but it teleports you to a safe zone.",
     Default = false,
     Callback = function(c2)
-      ct = c2
-      combatTp(c2)
+      ctp = c2
+      CombatTp(c2)
     end 
   }) 
 
 
   Tabs.cs:AddButton({
     Title = "Arcade Recode Client",
-    Description = "",
+    Description = "Executes Arcade Recode Client",
     Callback = function()
       loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
     end
@@ -441,37 +608,39 @@ if not getgenv().bytehubLoaded then
       Jesus(j)
     end 
   }) 
-
-  local infhtog = Tabs.lp:AddToggle("Infi HP",
-  {
-    Title = "Infinite Health", 
-    Description = "Increases your hp (only works with emerald leggings)",
-    Default = false,
-    Callback = function(infihp)
-      infh = infihp
-      infhealth(infihp)
-    end 
-  }) 
+  
+  if gameEngine == "EmeraldCraft" then
+    local infhtog = Tabs.lp:AddToggle("Infi HP",
+    {
+      Title = "Infinite Health",
+      Description = "Increases your hp (only works with emerald leggings)",
+      Default = false,
+      Callback = function(infihp)
+        infh = infihp
+        infhealth(infihp)
+      end 
+    }) 
+  end
 
   local xinput = Tabs.lp:AddInput("xinput", {
     Title = "X Coordinate:",
     Description = "Input Description",
     Default = "",
     Placeholder = "Placeholder",
-    Numeric = false, -- Only allows numbers
-    Finished = false, -- Only calls callback when you press enter
+    Numeric = false,
+    Finished = false,
     Callback = function(xi)
       xip = xi
     end
-})
+  })
 
   local yinput = Tabs.lp:AddInput("yinput", {
     Title = "Y Coordinate:",
     Description = "Input Description",
     Default = "",
     Placeholder = "Placeholder",
-    Numeric = false, -- Only allows numbers
-    Finished = false, -- Only calls callback when you press enter
+    Numeric = false,
+    Finished = false,
     Callback = function(yi)
       yip = yi
     end
@@ -482,8 +651,8 @@ if not getgenv().bytehubLoaded then
     Description = "Input Description",
     Default = "",
     Placeholder = "Placeholder",
-    Numeric = false, -- Only allows numbers
-    Finished = false, -- Only calls callback when you press enter
+    Numeric = false,
+    Finished = false,
     Callback = function(zi)
       zip = zi
     end
@@ -502,23 +671,6 @@ if not getgenv().bytehubLoaded then
     end
   })
 
-  Tabs.lp:AddButton({
-    Title = "Reload Chunks",
-    Description = "Reloads Chunks",
-    Callback = function()
-      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-      local pos = Vector3.new(
-      math.floor(humanroot2.Position.X),
-      math.floor(humanroot2.Position.Y),
-      math.floor(humanroot2.Position.Z)
-      )
-      wait()
-      humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
-      wait(1)
-      humanroot2.CFrame = CFrame.new(pos)
-    end
-  })
-
   local cesptog = Tabs.vs:AddToggle("Chest ESP",
   {
     Title = "Chest ESP", 
@@ -530,14 +682,14 @@ if not getgenv().bytehubLoaded then
     end 
   }) 
 
-  local lesptog = Tabs.vs:AddToggle("Lava ESP",
+  local LavaEspToggle = Tabs.vs:AddToggle("Lava ESP",
   {
     Title = "Lava ESP", 
     Description = "Makes you see lava through blocks",
     Default = false,
     Callback = function(l)
-      lesp = l
-      lavaESP(l)
+      LavaEspState = l
+      LavaESP(l)
     end 
   }) 
 
@@ -552,14 +704,14 @@ if not getgenv().bytehubLoaded then
     end 
   })
 
-  local wtog = Tabs.vs:AddToggle("Watermark",
+  local WatermarkToggle = Tabs.vs:AddToggle("Watermark",
   {
     Title = "Watermark", 
     Description = "Adds the Byte Hub watermark",
     Default = false,
     Callback = function(w)
-      wa = w
-      watermark(w)
+      WatermarkState = w
+      Watermark(w)
     end 
   }) 
 
@@ -578,7 +730,7 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(echest)
       ec = echest
-      enderchest(echest)
+      EnderChest(echest)
     end 
   })
 
@@ -589,7 +741,7 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(i)
       im = i
-      instamine(i)
+      InstaMine(i)
     end 
   }) 
 
@@ -600,7 +752,7 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(f)
       fb = f
-      fastbreak(f)
+      FastBreak(f)
     end 
   })
 
@@ -613,6 +765,28 @@ if not getgenv().bytehubLoaded then
       nk = n
       nuker(n)
     end 
+  })
+  
+  Tabs.wr:AddButton({
+    Title = "Reload Chunks",
+    Description = "Reloads Chunks",
+    Callback = function()
+      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
+
+      -- Save the current position of the HumanoidRootPart
+      local pos = Vector3.new(
+        math.floor(humanroot2.Position.X),
+        math.floor(humanroot2.Position.Y),
+        math.floor(humanroot2.Position.Z)
+      )
+
+      wait()
+      -- Move the HumanoidRootPart to a new position (scaled by 3)
+      humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
+      wait(1)
+      -- Move the HumanoidRootPart back to the original position
+      humanroot2.CFrame = CFrame.new(pos)
+    end
   })
 
   Tabs.wr:AddButton({
@@ -630,12 +804,29 @@ if not getgenv().bytehubLoaded then
       loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
     end
   })
-
+  
   Tabs.dt:AddButton({
     Title = "Dupe First Chest Slot",
     Description = "Dupes the first chest slot by pressing Z",
     Callback = function()
-      loadstring(game:HttpGet("https://pastebin.com/raw/nDPZ9s0h",true))()
+      chestdupe(1)
+    end
+  })
+  
+  Tabs.dt:AddButton({
+    Title = "Dupe Entire Chest",
+    Description = "Dupes the first chest slot by pressing Z",
+    Callback = function()
+      chestdupe(2)
+    end
+  })
+  
+  Tabs.dt:AddButton({
+    Title = "Dupe Entire Chest + Dump",
+    Description = "Dumps your inv to a chest, then dupes it",
+    Callback = function()
+      cheststealer()
+      chestdupe(2)
     end
   })
 
@@ -686,17 +877,40 @@ if not getgenv().bytehubLoaded then
       loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
     end
   })
+  
+  Tabs.st:AddDropdown("InterfaceTheme", {
+    Title = "Theme",
+    Description = "Changes the interface theme.",
+    Values = Fluent.Themes,
+    Default = Fluent.Theme,
+    Callback = function(Value)
+      Fluent:SetTheme(Value)
+    end
+  })
 
-  Tabs.ot:AddButton({
+  Tabs.st:AddToggle("TransparentToggle", {
+    Title = "Transparency",
+    Description = "Makes the interface transparent.",
+    Default = Fluent.Transparency,
+    Callback = function(Value)
+      Fluent:ToggleTransparency(Value)
+    end
+  })
+  
+  Tabs.st:AddButton({
     Title = "Destroy UI",
     Description = "Destroys Fluent UI",
     Callback = function()
       Fluent:Destroy()
       getgenv().bytehubLoaded = false
       game.Players.LocalPlayer.PlayerGui.WatermarkGui:Destroy()
-      game.Players.LocalPlayer.PlayerGui.DraggableFrameGui:Destroy()
+      if isMobile then
+        game.Players.LocalPlayer.PlayerGui.Toggleui:Destroy()
+      end
     end
   })
+  
+  Window:SelectTab(1)
 else
   local Notify = AkaliNotif.Notify;
 
