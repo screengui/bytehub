@@ -336,7 +336,7 @@ if not getgenv().bytehubLoaded then
     end
   end
 
-  function Instamine()
+  function InstaMine()
     player.Character.Gamemode.Value = im and 1 or 0
   end
 
@@ -510,7 +510,7 @@ if not getgenv().bytehubLoaded then
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent/Fluent Renewed\nv3.4\nCredits to 737465*** for some of the features\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv3.5\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -680,7 +680,7 @@ if not getgenv().bytehubLoaded then
     end 
   }) 
 
-  local LavaEspToggle = Tabs.vs:AddToggle("Lava ESP",
+  local lesptog = Tabs.vs:AddToggle("Lava ESP",
   {
     Title = "Lava ESP", 
     Description = "Makes you see lava through blocks",
@@ -698,7 +698,7 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(p)
       pesp = p
-      PlayerESP(p)
+      playeresp(p)
     end 
   })
 
