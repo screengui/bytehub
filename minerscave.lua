@@ -13,6 +13,7 @@ if not getgenv().bytehubLoaded then
   -- Variables --
   
   local player = game:GetService("Players").LocalPlayer
+  local LP = game.Players.LocalPlayer
   local Character = player.Character
   local Gamemode = Instance.new('IntValue', player.Character)
   Gamemode.Name = [[Gamemode]]
@@ -25,6 +26,7 @@ if not getgenv().bytehubLoaded then
   local isMobile
   local isPC
   local gameEngine
+  local delay = 0
   
   -- Remotes --
   local gameremotes = ReplicatedStorage.GameRemotes
@@ -120,7 +122,7 @@ if not getgenv().bytehubLoaded then
         end
       end
       
-      task.wait()
+      task.wait(delay)
     end
   end
   
@@ -198,73 +200,82 @@ if not getgenv().bytehubLoaded then
   function ChestESP()
     if not cesp then return end
     
-    while cesp do
-      local function findChest()
-        local chests = {}
+    local function findChestParts()
+      local childParts = {}
       
-        for _, folder in pairs(workspace.Blocks:GetChildren()) do
-          if folder:IsA("Folder") then
-            for _, item in pairs(folder:GetChildren()) do
-              if item.Name == "Chest" then
-                table.insert(chests, item)
-              end
+      for _, folder in pairs(workspace.Blocks:GetChildren()) do
+        if folder:IsA("Folder") then 
+          for _, item in pairs(folder:GetChildren()) do
+            if item.Name == "Chest" then
+              table.insert(childParts, item)
             end
           end
         end
+      end
         
-        return chests
-      end
+      return childParts
+    end
     
-      local function outlinePart(part)
-        if not part:FindFirstChild("CHEST_out") then
-          local outline = Instance.new("Highlight", part)
-          outline.Name = "CHEST_out"
-          outline.FillColor = Color3.fromRGB(139,69,19)
-        end
+    local function outlinePart(part)
+      if not part:FindFirstChild("BoxHandleAdornment") then
+        local a = Instance.new("BoxHandleAdornment", part)
+        a.Adornee = part
+        a.AlwaysOnTop = true
+        a.ZIndex = 0
+        a.Size = part.size
+        a.Transparency = 0.5
+        a.Color = BrickColor.new("Bright orange")
       end
+    end
+    
+    while cesp do
+      local chestParts = findChestParts()
       
-      local chestParts = findChests()
-      for _, part in ipairs(chests) do
-        task.wait()
+      for _, part in ipairs(chestParts) do
         outlinePart(part)
       end
-      
       task.wait()
     end
     
     for _, descendant in ipairs(workspace:GetDescendants()) do
-      if descendant:FindFirstChild("CHEST_out") then
-        descendant.CHEST_out:Destroy()
+      local highlight = descendant:FindFirstChild("BoxHandleAdornment")
+      if highlight then
+        highlight:Destroy()
       end
     end
   end
+
   
   function LavaESP()
     if not lesp then return end
     
-    while lesp do
-      local function findLava()
-        local lavaBlocks = {}
-        for _, folder in pairs(workspace.Fluid:GetChildren()) do
-          if folder:IsA("Folder") then
-            for _, item in pairs(folder:GetChildren()) do
-              if item.Name == "Lava" then
-                table.insert(lavaBlocks, item)
-              end
+    local function findLava()
+      local lavaBlocks = {}
+      for _, folder in pairs(workspace.Fluid:GetChildren()) do
+        if folder:IsA("Folder") then
+          for _, item in pairs(folder:GetChildren()) do
+            if item.Name == "Lava" then
+              table.insert(lavaBlocks, item)
             end
           end
         end
-        return lavaBlocks
       end
-      
-      local function createOutline(target)
-        if not target:FindFirstChild("LAVA_out") then
-          local outline = Instance.new("Highlight", target)
-          outline.Name = "LAVA_out"
-          outline.Color = Color3.fromRGB(255, 176, 0)
-        end
+      return lavaBlocks
+    end
+    
+    local function createOutline(target)
+      if not target:FindFirstChild("BoxHandleAdornment") then
+        local b = Instance.new("BoxHandleAdornment", target)
+        b.Adornee = target
+        b.AlwaysOnTop = true
+        b.ZIndex = 0
+        b.Size = target.Size
+        b.Transparency = 0.5
+        b.Color = BrickColor.new("Deep orange")
       end
-      
+    end
+    
+    while lesp do
       local lavaParts = findLava()
       for _, part in ipairs(lavaBlocks) do
         createOutline(part)
@@ -274,8 +285,9 @@ if not getgenv().bytehubLoaded then
     end
     
     for _, descendant in ipairs(workspace:GetDescendants()) do
-      if descendant:FindFirstChild("LAVA_out") then
-        descendant.LAVA_out:Destroy()
+      local bha = descendant:FindFirstChild("BoxHandleAdornment")
+      if bha then
+        bha:Destroy()
       end
     end
   end
@@ -321,15 +333,15 @@ if not getgenv().bytehubLoaded then
 
   function playeresp()
     while pesp do
-      for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= player.LocalPlayer and not player.Character:FindFirstChild("Highlight") then
-          Instance.new("Highlight", player.Character)
+      for _, players in pairs(game.Players:GetPlayers()) do
+        if players ~= LP and not players.Character:FindFirstChild("Highlight") then
+          Instance.new("Highlight", players.Character)
         end
       end
       task.wait()
     end
-    for _, player in pairs(game.Players:GetPlayers()) do
-      local highlight = player.Character:FindFirstChild("Highlight")
+    for _, players in pairs(game.Players:GetPlayers()) do
+      local highlight = players.Character:FindFirstChild("Highlight")
       if highlight then
         highlight:Destroy()
       end
@@ -761,7 +773,7 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(n)
       nk = n
-      nuker(n)
+      Nuker(n)
     end 
   })
   
@@ -873,6 +885,19 @@ if not getgenv().bytehubLoaded then
     Description = "Loads a Mobile & PC RemoteSpy",
     Callback = function()
       loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
+    end
+  })
+  
+  local kadelay = Tabs.st:AddInput("Input", {
+    Title = "Kill Aura Delay",
+    Description = "Seconds between each hit (Default: 0)",
+    Default = "0",
+    Placeholder = "Enter a number",
+    Numeric = false,
+    Finished = false,
+    Callback = function(zi)
+      zip = zi
+      local delay = tonumber(zi)
     end
   })
   
