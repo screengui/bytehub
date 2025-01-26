@@ -54,24 +54,6 @@ if not getgenv().bytehubLoaded then
   wm.Font = "FredokaOne"
   wm.Parent = wam
   
-  --[[
-  local function addFeature(name)
-    local placeholder = Instance.new("TextLabel")
-    placeholder.Name = name
-    placeholder.Text = name
-    placeholder.Size = UDim2.new(0, 170, 0, 30)
-    placeholder.Position = UDim2.new(0, 0, 0, #features * 30 + 10)
-    placeholder.TextScaled = true
-    placeholder.BackgroundTransparency = 1
-    placeholder.Font = "FredokaOne"
-    placeholder.TextColor3 = Color3.fromRGB(200, 200, 200)
-    placeholder.Parent = wm
-
-    table.insert(features, placeholder)
-  end]]
-  
-  
-  
   -- Anti Kick --
   
   local oldhmmi
@@ -90,23 +72,6 @@ if not getgenv().bytehubLoaded then
   end)
   
   -- Functions --
-
-  --[[function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-
-    for _, v in pairs(game.Players:GetPlayers()) do
-      if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
-        local distance = (v.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
-        if distance < shortestDistance then
-          closestPlayer = v.Character
-          shortestDistance = distance
-        end
-      end
-    end
-    
-    return closestPlayer
-  end]]
 
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
@@ -292,16 +257,6 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  --[[
-  local function featureslist()
-    return {
-      addFeature = addFeature,
-      removeFeature = removeFeature,
-    }
-  end]]
-  
-  -- local featureFunctions = featureslist()
-  
   function Watermark(wa)
     wm.Visible = wa
     
@@ -310,11 +265,9 @@ if not getgenv().bytehubLoaded then
         local hue = (tick() * 30) % 360
         local color = Color3.fromHSV(hue / 360, 1, 1)
         
-        -- Update watermark color
         wm.TextColor3 = color
         wm.TextStrokeColor3 = color
-
-        -- Loop through each feature in the 'features' table and update their color
+        
         for _, placeholder in pairs(features) do
           if placeholder:IsA("TextLabel") then
             placeholder.TextColor3 = color
@@ -322,7 +275,7 @@ if not getgenv().bytehubLoaded then
           end
         end
         
-        task.wait()  -- Adjust delay as needed for smooth transition
+        task.wait()
       end
     end
     
@@ -402,26 +355,11 @@ if not getgenv().bytehubLoaded then
   end
 
   function infhealth()
-    --[[ Disabled code
-    if infh then
-      if not table.find(features, "infhealth") then
-        table.insert(features, "infhealth")
-      end
-    end ]]
-    
     while infh do
       moveitems:InvokeServer(101, 9, true)
       moveitems:InvokeServer(9, 101, true)
       task.wait()
     end
-
-    --[[ Disabled code
-    else
-      local index = table.find(features, "infhealth")
-      if index then
-        table.remove(features, index)
-      end
-    end ]]
   end
 
   function cheststealer()
@@ -429,18 +367,6 @@ if not getgenv().bytehubLoaded then
       task.spawn(function()
         game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
       end)
-    end
-  end
-  
-  function checkgame()
-    if metaBlocks:FindFirstChild("EmeraldOre") then
-      gameEngine = "EmeraldCraft"
-    elseif metaBlocks:FindFirstChild("BismuthOre") then
-      gameEngine = "OPCraft"
-    elseif metaBlocks:FindFirstChild("UraniumOre") then
-      gameEngine = "ErrorCraft v7"
-    else
-      gameEngine = "Vanilla"
     end
   end
   
@@ -498,7 +424,7 @@ if not getgenv().bytehubLoaded then
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v3.4",
+    Title = "Minecraft (Byte Hub) v3.6",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
