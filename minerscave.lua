@@ -285,6 +285,32 @@ if not getgenv().bytehubLoaded then
     end
   end
   
+  function Nuker3()
+    while nk3 do
+        local playerPos = player.Character.HumanoidRootPart.Position / 3
+        local baseX, baseY, baseZ =
+            math.floor(playerPos.X),
+            math.floor(playerPos.Y - 1),
+            math.floor(playerPos.Z)
+
+        -- Collect positions
+        local positions = {}
+        for offsetX = -1, 1 do
+            for offsetZ = -1, 1 do
+                local roundedX = baseX + offsetX
+                local roundedY = baseY
+                local roundedZ = baseZ + offsetZ
+
+                table.insert(positions, {roundedX, roundedY, roundedZ})
+            end
+        end
+      
+      bb:FireServer(positions[1], positions[2], positions[3])
+      abb:InvokeServer()
+        task.wait()
+    end
+end
+  
   function EnderChest()
     while ec do
       local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
@@ -380,7 +406,7 @@ if not getgenv().bytehubLoaded then
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v3.6",
+    Title = "Minecraft (Byte Hub) v3.7",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -404,7 +430,7 @@ if not getgenv().bytehubLoaded then
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv3.5\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv3.7\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -648,6 +674,17 @@ if not getgenv().bytehubLoaded then
     end 
   })
   
+  local nktog = Tabs.wr:AddToggle("Nuker",
+  {
+    Title = "Nuker 3x3", 
+    Description = "Breaks blocks around you",
+    Default = false,
+    Callback = function(n3)
+      nk3 = n3
+      Nuker3(n3)
+    end 
+  })
+  
   Tabs.wr:AddButton({
     Title = "Reload Chunks",
     Description = "Reloads Chunks",
@@ -764,11 +801,20 @@ if not getgenv().bytehubLoaded then
     Description = "Seconds between each hit (Default: 0)",
     Default = "0",
     Placeholder = "Enter a number",
-    Numeric = false,
+    Numeric = false, -- Ensure input is numeric
     Finished = false,
     Callback = function(zi)
-      zip = zi
-      local delay = tonumber(zi)
+      local newDelay = tonumber(zi)
+      if newDelay then
+        delay = newDelay -- Update the delay value dynamically
+      else
+        Fluent:Notify({
+          Title = "Error",
+          Content = "Invalid Delay",
+          SubContent = "Please enter a number",
+          Duration = 3
+        })
+      end
     end
   })
   
@@ -797,9 +843,8 @@ if not getgenv().bytehubLoaded then
     Callback = function()
       Fluent:Destroy()
       getgenv().bytehubLoaded = false
-      game.Players.LocalPlayer.PlayerGui.WatermarkGui:Destroy()
       if isMobile then
-        game.Players.LocalPlayer.PlayerGui.Toggleui:Destroy()
+        game.CoreGui.Toggleui:Destroy()
       end
     end
   })
