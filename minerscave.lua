@@ -39,21 +39,6 @@ if not getgenv().bytehubLoaded then
   local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
   local useblock = gameremotes.UseBlock
   
-  -- Watermark --
-  local wam = Instance.new("ScreenGui")
-  wam.Name = "WatermarkGui"
-  wam.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-  local wm = Instance.new("TextLabel")
-  wm.Name = "Watermark"
-  wm.Text = "ByteHub"
-  wm.Size = UDim2.new(0, 170, 0, 50)
-  wm.Position = UDim2.new(1, -270, 0, 30)
-  wm.TextScaled = true
-  wm.BackgroundTransparency = 1
-  wm.Font = "FredokaOne"
-  wm.Parent = wam
-  
   -- Anti Kick --
   
   local oldhmmi
