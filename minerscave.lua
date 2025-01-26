@@ -256,33 +256,6 @@ if not getgenv().bytehubLoaded then
       end
     end
   end
-  
-  function Watermark(wa)
-    wm.Visible = wa
-    
-    local function rainbowFunction()
-      while wa do
-        local hue = (tick() * 30) % 360
-        local color = Color3.fromHSV(hue / 360, 1, 1)
-        
-        wm.TextColor3 = color
-        wm.TextStrokeColor3 = color
-        
-        for _, placeholder in pairs(features) do
-          if placeholder:IsA("TextLabel") then
-            placeholder.TextColor3 = color
-            placeholder.TextStrokeColor3 = color
-          end
-        end
-        
-        task.wait()
-      end
-    end
-    
-    if wa then
-      rainbowFunction()
-    end
-  end
 
   function playeresp()
     while pesp do
@@ -639,17 +612,6 @@ if not getgenv().bytehubLoaded then
       playeresp(p)
     end 
   })
-
-  local WatermarkToggle = Tabs.vs:AddToggle("Watermark",
-  {
-    Title = "Watermark", 
-    Description = "Adds the Byte Hub watermark",
-    Default = false,
-    Callback = function(w)
-      WatermarkState = w
-      Watermark(w)
-    end 
-  }) 
 
   Tabs.vs:AddButton({
     Title = "XRay GUI",
