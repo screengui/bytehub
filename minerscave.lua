@@ -377,8 +377,6 @@ if not getgenv().bytehubLoaded then
     end)
     return str;
   end
-  
-  checkgame()
 
   if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
     isPC = true
