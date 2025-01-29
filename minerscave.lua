@@ -25,7 +25,7 @@ if not getgenv().bytehubLoaded then
   local usetables = false
   local isMobile
   local isPC
-  local gameEngine
+  local hasGiveExploit
   local delay = 0
   
   -- Remotes --
@@ -58,6 +58,19 @@ if not getgenv().bytehubLoaded then
   
   -- Functions --
 
+  if game.ReplicatedStorage:FindFirstChild("admingui") then
+    hasGiveExploit = true
+    local Notify = AkaliNotif.Notify;
+
+    Notify({
+      Description = "Might want to try giving urself stuff ;) (Dupe Tab)!";
+      Title = "Give Exploit Detected!";
+      Duration = 3;
+    });
+  else
+    hasGiveExploit = false
+  end
+  
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
     local playerPosition = localPlayer.Character:WaitForChild("HumanoidRootPart").Position
@@ -391,6 +404,12 @@ end
 
   if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
     isPC = true
+    local Notify = AkaliNotif.Notify;
+    Notify({
+      Description = "PC Detected, Infinite Health might not work...";
+      Title = "PC Detected!";
+      Duration = 3;
+    });
   elseif UserInputService.TouchEnabled then
     isMobile = true
     local Notify = AkaliNotif.Notify;
@@ -406,7 +425,7 @@ end
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v3.7",
+    Title = "Minecraft (Byte Hub) v3.8",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -430,7 +449,7 @@ end
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv3.7\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv3.8\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -725,7 +744,7 @@ end
   
   Tabs.dt:AddButton({
     Title = "Dupe First Chest Slot",
-    Description = "Dupes the first chest slot by pressing Z",
+    Description = "Dupes the first chest slot",
     Callback = function()
       chestdupe(1)
     end
@@ -733,7 +752,7 @@ end
   
   Tabs.dt:AddButton({
     Title = "Dupe Entire Chest",
-    Description = "Dupes the first chest slot by pressing Z",
+    Description = "Dupes the entire chest slot",
     Callback = function()
       chestdupe(2)
     end
@@ -771,7 +790,43 @@ end
     end
   })
 
+  if hasGiveExploit then
+    local ginput = Tabs.dt:AddInput("Input", {
+      Title = "Item Name",
+      Description = "Enter Item Name",
+      Default = "",
+      Placeholder = "Enter an Item Name",
+      Numeric = false, -- Ensure input is numeric
+      Finished = false,
+      Callback = function(gi)
+        gip = gi
+      end
+    })
+    local ainput = Tabs.dt:AddInput("Input", {
+      Title = "Amount",
+      Description = "Enter Item Amount",
+      Default = "",
+      Placeholder = "Enter Amount of Items",
+      Numeric = true,
+      Finished = false,
+      Callback = function(ai)
+        aip = ai
+      end
+    })
+    Tabs.dt:AddButton({
+      Title = "Give Item",
+      Description = "Gives selected amount of selected item",
+      Callback = function()
+        local args = {
+          [1] = gip,
+          [2] = aip
+        }
 
+        game:GetService("ReplicatedStorage").admingui:FireServer(unpack(args))
+      end
+    })
+  end
+  
   Tabs.ot:AddButton({
     Title = "Infinite Yield",
     Description = "Loads Infinite Yield admin commands",
