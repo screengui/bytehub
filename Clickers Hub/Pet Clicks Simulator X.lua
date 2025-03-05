@@ -10,6 +10,20 @@ local sg = Window:MakeTab({
   PremiumOnly = false
 })
 
+sg:AddButton({
+  Name = "Execute Loader",
+  Callback = function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Clickers%20Hub/Loader.lua",true))()
+    
+    lib:MakeNotification({
+      Name = "Success!",
+      Content = "Successfully executed loader!",
+      Image = "rbxassetid://4483345998",
+      Time = 5
+    })
+  end
+})
+
 local ft = Window:MakeTab({
   Name = "Autofarm",
   Icon = "rbxassetid://18371225897",
