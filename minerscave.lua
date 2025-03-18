@@ -8,7 +8,6 @@ if not getgenv().bytehubLoaded then
   local RunService = game:GetService("RunService")
   local ReplicatedStorage = game:GetService("ReplicatedStorage")
   local Workspace = game:GetService("Workspace")
-  local FFC = game.FindFirstChild
   
   -- Variables --
   
@@ -18,7 +17,7 @@ if not getgenv().bytehubLoaded then
   local Gamemode = Instance.new('IntValue', player.Character)
   Gamemode.Name = [[Gamemode]]
   local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
-  local metaBlocks = FFC(game.ReplicatedFirst, "MetaBlocks")
+  local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
   local blocks = workspace.Blocks
   local strafeEnabled = false
   local features = {}
@@ -27,6 +26,7 @@ if not getgenv().bytehubLoaded then
   local isPC
   local hasGiveExploit
   local delay = 0
+  local useTaskSpawn = false
   
   -- Remotes --
   local gameremotes = ReplicatedStorage.GameRemotes
@@ -73,53 +73,83 @@ if not getgenv().bytehubLoaded then
   
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
-    local playerPosition = localPlayer.Character:WaitForChild("HumanoidRootPart").Position
 
-    while ka do
-      for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character then
-          local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-          if humanoidRootPart and (localPlayer:DistanceFromCharacter(humanoidRootPart.Position) < 16) then
-            game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(player.Character)
+    local function attackLoop()
+      while ka do
+        for _, player in ipairs(game.Players:GetPlayers()) do
+          if player ~= localPlayer and player.Character then
+            local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart and (localPlayer:DistanceFromCharacter(humanoidRootPart.Position) < 16) then
+              game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(player.Character)
+            end
           end
         end
+        task.wait(delay)
       end
-      
-      task.wait(delay)
+    end
+
+    if useTaskSpawn then
+      task.spawn(attackLoop) -- Runs attackLoop asynchronously
+    else
+      attackLoop() -- Runs attackLoop normally (blocking)
     end
   end
   
   function CombatLog()
     local function checkHealth()
       local character = player.Character
-      local humanoid = character.Humanoid
-      local healthThreshold = humanoid.MaxHealth * 0.4
+      if not character then return end
+
+      local humanoid = character:FindFirstChildOfClass("Humanoid")
+      if not humanoid then return end
       
-      if humanoid.Health <= healthThreshold then
-        game:Shutdown()
-      end
+      local healthThreshold = humanoid.MaxHealth * 0.4
+        if humanoid.Health <= healthThreshold then
+          game:Shutdown()
+        end
     end
     
-    while cl do
-      checkHealth()
-      wait(1)
+    local function healthLoop()
+        while cl do
+            checkHealth()
+            task.wait(0.25)
+        end
+    end
+
+    if useTaskSpawn then
+        task.spawn(healthLoop) -- Runs the loop asynchronously
+    else
+        healthLoop() -- Runs normally (blocking)
     end
   end
   
   function CombatTp()
     local function checkHealth2()
       local character = player.Character
+      if not character then return end
+
       local humanoid = character:FindFirstChild("Humanoid")
+      local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+      if not humanoid or not humanoidRootPart then return end
+
       local healthThreshold = humanoid.MaxHealth * 0.4
       if humanoid.Health <= healthThreshold then
-        local teleportPosition = CFrame.new(math.floor(1000 * 3), math.floor(60 * 3), math.floor(1000 * 3))
-        character.HumanoidRootPart.CFrame = teleportPosition
+        local teleportPosition = CFrame.new(1000 * 3, 60 * 3, 1000 * 3)
+        humanoidRootPart.CFrame = teleportPosition
       end
     end
-    
-    while ctp do
-      checkHealth2()
-      wait(1)
+
+    local function tpLoop()
+      while ctp do
+        checkHealth2()
+        task.wait(0.25)
+      end
+    end
+
+    if useTaskSpawn then
+      task.spawn(tpLoop) -- Runs asynchronously
+    else
+      tpLoop() -- Runs normally (blocking)
     end
   end
   
@@ -137,26 +167,34 @@ if not getgenv().bytehubLoaded then
   
   function Jesus()
     local fluidFolder = Workspace:FindFirstChild("Fluid")
-    
     if not je or not fluidFolder then return end
-    
-    while je do
+
+    local function waterLoop()
+      while je do
+        for _, child in pairs(fluidFolder:GetChildren()) do
+          for _, grandchild in pairs(child:GetChildren()) do
+            if grandchild:IsA("BasePart") and (grandchild.Name == "Water" or grandchild.Name == "Lava") then
+              grandchild.CanCollide = true
+            end
+          end
+        end
+        task.wait()
+      end
+
+      -- Reset water collision when loop ends
       for _, child in pairs(fluidFolder:GetChildren()) do
         for _, grandchild in pairs(child:GetChildren()) do
-          if grandchild:IsA("BasePart") and grandchild.Name == "Water" then
-            grandchild.CanCollide = true
+          if grandchild:IsA("BasePart") and (grandchild.Name == "Water" or grandchild.Name == "Lava") then
+            grandchild.CanCollide = false
           end
         end
       end
-      task.wait()
     end
-    
-    for _, child in pairs(fluidFolder:GetChildren()) do
-      for _, grandchild in pairs(child:GetChildren()) do
-        if grandchild:IsA("BasePart") and grandchild.Name == "Water" then
-          grandchild.CanCollide = false
-        end
-      end
+
+    if useTaskSpawn then
+      task.spawn(waterLoop) -- Runs asynchronously
+    else
+      waterLoop() -- Runs normally (blocking)
     end
   end
   
@@ -208,50 +246,113 @@ if not getgenv().bytehubLoaded then
     end
   end
 
+  function ChestESP()
+    if not cesp then return end
+
+    local function findChestParts()
+      local childParts = {}
+      for _, folder in pairs(workspace.Blocks:GetChildren()) do
+        if folder:IsA("Folder") then
+          for _, item in pairs(folder:GetChildren()) do
+            if item.Name == "Chest" then
+              table.insert(childParts, item)
+            end
+          end
+        end
+      end
+      return childParts
+    end
+
+    local function outlinePart(part)
+      if not part:FindFirstChild("BoxHandleAdornment") then
+        local a = Instance.new("BoxHandleAdornment")
+        a.Adornee = part
+        a.AlwaysOnTop = true
+        a.ZIndex = 0
+        a.Size = part.Size
+        a.Transparency = 0.5
+        a.Color = BrickColor.new("Bright orange")
+        a.Parent = part
+      end
+    end
+
+    local function chestLoop()
+      while cesp do
+        local chestParts = findChestParts()
+        for _, part in ipairs(chestParts) do
+          outlinePart(part)
+        end
+        task.wait()
+      end
+
+      -- Cleanup when `cesp` is false
+      for _, descendant in ipairs(workspace:GetDescendants()) do
+        local highlight = descendant:FindFirstChild("BoxHandleAdornment")
+        if highlight then
+          highlight:Destroy()
+        end
+      end
+    end
+
+    if useTaskSpawn then
+      task.spawn(chestLoop) -- Runs asynchronously
+    else
+      chestLoop() -- Runs normally (blocking)
+    end
+  end
   
   function LavaESP()
     if not lesp then return end
     
     local function findLava()
       local lavaBlocks = {}
-      for _, folder in pairs(workspace.Fluid:GetChildren()) do
-        if folder:IsA("Folder") then
-          for _, item in pairs(folder:GetChildren()) do
-            if item.Name == "Lava" then
-              table.insert(lavaBlocks, item)
+        for _, folder in pairs(workspace.Fluid:GetChildren()) do
+          if folder:IsA("Folder") then
+            for _, item in pairs(folder:GetChildren()) do
+              if item.Name == "Lava" then
+                table.insert(lavaBlocks, item)
+              end
             end
           end
         end
-      end
       return lavaBlocks
     end
     
     local function createOutline(target)
       if not target:FindFirstChild("BoxHandleAdornment") then
-        local b = Instance.new("BoxHandleAdornment", target)
+        local b = Instance.new("BoxHandleAdornment")
         b.Adornee = target
         b.AlwaysOnTop = true
         b.ZIndex = 0
         b.Size = target.Size
         b.Transparency = 0.5
         b.Color = BrickColor.new("Deep orange")
+        b.Parent = target
       end
     end
-    
-    while lesp do
-      local lavaParts = findLava()
-      for _, part in ipairs(lavaBlocks) do
-        createOutline(part)
+
+    local function lavaLoop()
+      while lesp do
+        local lavaParts = findLava()
+        for _, part in ipairs(lavaParts) do
+          createOutline(part)
+        end
+        task.wait()
       end
-      
-      task.wait()
+        
+      -- Cleanup when `lesp` is set to false
+      for _, descendant in ipairs(workspace:GetDescendants()) do
+        local bha = descendant:FindFirstChild("BoxHandleAdornment")
+        if bha then
+          bha:Destroy()
+        end
+      end
     end
-    
-    for _, descendant in ipairs(workspace:GetDescendants()) do
-      local bha = descendant:FindFirstChild("BoxHandleAdornment")
-      if bha then
-        bha:Destroy()
-      end
+
+    if useTaskSpawn then
+      task.spawn(lavaLoop) -- Runs asynchronously
+    else
+      lavaLoop() -- Runs normally (blocking)
     end
   end
 
@@ -352,10 +453,18 @@ end
   end
 
   function infhealth()
-    while infh do
-      moveitems:InvokeServer(101, 9, true)
-      moveitems:InvokeServer(9, 101, true)
-      task.wait()
+    local function healthLoop()
+      while infh do
+        moveitems:InvokeServer(101, 9, true)
+        moveitems:InvokeServer(9, 101, true)
+        task.wait()
+      end
+    end
+
+    if useTaskSpawn then
+      task.spawn(healthLoop) -- Runs asynchronously
+    else
+      healthLoop() -- Runs normally (blocking)
     end
   end
 
@@ -425,7 +534,7 @@ end
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v3.8",
+    Title = "Minecraft (Byte Hub) v3.9",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -449,7 +558,7 @@ end
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv3.8\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv3.9\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -871,6 +980,16 @@ end
         })
       end
     end
+  })
+  
+  local utstog = Tabs.st:AddToggle("Toggle", {
+    Title = "Use task.spawn()", 
+    Description = "Makes some features run asynchronously\nto prevent blocking.",
+    Default = false,
+    Callback = function(uts)
+        ut = uts
+        useTaskSpawn = uts
+    end 
   })
   
   Tabs.st:AddDropdown("InterfaceTheme", {
