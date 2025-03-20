@@ -534,7 +534,7 @@ end
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v3.9",
+    Title = "Minecraft (Byte Hub) v4.0",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -935,6 +935,19 @@ end
       end
     })
   end
+  
+  Tabs.ot:AddButton({
+    Title = "Load WolfMoons",
+    Description = "Loads ByteHub for WolfMoons",
+    Callback = function()
+      Fluent:Destroy()
+      getgenv().bytehubLoaded = false
+      if isMobile then
+        game.CoreGui.Toggleui:Destroy()
+      end
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Wolfmoons.lua",true))()
+    end
+  })
   
   Tabs.ot:AddButton({
     Title = "Infinite Yield",
