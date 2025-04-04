@@ -1,0 +1,61 @@
+-- Halo UI --
+game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.ImageTransparency = 0.3
+game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.ScrollingFrame.BackgroundTransparency = 1
+game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.ScrollingFrame3.BackgroundTransparency = 1
+game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.ScrollingFrame2.BackgroundTransparency = 1
+game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.Page2.BackgroundTransparency = 0.3
+game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.NormalHalos.BackgroundTransparency = 0.3
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.ScrollingFrame:GetChildren()) do
+  if v:IsA("Frame") then
+    v.BackgroundTransparency = 0.3
+  end
+end
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.ScrollingFrame2:GetChildren()) do
+  if v:IsA("Frame") then
+    v.BackgroundTransparency = 0.3
+  end
+end
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HaloGui.MainFrame.ScrollingFrame3:GetChildren()) do
+  if v:IsA("Frame") then
+    v.BackgroundTransparency = 0.3
+  end
+end
+
+-- Trail UI --
+game:GetService("Players").LocalPlayer.PlayerGui.TrailsGUI.MainFrame.ImageTransparency = 0.3
+game:GetService("Players").LocalPlayer.PlayerGui.TrailsGUI.MainFrame.ScrollingFrame.BackgroundTransparency = 1
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.TrailsGUI.MainFrame.ScrollingFrame:GetChildren()) do
+  if v:IsA("Frame") then
+    v.BackgroundTransparency = 0.3
+  end
+end
+
+-- Trolls UI --
+game:GetService("Players").LocalPlayer.PlayerGui["Products UI"].Enabled = false
+
+-- Gamepass UI --
+game:GetService("Players").LocalPlayer.PlayerGui.GamepassGui.Enabled = false
+
+-- Animations UI --
+game:GetService("Players").LocalPlayer.PlayerGui.AnimationsGui.AnimationsBG.BackgroundTransparency = 0.3
+game:GetService("Players").LocalPlayer.PlayerGui.AnimationsGui.AnimationsBG.Title.BackgroundTransparency = 1
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.AnimationsGui.AnimationsBG.AnimationsScroll:GetChildren()) do
+  if v:IsA("TextButton") then
+    v.BackgroundTransparency = 0.3
+  end
+end
+
+-- Rewards UI --
+game:GetService("Players").LocalPlayer.PlayerGui.RewardsGUI.RewardsFrame.BackgroundTransparency = 0.3
+game:GetService("Players").LocalPlayer.PlayerGui.RewardsGUI.RewardsFrame.TextLabel.BackgroundTransparency = 1
+game:GetService("Players").LocalPlayer.PlayerGui.RewardsGUI.RewardsFrame.DayTimer.BackgroundTransparency = 0.3
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.RewardsGUI.RewardsFrame.Grid:GetChildren()) do
+  if v:IsA("Frame") then
+    v.BackgroundTransparency = 0.3
+    for _, label in pairs(v:GetChildren()) do
+      if label.Name == "TimerLabel" then
+        label.BackgroundTransparency = 1
+      end
+    end
+  end
+end
