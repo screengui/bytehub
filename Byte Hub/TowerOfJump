@@ -1,0 +1,94 @@
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/ByteHubOrion.lua",true))()
+lib.SelectedTheme = "ByteHub"
+local Window = lib:MakeWindow({
+  Name = "Tower Of Jump", 
+  HidePremium = false, 
+  SaveConfig = true, 
+  ConfigFolder = "OrionTest", 
+  IntroText = "Byte Hub",
+  IntroIcon = "rbxassetid://4483345998"
+})
+local delay = 0
+
+function AutoWin()
+  while aw do
+    task.spawn(function()
+      workspace.Storage.End.WinsBrick.CFrame = CFrame.new(game.Players.LocalPlayer.Character.HumanoidRootPart.Position)
+    end)
+    task.wait(delay)
+  end
+end
+
+local cr = Window:MakeTab({
+    Name = "Credits",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+cr:AddParagraph("Tower of Jump","Version: 1\nMade by: Purple Apple\nPlease support me by joining my discord server!")
+
+cr:AddButton({
+    Name = "Discord Server",
+    Callback = function(Value)
+      setclipboard("https://discord.gg/9Nzzya6d46")
+    end
+})
+
+local mn = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://126633428869869",
+    PremiumOnly = false
+})
+
+local ot = Window:MakeTab({
+    Name = "Others",
+    Icon = "rbxassetid://126633428869869",
+    PremiumOnly = false
+})
+
+mn:AddToggle({
+  Name = "Auto Win",
+  Default = false,
+  Callback = function(a) 
+    aw = a
+    AutoWin(a)
+  end
+})
+
+mn:AddTextbox({
+    Name = "Auto Win Delay",
+    Default = "",
+    TextDisappear = true,
+    Callback = function(a2)
+        awd = a2
+    end	  
+})
+
+mn:AddButton({
+    Name = "Set Auto Win Delay",
+    Callback = function(Value)
+      local newDelay = tostring(awd)
+      delay = newDelay
+    end
+})
+
+mn:AddButton({
+    Name = "Bring Win Part to Orig. Pos",
+    Callback = function(Value)
+      workspace.Storage.End.WinsBrick.CFrame = CFrame.new(31.999998092651367, 223.288330078125, 142.49249267578125)
+    end
+})
+
+mn:AddButton({
+    Name = "Teleport to End",
+    Callback = function(Value)
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(31.999998092651367, 223.288330078125, 142.49249267578125)
+    end
+})
+
+ot:AddButton({
+    Name = "UI Mod (pretty useless ngl)",
+    Callback = function(Value)
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/ui%20mod/TowerOfJump",true))()
+    end
+})
