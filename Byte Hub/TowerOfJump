@@ -6,9 +6,26 @@ local Window = lib:MakeWindow({
   SaveConfig = true, 
   ConfigFolder = "OrionTest", 
   IntroText = "Byte Hub",
-  IntroIcon = "rbxassetid://4483345998"
+  IntroIcon = "rbxassetid://126633428869869"
 })
+
 local delay = 0
+local noclipConnection
+
+local oldhmmi
+local oldhmmnc
+oldhmmi = hookmetamethod(game, "__index", function(self, method)
+  if self == player and method:lower() == "kick" then
+    return error("Expected ':' not '.' calling member function Kick", 2)
+  end
+  return oldhmmi(self, method)
+end)
+oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
+  if self == player and getnamecallmethod():lower() == "kick" then
+    return
+  end
+  return oldhmmnc(self, ...)
+end)
 
 function AutoWin()
   while aw do
@@ -19,31 +36,71 @@ function AutoWin()
   end
 end
 
+function InfiniteJump()
+  game:GetService("UserInputService").JumpRequest:Connect(function()
+    if infj then
+      game.Players.LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+  end)
+end
+
+function Noclip()
+  if nc then
+    noclipConnection = game:GetService("RunService").RenderStepped:Connect(function()
+      local char = game.Players.LocalPlayer.Character
+      if char then
+        for _, part in ipairs(char:GetDescendants()) do
+          if part:IsA("BasePart") and not part.Parent:IsA("Accessory") and not part:FindFirstAncestorOfClass("Tool") then
+            part.CanCollide = false
+          end
+        end
+      end
+    end)
+  else
+    if noclipConnection then
+      noclipConnection:Disconnect()
+      noclipConnection = nil
+    end
+  end
+end
+
 local cr = Window:MakeTab({
     Name = "Credits",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
 
-cr:AddParagraph("Tower of Jump","Version: 1\nMade by: Purple Apple\nPlease support me by joining my discord server!")
+local mn = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local pl = Window:MakeTab({
+    Name = "Player",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local vs = Window:MakeTab({
+    Name = "Visuals",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+local ot = Window:MakeTab({
+    Name = "Others",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+cr:AddParagraph("Tower of Jump","Version: 1.1\nMade by: Purple Apple\nPlease support me by joining my discord server!")
 
 cr:AddButton({
     Name = "Discord Server",
     Callback = function(Value)
       setclipboard("https://discord.gg/9Nzzya6d46")
     end
-})
-
-local mn = Window:MakeTab({
-    Name = "Main",
-    Icon = "rbxassetid://126633428869869",
-    PremiumOnly = false
-})
-
-local ot = Window:MakeTab({
-    Name = "Others",
-    Icon = "rbxassetid://126633428869869",
-    PremiumOnly = false
 })
 
 mn:AddToggle({
@@ -86,9 +143,110 @@ mn:AddButton({
     end
 })
 
-ot:AddButton({
+mn:AddButton({
+    Name = "Teleport to Winners Room",
+    Callback = function(Value)
+      game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(workspace.WinnersRoom.Blocks:GetChildren()[14].Position)
+    end
+})
+
+
+pl:AddToggle({
+  Name = "Infinite Jump",
+  Default = false,
+  Callback = function(i) 
+    infj = i
+    InfiniteJump(i)
+  end
+})
+
+pl:AddToggle({
+  Name = "Noclip",
+  Default = false,
+  Callback = function(n) 
+    nc = n
+    Noclip(n)
+  end
+})
+
+pl:AddTextbox({
+    Name = "Walkspeed",
+    Default = "",
+    TextDisappear = true,
+    Callback = function(w)
+        ws = w
+    end	  
+})
+
+pl:AddButton({
+    Name = "Set Walkspeed",
+    Callback = function(Value)
+      local newWS = tostring(ws)
+      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = newWS
+    end
+})
+
+pl:AddTextbox({
+    Name = "Jumppower",
+    Default = "",
+    TextDisappear = true,
+    Callback = function(j)
+        jp = j
+    end	  
+})
+
+pl:AddButton({
+    Name = "Set Jumppower",
+    Callback = function(Value)
+      local newJP = tostring(jp)
+      game.Players.LocalPlayer.Character.Humanoid.JumpPower = newJP
+    end
+})
+
+vs:AddButton({
     Name = "UI Mod (pretty useless ngl)",
     Callback = function(Value)
       loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/ui%20mod/TowerOfJump",true))()
+    end
+})
+
+vs:AddTextbox({
+    Name = "Custom Name",
+    Default = "",
+    TextDisappear = true,
+    Callback = function(n2)
+        cn = n2
+    end	  
+})
+
+vs:AddButton({
+    Name = "Set Custom Name",
+    Callback = function(Value)
+      local newCN = tostring(cn)
+      game.Players.LocalPlayer.Character.Head.Nametag.Username.Text = newCN
+    end
+})
+
+vs:AddTextbox({
+    Name = "Wins",
+    Default = "",
+    TextDisappear = true,
+    Callback = function(w2)
+        wn = w2
+    end	  
+})
+
+vs:AddButton({
+    Name = "Set Wins",
+    Callback = function(Value)
+      local newWN = tostring(wn)
+      game.Players.LocalPlayer.Character.Head.Nametag.Wins.Text = "Wins: " .. newWN
+    end
+})
+
+ot:AddButton({
+    Name = "Infinite Yield",
+    Callback = function(Value)
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/edgeiy/infiniteyield/master/source",true))()
     end
 })
