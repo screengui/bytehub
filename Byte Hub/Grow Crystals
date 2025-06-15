@@ -1,0 +1,154 @@
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Window = Fluent:CreateWindow({
+    Title = "Grow Crystals",
+    SubTitle = "Byte Hub",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Rose",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Autofarm", Icon = "" }),
+    Shop = Window:AddTab({ Title = "Shop", Icon = "" }),
+}
+Window:SelectTab(1)
+
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+local userId = LP.UserId
+
+local plotsFolder = workspace:WaitForChild("Plots")
+local plots = nil
+
+local materialsTable = {}
+
+for _, plot in ipairs(plotsFolder:GetChildren()) do
+    if plot:IsA("Model") and plot:GetAttribute("Owner") == userId then
+        plots = plot.Name
+        break
+    end
+end
+
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUD.Menus.Materials.Container:GetChildren()) do
+    if v:IsA("ImageButton") then
+        table.insert(materialsTable, v.Name)
+    end
+end
+
+function AutoPlant()
+    while a3 do
+        local placement = workspace.Plots[plots].Placements["5"]
+        local position = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
+        task.spawn(function()
+            game:GetService("ReplicatedStorage").Packages.Knit.Services.PlotService.RE.PlaceItem:FireServer(placement, Vector3.new(position.X, position.Y-3, position.Z))
+        end)
+        task.wait()
+    end
+end
+
+function AutoHarvest()
+    while a and task.wait() do
+        local plot = workspace.Plots:FindFirstChild(plots)
+        local itemsFolder = plot:FindFirstChild("Items")
+
+        for _, model in ipairs(itemsFolder:GetChildren()) do
+            local primary = model:FindFirstChild("Primary")
+            if primary and primary:IsA("BasePart") then
+                local pp = primary:FindFirstChildOfClass("ProximityPrompt")
+                if pp then
+                    task.spawn(function()
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = primary.CFrame + Vector3.new(0, 5, 0)
+                        fireproximityprompt(pp)
+                    end)
+                    task.wait()
+                else
+                    
+                end
+            end
+        end
+    end
+end
+
+function AutoSellInv()
+    while a2 do
+        task.spawn(function()
+            game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("CashService"):WaitForChild("RF"):WaitForChild("SellInventory"):InvokeServer()
+        end)
+        task.wait()
+    end
+end
+
+local Toggle = Tabs.Main:AddToggle("MyToggle",
+{
+    Title = "Auto Plant", 
+    Description = "Auto plants crystals (Can plant anywhere)",
+    Default = false,
+    Callback = function(ap)
+        a3 = ap
+        AutoPlant(ap)
+    end
+})
+
+local Toggle = Tabs.Main:AddToggle("MyToggle",
+{
+    Title = "Auto Harvest", 
+    Description = "Automatically harvests ur crystals",
+    Default = false,
+    Callback = function(ah)
+        a = ah
+        AutoHarvest(ah)
+    end
+})
+
+local Toggle = Tabs.Main:AddToggle("MyToggle",
+{
+    Title = "Auto Sell Inventory", 
+    Description = "Automatically sells your inventory",
+    Default = false,
+    Callback = function(asi)
+        a2 = asi
+        AutoSellInv(asi)
+    end
+})
+
+local MultiDropdown = Tabs.Shop:AddDropdown("MultiDropdown", {
+   Title = "Select Material",
+   Description = "You can select multiple materials.",
+   Values = materialsTable,
+   Multi = true,
+   Default = {},
+})
+
+function AutoBuy()
+    while a4 do
+        task.spawn(function()
+            local buyRE = game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services"):WaitForChild("MaterialShopService"):WaitForChild("RF"):WaitForChild("Buy")
+            
+            local selected = {}
+            for k, v in pairs(MultiDropdown.Value) do
+                if v then
+                    table.insert(selected, k)
+                end
+            end
+
+            for _, material in ipairs(selected) do
+                buyRE:InvokeServer(material)
+                print("Buying:", material)
+            end
+        end)
+        task.wait()
+    end
+end
+
+local Toggle = Tabs.Shop:AddToggle("MyToggle",
+{
+    Title = "Auto Buy", 
+    Description = "Automatically buys materials if on stock",
+    Default = false,
+    Callback = function(ab)
+        a4 = ab
+        AutoBuy(ab)
+    end
+})
