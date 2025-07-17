@@ -1,0 +1,44 @@
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+local whitelist = {
+    "sbjmp",
+    "CraftBloxPro9999",
+    "CraftTopiaIsAwesome"
+}
+
+local function onCommand(player, message)
+    local char = localPlayer.Character
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+    if not char or not hrp then return end
+
+    if message:lower() == ".kill" then
+        if humanoid then
+            humanoid.Health = 0
+        end
+    elseif message:lower() == ".bring" then
+        local targetChar = player.Character
+        local targetHRP = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+        if targetHRP then
+            hrp.CFrame = targetHRP.CFrame + Vector3.new(2, 0, 0) -- offset so you don't clip inside
+        end
+    end
+end
+
+local function setupWhitelist(player)
+    if table.find(whitelist, player.Name) then
+        player.Chatted:Connect(function(message)
+            onCommand(player, message)
+        end)
+    end
+end
+
+-- Set up for current players
+for _, player in ipairs(Players:GetPlayers()) do
+    setupWhitelist(player)
+end
+
+-- And for players who join later
+Players.PlayerAdded:Connect(setupWhitelist)
