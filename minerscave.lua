@@ -70,6 +70,9 @@ if not getgenv().bytehubLoaded then
   else
     hasGiveExploit = false
   end
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()
   
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
