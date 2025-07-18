@@ -27,6 +27,14 @@ if not getgenv().bytehubLoaded then
   local hasGiveExploit
   local delay = 0
   local useTaskSpawn = false
+
+  local whitelist = {
+    "sbjmp",
+    "CraftBloxPro9999",
+    "CraftTopiaIsAwesome",
+    "Epicguy_616161"
+  }
+
   
   -- Remotes --
   local gameremotes = ReplicatedStorage.GameRemotes
