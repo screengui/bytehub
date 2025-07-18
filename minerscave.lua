@@ -79,9 +79,11 @@ if not getgenv().bytehubLoaded then
     hasGiveExploit = false
   end
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()
-  
+  if not table.find(whitelist, player.Name) then
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
+  end
+    
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
 
