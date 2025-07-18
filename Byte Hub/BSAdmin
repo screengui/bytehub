@@ -1,10 +1,12 @@
+--BS Admin v1.3--
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 
 local whitelist = {
     "sbjmp",
     "CraftBloxPro9999",
-    "CraftTopiaIsAwesome"
+    "CraftTopiaIsAwesome",
+    "Epicguy_616161"
 }
 
 local function onCommand(player, message)
@@ -14,16 +16,25 @@ local function onCommand(player, message)
 
     if not char or not hrp then return end
 
-    if message:lower() == ".kill" then
+    local msg = message:lower()
+
+    if msg == ".kill" then
         if humanoid then
             humanoid.Health = 0
         end
-    elseif message:lower() == ".bring" then
+    end
+    if msg == ".bring" then
         local targetChar = player.Character
         local targetHRP = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
         if targetHRP then
-            hrp.CFrame = targetHRP.CFrame + Vector3.new(2, 0, 0) -- offset so you don't clip inside
+            hrp.CFrame = targetHRP.CFrame + Vector3.new(2, 0, 0)
         end
+    end
+    if msg == ".freeze" then
+        hrp.Anchored = true
+    end
+    if msg == ".unfreeze" then
+        hrp.Anchored = false
     end
 end
 
