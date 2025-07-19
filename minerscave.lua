@@ -551,7 +551,7 @@ end
     Title = "Minecraft (Byte Hub) v4.0",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
-    Size = UDim2.fromOffset(400, 400),
+    Size = UDim2.fromOffset(560, 300),
     Acrylic = false,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftShift -- Used when theres no MinimizeKeybind
