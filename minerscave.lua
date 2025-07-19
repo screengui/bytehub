@@ -35,6 +35,7 @@ if not getgenv().bytehubLoaded then
     "Epicguy_616161"
   }
 
+--hello
   
   -- Remotes --
   local gameremotes = ReplicatedStorage.GameRemotes
