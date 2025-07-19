@@ -550,7 +550,7 @@ end
     Title = "Minecraft (Byte Hub) v4.0",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
+    Size = UDim2.fromOffset(400, 400),
     Acrylic = false,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftShift -- Used when theres no MinimizeKeybind
@@ -571,7 +571,7 @@ end
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv3.9\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv4.0\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -669,6 +669,14 @@ end
       Jesus(j)
     end 
   }) 
+
+  Tabs.lp:AddButton({
+    Title = "Immortality",
+    Description = "Put an item in\nthe first inventory slot",
+    Callback = function()
+    game.ReplicatedStorage.GameRemotes.MoveItem:InvokeServer(101, 9, true)
+      end
+  })
   
   local infhtog = Tabs.lp:AddToggle("Infi HP",
   {
@@ -815,17 +823,6 @@ end
     end 
   })
   
-  local nktog = Tabs.wr:AddToggle("Nuker",
-  {
-    Title = "Nuker 3x3", 
-    Description = "Breaks blocks around you",
-    Default = false,
-    Callback = function(n3)
-      nk3 = n3
-      Nuker3(n3)
-    end 
-  })
-  
   Tabs.wr:AddButton({
     Title = "Reload Chunks",
     Description = "Reloads Chunks",
@@ -856,6 +853,17 @@ end
     end
   })
 
+  local nktog = Tabs.wr:AddToggle("Nuker",
+  {
+    Title = "Nuker 3x3", 
+    Description = "Breaks blocks around you",
+    Default = false,
+    Callback = function(n3)
+      nk3 = n3
+      Nuker3(n3)
+    end 
+  })
+  
   Tabs.dt:AddButton({
     Title = "Dupe GUI",
     Description = "Loads the Dupe GUI by Argentum Exploitz",
