@@ -525,21 +525,6 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  function GetLava()
-    local xlp = math.floor(Character.HumanoidRootPart.Position.X / 3)
-    local ylp = math.floor(Character.HumanoidRootPart.Position.Y / 3) - 2
-    local zlp = math.floor(Character.HumanoidRootPart.Position.Z / 3)
-
-    local args = {
-      [1] = xlp,
-      [2] = ylp,
-      [3] = zlp,
-      [4] = 0
-    }
-    
-    useblock:InvokeServer(unpack(args))
-  end
-  
   local function UpdateCrosshair()
     if not chplus then
       CrosshairSettings.HorizontalLine.Visible = false
@@ -1161,7 +1146,22 @@ if not getgenv().bytehubLoaded then
     Title = "Get Lava",
     Description = "Gets Lava 2 blocks below you\n(must have bucket in first slot)",
     Callback = function()
-      GetLava()
+      local coordText = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+
+    local xStr, yStr, zStr = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+
+    local xlp = tonumber(xStr)
+    local ylp = tonumber(yStr) - 2
+    local zlp = tonumber(zStr)
+    
+    local args = {
+      [1] = xlp,
+      [2] = ylp,
+      [3] = zlp,
+      [4] = 0
+    }
+    
+    useblock:InvokeServer(unpack(args))
     end
   })
 
