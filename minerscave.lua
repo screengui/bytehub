@@ -8,14 +8,20 @@ if not getgenv().bytehubLoaded then
   local RunService = game:GetService("RunService")
   local ReplicatedStorage = game:GetService("ReplicatedStorage")
   local Workspace = game:GetService("Workspace")
+  local Lighting = game:GetService("Lighting")
+  local Camera = game.Workspace.CurrentCamera
+  local Players = game:GetService("Players")
   
   -- Variables --
   
   local player = game:GetService("Players").LocalPlayer
   local LP = game.Players.LocalPlayer
   local Character = player.Character
-  local Gamemode = Instance.new('IntValue', player.Character)
-  Gamemode.Name = [[Gamemode]]
+  
+  local Gamemode = Instance.new("IntValue")
+  Gamemode.Name = "Gamemode"
+  Gamemode.Parent = game.Players.LocalPlayer.Character
+  
   local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
   local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
   local blocks = workspace.Blocks
@@ -27,15 +33,20 @@ if not getgenv().bytehubLoaded then
   local hasGiveExploit
   local delay = 0
   local useTaskSpawn = false
-
+  local clockTimeConnection = nil
+  local slot = player.PlayerGui.HUDGui.Inventory.Slots:FindFirstChild("Slot-1")
+  local strafeEnabled = false
+  local radius = 10
+  local speed = 2
+  local strafeRange = 50 -- how close they must be to strafe
+  local wasEnabled = false
+  
   local whitelist = {
     "sbjmp",
     "CraftBloxPro9999",
     "CraftTopiaIsAwesome",
     "Epicguy_616161"
   }
-
---hello
   
   -- Remotes --
   local gameremotes = ReplicatedStorage.GameRemotes
@@ -47,6 +58,26 @@ if not getgenv().bytehubLoaded then
   local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
   local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
   local useblock = gameremotes.UseBlock
+  
+  local CrosshairSettings = {
+    Visible = false,
+    Size = 35,
+    Thickness = 2.5,
+    Color = Color3.fromRGB(188, 50, 252),
+    Transparency = 1,
+    HorizontalLine = Drawing.new("Line"),
+    VerticalLine = Drawing.new("Line")
+  }
+  
+  local CrosshairSettings2 = {
+    Visible = false,
+    Size = 35,
+    Thickness = 2.5,
+    Color = Color3.fromRGB(188, 50, 252),
+    Transparency = 1,
+    HorizontalLine = Drawing.new("Line"),
+    VerticalLine = Drawing.new("Line")
+  }
   
   -- Anti Kick --
   
@@ -79,12 +110,36 @@ if not getgenv().bytehubLoaded then
   else
     hasGiveExploit = false
   end
-
+  
   if not table.find(whitelist, player.Name) then
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
   end
+
+  local function getLowestHealthNearbyPlayer()
+    local lowestHealth = math.huge
+    local targetPlayer = nil
     
+    local localHRP = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not localHRP then return nil end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+      if player ~= LP and player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
+        if humanoid and targetHRP and humanoid.Health > 0 then
+          local distance = (targetHRP.Position - localHRP.Position).Magnitude
+          if distance <= strafeRange and humanoid.Health < lowestHealth then
+            lowestHealth = humanoid.Health
+            targetPlayer = player
+          end
+        end
+      end
+    end
+    
+    return targetPlayer
+  end
+  
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
 
@@ -209,54 +264,6 @@ if not getgenv().bytehubLoaded then
       task.spawn(waterLoop) -- Runs asynchronously
     else
       waterLoop() -- Runs normally (blocking)
-    end
-  end
-  
-  function ChestESP()
-    if not cesp then return end
-    
-    local function findChestParts()
-      local childParts = {}
-      
-      for _, folder in pairs(workspace.Blocks:GetChildren()) do
-        if folder:IsA("Folder") then 
-          for _, item in pairs(folder:GetChildren()) do
-            if item.Name == "Chest" then
-              table.insert(childParts, item)
-            end
-          end
-        end
-      end
-        
-      return childParts
-    end
-    
-    local function outlinePart(part)
-      if not part:FindFirstChild("BoxHandleAdornment") then
-        local a = Instance.new("BoxHandleAdornment", part)
-        a.Adornee = part
-        a.AlwaysOnTop = true
-        a.ZIndex = 0
-        a.Size = part.size
-        a.Transparency = 0.5
-        a.Color = BrickColor.new("Bright orange")
-      end
-    end
-    
-    while cesp do
-      local chestParts = findChestParts()
-      
-      for _, part in ipairs(chestParts) do
-        outlinePart(part)
-      end
-      task.wait()
-    end
-    
-    for _, descendant in ipairs(workspace:GetDescendants()) do
-      local highlight = descendant:FindFirstChild("BoxHandleAdornment")
-      if highlight then
-        highlight:Destroy()
-      end
     end
   end
 
@@ -399,28 +406,37 @@ if not getgenv().bytehubLoaded then
   end
 
   function Nuker()
-    while nk do
-      local playerPos = player.Character.HumanoidRootPart.Position / 3
-      local roundedX, roundedY, roundedZ =
+    local function nukerLoop()
+      while nk do
+        local playerPos = player.Character.HumanoidRootPart.Position / 3
+        local roundedX, roundedY, roundedZ =
         math.floor(playerPos.x), 
         math.floor(playerPos.y - 1), 
         math.floor(playerPos.z)
-
-      bb:FireServer(roundedX, roundedY, roundedZ)
-      abb:InvokeServer()
-
-      task.wait()
+        
+        bb:FireServer(roundedX, roundedY, roundedZ)
+        abb:InvokeServer()
+        
+        task.wait()
+      end
+    end
+    
+    if useTaskSpawn then
+      task.spawn(nukerLoop)
+    else
+      nukerLoop()
     end
   end
   
   function Nuker3()
-    while nk3 do
-        local playerPos = player.Character.HumanoidRootPart.Position / 3
+    local function nuker3Loop()
+      while nk3 do
+        local playerPos2 = player.Character.HumanoidRootPart.Position / 3
         local baseX, baseY, baseZ =
-            math.floor(playerPos.X),
-            math.floor(playerPos.Y - 1),
-            math.floor(playerPos.Z)
-
+            math.floor(playerPos2.X),
+            math.floor(playerPos2.Y - 1),
+            math.floor(playerPos2.Z)
+        
         -- Collect positions
         local positions = {}
         for offsetX = -1, 1 do
@@ -432,12 +448,19 @@ if not getgenv().bytehubLoaded then
                 table.insert(positions, {roundedX, roundedY, roundedZ})
             end
         end
-      
-      bb:FireServer(positions[1], positions[2], positions[3])
-      abb:InvokeServer()
+        
+        bb:FireServer(positions[1], positions[2], positions[3])
+        abb:InvokeServer()
         task.wait()
+      end
     end
-end
+    
+    if useTaskSpawn then
+      task.spawn(nuker3Loop)
+    else
+      nuker3Loop()
+    end
+  end
   
   function EnderChest()
     while ec do
@@ -502,7 +525,7 @@ end
     end
   end
   
-  function getlava()
+  function GetLava()
     local xlp = math.floor(Character.HumanoidRootPart.Position.X / 3)
     local ylp = math.floor(Character.HumanoidRootPart.Position.Y / 3) - 2
     local zlp = math.floor(Character.HumanoidRootPart.Position.Z / 3)
@@ -515,6 +538,210 @@ end
     }
     
     useblock:InvokeServer(unpack(args))
+  end
+  
+  local function UpdateCrosshair()
+    if not chplus then
+      CrosshairSettings.HorizontalLine.Visible = false
+      CrosshairSettings.VerticalLine.Visible = false
+      for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+        if v.Name == "Crosshair" then
+          v.Visible = true
+        end
+      end
+      return
+    end
+
+    local ViewportSize = Camera.ViewportSize / 2
+    local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
+    local Real_Size = CrosshairSettings.Size / 2
+	
+    for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+      if v.Name == "Crosshair" then
+        v.Visible = false
+      end
+    end
+    
+    CrosshairSettings.HorizontalLine.Color = CrosshairSettings.Color
+    CrosshairSettings.HorizontalLine.Thickness = CrosshairSettings.Thickness
+    CrosshairSettings.HorizontalLine.Visible = true
+    CrosshairSettings.HorizontalLine.Transparency = CrosshairSettings.Transparency
+    CrosshairSettings.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
+    CrosshairSettings.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
+    CrosshairSettings.VerticalLine.Color = CrosshairSettings.Color
+    CrosshairSettings.VerticalLine.Thickness = CrosshairSettings.Thickness
+    CrosshairSettings.VerticalLine.Visible = true
+    CrosshairSettings.VerticalLine.Transparency = CrosshairSettings.Transparency
+    CrosshairSettings.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
+    CrosshairSettings.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
+  end
+  
+  local function RBCrosshair()
+    if not chr then
+      CrosshairSettings2.HorizontalLine.Visible = false
+      CrosshairSettings2.VerticalLine.Visible = false
+      for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+        if v.Name == "Crosshair" then
+          v.Visible = true
+        end
+      end
+      return
+    end
+
+    local ViewportSize = Camera.ViewportSize / 2
+    local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
+    local Real_Size = CrosshairSettings.Size / 2
+
+    for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+      if v.Name == "Crosshair" then
+        v.Visible = false
+      end
+    end
+
+    -- Calculate the rainbow color
+    local hue = (tick() * 0.2) % 1
+    local rainbowColor = Color3.fromHSV(hue, 1, 1)
+
+    CrosshairSettings2.HorizontalLine.Color = rainbowColor
+    CrosshairSettings2.HorizontalLine.Thickness = CrosshairSettings.Thickness
+    CrosshairSettings2.HorizontalLine.Visible = true
+    CrosshairSettings2.HorizontalLine.Transparency = CrosshairSettings.Transparency
+    CrosshairSettings2.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
+    CrosshairSettings2.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
+
+    CrosshairSettings2.VerticalLine.Color = rainbowColor
+    CrosshairSettings2.VerticalLine.Thickness = CrosshairSettings.Thickness
+    CrosshairSettings2.VerticalLine.Visible = true
+    CrosshairSettings2.VerticalLine.Transparency = CrosshairSettings.Transparency
+    CrosshairSettings2.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
+    CrosshairSettings2.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
+  end
+  
+  RunService.RenderStepped:Connect(RBCrosshair)
+  
+  function Sprint()
+    if not sp then
+      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 12
+    else
+      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 20
+    end
+  end
+  
+  local originalSettings = {}
+
+  function FullBright()
+    local function Enable()
+      if not originalSettings.Brightness then
+        originalSettings.Brightness = Lighting.Brightness
+        originalSettings.ClockTime = Lighting.ClockTime
+        originalSettings.FogEnd = Lighting.FogEnd
+        originalSettings.GlobalShadows = Lighting.GlobalShadows
+        originalSettings.OutdoorAmbient = Lighting.OutdoorAmbient
+      end
+      
+      Lighting.Brightness = 2
+      Lighting.ClockTime = 14
+      Lighting.FogEnd = 100000
+      Lighting.GlobalShadows = false
+      Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+      
+      clockTimeConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+        if Lighting.ClockTime < 6 or Lighting.ClockTime > 15 then
+          Lighting.ClockTime = 14
+        end
+      end)
+    end
+    
+    local function Disable()
+      if clockTimeConnection then
+        clockTimeConnection:Disconnect()
+        clockTimeConnection = nil
+      end
+      
+      if originalSettings.Brightness then
+        Lighting.Brightness = originalSettings.Brightness
+        Lighting.ClockTime = originalSettings.ClockTime
+        Lighting.FogEnd = originalSettings.FogEnd
+        Lighting.GlobalShadows = originalSettings.GlobalShadows
+        Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
+      end
+    end
+
+    if fb then
+      Enable()
+    else
+      Disable()
+    end
+  end
+  
+  function TargetStrafe()
+    if ts then
+      RunService.Heartbeat:Connect(function(dt)
+        if not ts then return end
+        
+        local target = getLowestHealthNearbyPlayer()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+          local hrp = 		LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+          if hrp then
+            local time = tick() * speed
+            local x = math.cos(time) * radius
+            local z = math.sin(time) * radius
+            local targetPos = target.Character.HumanoidRootPart.Position
+            hrp.CFrame = CFrame.new(targetPos + Vector3.new(x, 0, z), targetPos)
+          end
+        end
+      end)
+    end
+  end
+  
+  function Xray()
+    local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
+    
+    if xr then
+      wasEnabled = true
+        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
+            if v.Name == "Stone" or v.Name == "Dirt" then
+                for _, texture in pairs(v:GetChildren()) do
+                    texture.Transparency = 1
+                end
+            end
+        end
+        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
+            if v.Name == "Stone" or v.Name == "Dirt" then
+                v.Transparency = 1
+            end
+        end
+
+        -- Force chunk reload
+        local pos = humanroot2.Position
+        task.wait()
+        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
+        task.wait()
+        humanroot2.CFrame = CFrame.new(pos)
+
+    elseif not xr then
+      for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
+        if v.Name == "Stone" or v.Name == "Dirt" then
+          for _, texture in pairs(v:GetChildren()) do
+            texture.Transparency = 0
+          end
+        end
+      end
+      for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
+        if v.Name == "Stone" or v.Name == "Dirt" then
+          v.Transparency = 0
+        end
+      end
+      
+      if wasEnabled then
+        local pos = humanroot2.Position
+        task.wait()
+        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
+        task.wait()
+        humanroot2.CFrame = CFrame.new(pos)
+        wasEnabled = false
+      end
+    end
   end
   
   function conv(txt)
@@ -548,12 +775,12 @@ end
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v4.0",
+    Title = "Minecraft (Byte Hub) v4.1",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 300),
     Acrylic = false,
-    Theme = "Dark",
+    Theme = "Rose",
     MinimizeKey = Enum.KeyCode.LeftShift -- Used when theres no MinimizeKeybind
   })
 
@@ -572,7 +799,7 @@ end
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv4.0\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv4.1\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -615,6 +842,17 @@ end
     Callback = function(k)
       ka = k
       KillAura(k)
+    end 
+  })
+  
+  local Toggle = Tabs.cs:AddToggle("Toggle",
+  {
+    Title = "Target Strafe", 
+    Description = "Circles around your target",
+    Default = false,
+    Callback = function(t)
+      ts = t
+      TargetStrafe(t)
     end 
   })
 
@@ -660,6 +898,25 @@ end
     end 
   }) 
 
+  local Toggle = Tabs.lp:AddToggle("Toggle",
+  {
+    Title = "Sprint", 
+    Description = "Makes you a tiny bit faster",
+    Default = false,
+    Callback = function(s)
+      sp = s
+      Sprint(s)
+    end 
+  }) 
+  
+  Tabs.lp:AddButton({
+    Title = "Immortality",
+    Description = "Put an item in\nthe first inventory slot",
+    Callback = function()
+    game.ReplicatedStorage.GameRemotes.MoveItem:InvokeServer(101, 9, true)
+      end
+  })
+  
   local jetog = Tabs.lp:AddToggle("Jesus",
   {
     Title = "Jesus", 
@@ -669,14 +926,6 @@ end
       je = j
       Jesus(j)
     end 
-  }) 
-
-  Tabs.lp:AddButton({
-    Title = "Immortality",
-    Description = "Put an item in\nthe first inventory slot",
-    Callback = function()
-    game.ReplicatedStorage.GameRemotes.MoveItem:InvokeServer(101, 9, true)
-      end
   })
   
   local infhtog = Tabs.lp:AddToggle("Infi HP",
@@ -688,6 +937,30 @@ end
       infh = infihp
       infhealth(infihp)
     end 
+  })
+  
+  local Input = Tabs.lp:AddInput("Input", {
+    Title = "Walkspeed",
+    Description = "Sets your walkspeed amount (Default: 12)",
+    Default = "12",
+    Placeholder = "Enter a number",
+    Numeric = false, -- Ensure input is numeric
+    Finished = false,
+    Callback = function(ws)
+      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(ws)
+    end
+  })
+  
+  local Input = Tabs.lp:AddInput("Input", {
+    Title = "Jumppower",
+    Description = "Sets your jumppower amount (Default: 25)",
+    Default = "25",
+    Placeholder = "Enter a number",
+    Numeric = false, -- Ensure input is numeric
+    Finished = false,
+    Callback = function(ws)
+      game.Players.LocalPlayer.Character.Humanoid.JumpPower = tonumber(ws)
+    end
   })
 
   local xinput = Tabs.lp:AddInput("xinput", {
@@ -738,7 +1011,50 @@ end
       humanroot.CFrame = CFrame.new(xtppos, ytppos, ztppos)
     end
   })
-
+  
+  local chp = Tabs.vs:AddToggle("CH+",
+  {
+    Title = "Crosshair+", 
+    Description = "Makes your crosshair look cooler",
+    Default = false,
+    Callback = function(ch)
+      chplus = ch
+      UpdateCrosshair(ch)
+    end 
+  }) 
+  
+  local Toggle = Tabs.vs:AddToggle("Toggle", {
+    Title = "Rainbow Crosshair", 
+    Description = "Makes Crosshair Rainbow\n(Must have Crosshair+ disabled)",
+    Default = false,
+    Callback = function(chpr)
+        chr = chpr
+        RBCrosshair(chpr)
+    end 
+  })
+  
+  local Toggle = Tabs.vs:AddToggle("Toggle",
+  {
+    Title = "Fullbright", 
+    Description = "Makes it very bright",
+    Default = false,
+    Callback = function(f)
+      fb = f
+      FullBright(f)
+    end 
+  }) 
+  
+  local Toggle = Tabs.vs:AddToggle("Toggle",
+  {
+    Title = "X-Ray", 
+    Description = "Makes you see ores through blocks",
+    Default = false,
+    Callback = function(x)
+      xr = x
+      Xray(x)
+    end 
+  }) 
+  
   local cesptog = Tabs.vs:AddToggle("Chest ESP",
   {
     Title = "Chest ESP", 
@@ -756,7 +1072,7 @@ end
     Description = "Makes you see lava through blocks",
     Default = false,
     Callback = function(l)
-      LavaEspState = l
+      lesp = l
       LavaESP(l)
     end 
   }) 
@@ -772,14 +1088,6 @@ end
     end 
   })
 
-  Tabs.vs:AddButton({
-    Title = "XRay GUI",
-    Description = "Loads the XRay GUI by creepypro123",
-    Callback = function()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/ORE%20ESP%20creepypro123",true))()
-    end
-  })
-
   local ectog = Tabs.vs:AddToggle("Enderchest",
   {
     Title = "More Slots", 
@@ -789,6 +1097,14 @@ end
       ec = echest
       EnderChest(echest)
     end 
+  })
+  
+  Tabs.vs:AddButton({
+    Title = "XRay GUI",
+    Description = "Loads the XRay GUI by creepypro123",
+    Callback = function()
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/ORE%20ESP%20creepypro123",true))()
+    end
   })
 
   local imtog = Tabs.wr:AddToggle("Instamine",
@@ -800,7 +1116,7 @@ end
       im = i
       InstaMine(i)
     end 
-  }) 
+  })
 
   local fbtog = Tabs.wr:AddToggle("Fast Break",
   {
@@ -811,6 +1127,41 @@ end
       fb = f
       FastBreak(f)
     end 
+  })
+  
+  Tabs.wr:AddButton({
+    Title = "Reload Chunks",
+    Description = "Reloads Chunks",
+    Callback = function()
+      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
+      
+      local pos = Vector3.new(
+        math.floor(humanroot2.Position.X),
+        math.floor(humanroot2.Position.Y),
+        math.floor(humanroot2.Position.Z)
+      )
+
+      wait()
+      humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
+      wait()
+      humanroot2.CFrame = CFrame.new(pos)
+    end
+  })
+
+  Tabs.wr:AddButton({
+    Title = "Chest Stealer / Dumper",
+    Description = "Steals/Dumps everything from/into a chest",
+    Callback = function()
+      cheststealer()
+    end
+  })
+  
+  Tabs.wr:AddButton({
+    Title = "Get Lava",
+    Description = "Gets Lava 2 blocks below you\n(must have bucket in first slot)",
+    Callback = function()
+      GetLava()
+    end
   })
 
   local nktog = Tabs.wr:AddToggle("Nuker",
@@ -824,36 +1175,6 @@ end
     end 
   })
   
-  Tabs.wr:AddButton({
-    Title = "Reload Chunks",
-    Description = "Reloads Chunks",
-    Callback = function()
-      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-
-      -- Save the current position of the HumanoidRootPart
-      local pos = Vector3.new(
-        math.floor(humanroot2.Position.X),
-        math.floor(humanroot2.Position.Y),
-        math.floor(humanroot2.Position.Z)
-      )
-
-      wait()
-      -- Move the HumanoidRootPart to a new position (scaled by 3)
-      humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
-      wait(1)
-      -- Move the HumanoidRootPart back to the original position
-      humanroot2.CFrame = CFrame.new(pos)
-    end
-  })
-
-  Tabs.wr:AddButton({
-    Title = "Chest Stealer / Dumper",
-    Description = "Steals/Dumps everything from/into a chest",
-    Callback = function()
-      cheststealer()
-    end
-  })
-
   local nktog = Tabs.wr:AddToggle("Nuker",
   {
     Title = "Nuker 3x3", 
@@ -864,12 +1185,39 @@ end
       Nuker3(n3)
     end 
   })
-  
+
   Tabs.dt:AddButton({
     Title = "Dupe GUI",
     Description = "Loads the Dupe GUI by Argentum Exploitz",
     Callback = function()
       loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+    end
+  })
+  
+  Tabs.dt:AddButton({
+    Title = "Dupe Selected Item",
+    Description = "Dupes the first chest slot",
+    Callback = function()
+      local b = slot.SlotNA.Count
+      local bCount = tonumber(b.Text)
+      if not bCount then
+        return
+      end
+      
+      if bCount == 64 then
+        return
+      end
+
+      local howmuch = 64 - bCount
+      local usetables = false
+      
+      local success, err = pcall(function()
+        if usetables then
+          moveitems:InvokeServer({[1] = -1, [2] = 82, [3] = true, [4] = -howmuch})
+        else
+          moveitems:InvokeServer(-1, 82, true, -howmuch)
+        end
+      end)
     end
   })
   
@@ -1006,11 +1354,105 @@ end
       local newDelay = tonumber(zi)
       if newDelay then
         delay = newDelay -- Update the delay value dynamically
+        Fluent:Notify({
+          Title = "Success!",
+          Content = "Successfully edited delay",
+          SubContent = "Delay: " .. newDelay,
+          Duration = 3
+        })
       else
         Fluent:Notify({
           Title = "Error",
-          Content = "Invalid Delay",
+          Content = "Invalid Delay:" .. zi,
           SubContent = "Please enter a number",
+          Duration = 3
+        })
+      end
+    end
+  })
+  
+  local Input = Tabs.st:AddInput("Input", {
+    Title = "Target Strafe Distance",
+    Description = "Distance between the target (Default: 10)",
+    Default = "10",
+    Placeholder = "Enter a number",
+    Numeric = false, -- Ensure input is numeric
+    Finished = false,
+    Callback = function(tad)
+      local newRadius = tonumber(tad)
+      if newRadius then
+        radius = newRadius -- Update the delay value dynamically
+        Fluent:Notify({
+          Title = "Success!",
+          Content = "Successfully edited radius",
+          SubContent = "Radius: " .. newRadius,
+          Duration = 3
+        })
+      elseif newRadius > 16 then
+        Fluent:Notify({
+          Title = "Error",
+          Content = "Over Limit:" .. tad,
+          SubContent = "Please enter a number below 16",
+          Duration = 3
+        })
+      else
+        Fluent:Notify({
+          Title = "Error",
+          Content = "Invalid Number:" .. tad,
+          SubContent = "Please enter a number",
+          Duration = 3
+        })
+      end
+    end
+  })
+  
+  local Input = Tabs.st:AddInput("Input", {
+    Title = "Target Strafe Speed",
+    Description = "Speed of rotation (Default: 5)",
+    Default = "5",
+    Placeholder = "Enter a number",
+    Numeric = false, -- Ensure input is numeric
+    Finished = false,
+    Callback = function(tas)
+      local newSpeed = tonumber(tas)
+      if newSpeed then
+        speed = newSpeed -- Update the delay value dynamically
+        Fluent:Notify({
+          Title = "Success!",
+          Content = "Successfully edited speed",
+          SubContent = "Speed: " .. newSpeed,
+          Duration = 3
+        })
+      else
+        Fluent:Notify({
+          Title = "Error",
+          Content = "Invalid Speed:" .. tas,
+          SubContent = "Please enter a number",
+          Duration = 3
+        })
+      end
+    end
+  })
+  
+  local Input = Tabs.st:AddInput("Input", {
+    Title = "Crosshair+ Color",
+    Description = "Color of Crosshair+ (Default: 188, 50, 252)",
+    Default = "",
+    Placeholder = "Enter a number",
+    Numeric = false, -- Ensure input is numeric
+    Finished = false,
+    Callback = function(ci)
+      local newColor = tonumber(ci)
+      local r, g, b = string.match(ci, "(%d+),%s*(%d+),%s*(%d+)")
+      if r and g and b then
+        local newColor = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+        CrosshairSettings.VerticalLine.Color = newColor
+        CrosshairSettings.HorizontalLine.Color = newColor
+      else
+        Fluent:Notify({
+          Title = "Error",
+          Content = "Invalid Color",
+          SubContent = "Please enter an RGB3 Value",
           Duration = 3
         })
       end
@@ -1068,4 +1510,4 @@ else
     Duration = 3;
   });
   wait(1)
-end
+end 
