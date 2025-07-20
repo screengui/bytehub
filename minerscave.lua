@@ -796,6 +796,7 @@ if not getgenv().bytehubLoaded then
   }
 
   local Options = Fluent.Options
+  local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
@@ -1501,6 +1502,11 @@ if not getgenv().bytehubLoaded then
   })
   
   Window:SelectTab(1)
+  SaveManager:SetLibrary(Fluent)
+  SaveManager:SetFolder("ByteHub/MC")
+  SaveManager:BuildConfigSection(Tabs.st)
+  SaveManager:LoadAutoloadConfig()
+  
 else
   local Notify = AkaliNotif.Notify;
 
