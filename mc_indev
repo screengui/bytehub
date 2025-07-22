@@ -917,7 +917,7 @@ end
     end 
   }) 
 
-  local Toggle = Tabs.lp:AddToggle("Toggle",
+  local sptog = Tabs.lp:AddToggle("Toggle",
   {
     Title = "Sprint", 
     Description = "Makes you a tiny bit faster",
@@ -1054,7 +1054,7 @@ end
     end 
   }) 
   
-  local Toggle = Tabs.vs:AddToggle("Toggle", {
+  local rbchtog = Tabs.vs:AddToggle("Toggle", {
     Title = "Rainbow Crosshair", 
     Description = "Makes Crosshair Rainbow\n(Must have Crosshair+ disabled)",
     Default = false,
@@ -1158,6 +1158,28 @@ end
       fb = f
       FastBreak(f)
     end 
+  })
+
+  local adstog = Tabs.wr:AddToggle("Fast Break",
+  {
+    Title = "Auto Drop Selected Item", 
+    Description = "Automatically Drops Selected Item",
+    Default = false,
+    Callback = function(adsi)
+      ad = adsi
+      local function AutoDrop()
+        while ad do
+          local args = {
+	    true
+          }
+          game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("DropItem"):InvokeServer(unpack(args))
+        end 
+      end
+      if useTaskSpawn then
+        task.spawn(AutoDrop)
+      else
+        AutoDrop(ad)
+      end
   })
   
   Tabs.wr:AddButton({
