@@ -1160,7 +1160,7 @@ end
     end 
   })
 
-  local adstog = Tabs.wr:AddToggle("Fast Break",
+  local adstog = Tabs.wr:AddToggle("Toggle",
   {
     Title = "Auto Drop Selected Item", 
     Description = "Automatically Drops Selected Item",
@@ -1180,6 +1180,7 @@ end
       else
         AutoDrop(ad)
       end
+    end
   })
   
   Tabs.wr:AddButton({
