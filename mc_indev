@@ -1567,8 +1567,8 @@ end
   })
   
   local Dropdown = Tabs.st:AddDropdown("Dropdown", {
-    Title = "Dropdown",
-    Description = "Dropdown description",
+    Title = "Select Targeting Method",
+    Description = "Selects targeting method for\nKill Aura and Target Strafe",
     Values = {"lowest", "nearest"},
     Multi = false,
     Default = "lowest",
