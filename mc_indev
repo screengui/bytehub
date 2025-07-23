@@ -768,6 +768,7 @@ end
   end
 
   loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
+  ExunysDeveloperAimbot.Settings.LockPart = "Torso"
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -881,15 +882,16 @@ end
   })
 
   local abtog = Tabs.cs:AddToggle("Aimbot Tog",
+  {
     Title = "Aimbot", 
-    Description = "Automatically leaves when you have less than 30% hp",
+    Description = "Automatically aims at a player",
     Default = false,
     Callback = function(ab)
       abot = ab
       if abot then
-        ExunysDeveloperAimbot.Load()
+        ExunysDeveloperAimbot.Settings.Enabled = true
       else
-        ExunysDeveloperAimbot:Exit()
+        ExunysDeveloperAimbot.Settings.Enabled = false
       end
     end 
   }) 
