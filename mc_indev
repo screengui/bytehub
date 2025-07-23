@@ -1087,7 +1087,7 @@ end
           CrosshairSettings2.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
           CrosshairSettings2.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
         end
-        RunService.RenderStepped:Connect(RBCrosshair)
+        RunService.RenderStepped:Connect(RainbowCrosshair)
     end 
   })
   
