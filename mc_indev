@@ -781,6 +781,9 @@ end
   loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
   ExunysDeveloperAimbot.Settings.Enabled = false
   ExunysDeveloperAimbot.Settings.LockPart = "Torso"
+  ExunysDeveloperAimbot.Settings.TriggerKey = Enum.UserInputType.MouseButton2 or Enum.UserInputType.Touch
+  ExunysDeveloperAimbot.Settings.Toggle = true
+  ExunysDeveloperAimbot.FOVSettings.Enabled = false
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
