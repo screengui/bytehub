@@ -766,7 +766,8 @@ end
     });
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
   end
-  
+
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
@@ -852,6 +853,46 @@ end
       TargetStrafe(t)
     end 
   })
+
+  local hboxtog = Tabs.cs:AddToggle("HitboxToggle",
+  {
+    Title = "Hitbox Expander", 
+    Description = "Expands other player's hitboxes\nCredits to Ket Hub",
+    Default = false,
+    Callback = function(h)
+      he = h
+      if he then
+        connection = RunService.Heartbeat:Connect(function()
+          for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+              changeTorsoSize(player, Vector3.new(10, 10, 10), true, 0.999)
+            end
+          end
+        end)
+      else
+        if connection then connection:Disconnect() end
+          for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+              changeTorsoSize(player, Vector3.new(2, 2, 1), true, 0)
+            end
+          end
+        end
+      end 
+  })
+
+  local abtog = Tabs.cs:AddToggle("Aimbot Tog",
+    Title = "Aimbot", 
+    Description = "Automatically leaves when you have less than 30% hp",
+    Default = false,
+    Callback = function(ab)
+      abot = ab
+      if abot then
+        ExunysDeveloperAimbot.Load()
+      else
+        ExunysDeveloperAimbot:Exit()
+      end
+    end 
+  }) 
 
   local acltog = Tabs.cs:AddToggle("Auto Combat Log",
   {
