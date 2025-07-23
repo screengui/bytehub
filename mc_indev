@@ -149,6 +149,17 @@ if not getgenv().bytehubLoaded then
     return closest
   end
 
+  local function changeTorsoSize(player, size, Massless, transparency)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+    if torso then
+      torso.Size = size  
+      torso.Massless = Massless  
+      torso.Transparency = transparency
+    end
+  end
+
+
   function KillAura()
     local localPlayer = game.Players.LocalPlayer
 
@@ -768,6 +779,7 @@ end
   end
 
   loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
+  ExunysDeveloperAimbot.Settings.Enabled = false
   ExunysDeveloperAimbot.Settings.LockPart = "Torso"
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
