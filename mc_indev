@@ -781,7 +781,7 @@ end
   loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
   ExunysDeveloperAimbot.Settings.Enabled = false
   ExunysDeveloperAimbot.Settings.LockPart = "Torso"
-  ExunysDeveloperAimbot.Settings.TriggerKey = Enum.UserInputType.MouseButton2 or Enum.UserInputType.Touch
+  ExunysDeveloperAimbot.Settings.TriggerKey = Enum.KeyCode.F or Enum.UserInputType.Touch
   ExunysDeveloperAimbot.Settings.Toggle = true
   ExunysDeveloperAimbot.FOVSettings.Enabled = false
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
@@ -898,7 +898,7 @@ end
 
   local abtog = Tabs.cs:AddToggle("Aimbot Tog",
   {
-    Title = "Aimbot", 
+    Title = "Aimbot (F)", 
     Description = "Automatically aims at a player",
     Default = false,
     Callback = function(ab)
@@ -910,6 +910,14 @@ end
       end
     end 
   }) 
+
+  Tabs.cs:AddButton({
+    Title = "Aimbot Button for Mobile",
+    Description = "Presses F",
+    Callback = function()
+      game.VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+    end
+  })
 
   local acltog = Tabs.cs:AddToggle("Auto Combat Log",
   {
