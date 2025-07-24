@@ -40,7 +40,7 @@ if not getgenv().bytehubLoaded then
   local speed = 2
   local strafeRange = 50 -- how close they must be to strafe
   local wasEnabled = false
-  local selectedTargeting = "lowest"
+  local selectedTargeting = "nearest"
   
   local whitelist = {
     "sbjmp",
@@ -1370,12 +1370,30 @@ end
       chestdupe(2)
     end
   })
+
+  local Toggle = Tabs.dt:AddToggle("Toggle",
+  {
+    Title = "Auto Dupe Entire Chest", 
+    Description = "Automatically dupes entire chest",
+    Default = false,
+    Callback = function(a2)
+      ad = a2
+      while ad do
+        chestdupe(2)
+        task.wait()
+      end
+    end 
+  })
   
   Tabs.dt:AddButton({
     Title = "Dupe Entire Chest + Dump",
     Description = "Dumps your inv to a chest, then dupes it",
     Callback = function()
-      cheststealer()
+      for i = 36, 62 do
+        task.spawn(function()
+          game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
+        end)
+      end
       chestdupe(2)
     end
   })
@@ -1598,7 +1616,7 @@ end
     Description = "Selects targeting method for\nKill Aura and Target Strafe",
     Values = {"lowest", "nearest"},
     Multi = false,
-    Default = "lowest",
+    Default = "nearest",
     Callback = function(Value)
       selectedTargeting = Value
     end
