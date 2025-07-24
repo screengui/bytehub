@@ -1406,7 +1406,7 @@ end
         [1] = -1,
         [2] = 0,
         [3] = true,
-        [4] = -99e99+100
+        [4] = -(1/0)
       }
       local args2 = {[1] = {}}
       if usetables then
