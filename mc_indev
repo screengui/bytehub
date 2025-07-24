@@ -158,65 +158,6 @@ if not getgenv().bytehubLoaded then
       torso.Transparency = transparency
     end
   end
-
-
-  function KillAura()
-    local localPlayer = game.Players.LocalPlayer
-
-    local function attackLoop()
-        while ka do
-            local target
-            if selectedTargeting == "lowest" then
-                target = getLowestHealthNearbyPlayer()
-            elseif selectedTargeting == "nearest" then
-                target = getClosestNearbyPlayer()
-            end
-
-            if target and target.Character then
-                local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
-                if humanoidRootPart and (localPlayer:DistanceFromCharacter(humanoidRootPart.Position) < 16) then
-                    game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(target.Character)
-                end
-            end
-
-            task.wait(delay)
-        end
-    end
-
-    if useTaskSpawn then
-      task.spawn(attackLoop)
-    else
-      attackLoop()
-    end
-  end
-  
-  function CombatLog()
-    local function checkHealth()
-      local character = player.Character
-      if not character then return end
-
-      local humanoid = character:FindFirstChildOfClass("Humanoid")
-      if not humanoid then return end
-      
-      local healthThreshold = humanoid.MaxHealth * 0.4
-        if humanoid.Health <= healthThreshold then
-          game:Shutdown()
-        end
-    end
-    
-    local function healthLoop()
-        while cl do
-            checkHealth()
-            task.wait(0.25)
-        end
-    end
-
-    if useTaskSpawn then
-        task.spawn(healthLoop) -- Runs the loop asynchronously
-    else
-        healthLoop() -- Runs normally (blocking)
-    end
-  end
   
   function CombatTp()
     local function checkHealth2()
@@ -537,41 +478,6 @@ end
     end
   end
   
-  function EnderChest()
-    while ec do
-      local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-      local inventory = playerGui.HUDGui.Inventory
-      
-      inventory.Chest.Visible = true
-      inventory.Crafting.Visible = false
-      inventory.Mirror.Visible = false
-      inventory.ResultSlot.Visible = false
-      
-      local slots = {
-        "Slot100", "Slot101", "Slot102", "Slot103",
-        "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", 
-        "Slot85", "Slot86", "Slot87", "Slot88"
-      }
-
-      for _, slotName in ipairs(slots) do
-        local slot = inventory.Slots:FindFirstChild(slotName)
-        if slot then
-          slot.Visible = false
-        end
-      end
-
-      task.wait()
-    end
-  end
-
-  function cheststealer()
-    for i = 36, 62 do
-      task.spawn(function()
-        game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
-      end)
-    end
-  end
-  
   function chestdupe(mode)
     if mode == 1 then
       sortitems:InvokeServer(36)
@@ -584,172 +490,7 @@ end
     end
   end
   
-  local function UpdateCrosshair()
-    if not chplus then
-      CrosshairSettings.HorizontalLine.Visible = false
-      CrosshairSettings.VerticalLine.Visible = false
-      for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-        if v.Name == "Crosshair" then
-          v.Visible = true
-        end
-      end
-      return
-    end
-
-    local ViewportSize = Camera.ViewportSize / 2
-    local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
-    local Real_Size = CrosshairSettings.Size / 2
-	
-    for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-      if v.Name == "Crosshair" then
-        v.Visible = false
-      end
-    end
-    
-    CrosshairSettings.HorizontalLine.Color = CrosshairSettings.Color
-    CrosshairSettings.HorizontalLine.Thickness = CrosshairSettings.Thickness
-    CrosshairSettings.HorizontalLine.Visible = true
-    CrosshairSettings.HorizontalLine.Transparency = CrosshairSettings.Transparency
-    CrosshairSettings.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
-    CrosshairSettings.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
-    CrosshairSettings.VerticalLine.Color = CrosshairSettings.Color
-    CrosshairSettings.VerticalLine.Thickness = CrosshairSettings.Thickness
-    CrosshairSettings.VerticalLine.Visible = true
-    CrosshairSettings.VerticalLine.Transparency = CrosshairSettings.Transparency
-    CrosshairSettings.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
-    CrosshairSettings.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
-  end
-  
-  function Sprint()
-    if not sp then
-      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 12
-    else
-      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 20
-    end
-  end
-  
   local originalSettings = {}
-
-  function FullBright()
-    local function Enable()
-      if not originalSettings.Brightness then
-        originalSettings.Brightness = Lighting.Brightness
-        originalSettings.ClockTime = Lighting.ClockTime
-        originalSettings.FogEnd = Lighting.FogEnd
-        originalSettings.GlobalShadows = Lighting.GlobalShadows
-        originalSettings.OutdoorAmbient = Lighting.OutdoorAmbient
-      end
-      
-      Lighting.Brightness = 2
-      Lighting.ClockTime = 14
-      Lighting.FogEnd = 100000
-      Lighting.GlobalShadows = false
-      Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-      
-      clockTimeConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
-        if Lighting.ClockTime < 6 or Lighting.ClockTime > 15 then
-          Lighting.ClockTime = 14
-        end
-      end)
-    end
-    
-    local function Disable()
-      if clockTimeConnection then
-        clockTimeConnection:Disconnect()
-        clockTimeConnection = nil
-      end
-      
-      if originalSettings.Brightness then
-        Lighting.Brightness = originalSettings.Brightness
-        Lighting.ClockTime = originalSettings.ClockTime
-        Lighting.FogEnd = originalSettings.FogEnd
-        Lighting.GlobalShadows = originalSettings.GlobalShadows
-        Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
-      end
-    end
-
-    if fb then
-      Enable()
-    else
-      Disable()
-    end
-  end
-  
-  function TargetStrafe()
-    if ts then
-      RunService.Heartbeat:Connect(function(dt)
-        if not ts then return end
-        
-        local target2
-        if selectedTargeting == "lowest" then
-          target2 = getLowestHealthNearbyPlayer()
-        elseif selectedTargeting == "nearest" then
-          target2 = getClosestPlayer()
-        end
-        
-        if target2 and target2.Character and target2.Character:FindFirstChild("HumanoidRootPart") then
-          local hrp = 		LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-          if hrp then
-            local time = tick() * speed
-            local x = math.cos(time) * radius
-            local z = math.sin(time) * radius
-            local targetPos = target2.Character.HumanoidRootPart.Position
-            hrp.CFrame = CFrame.new(targetPos + Vector3.new(x, 0, z), targetPos)
-          end
-        end
-      end)
-    end
-  end
-  
-  function Xray()
-    local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-    
-    if xr then
-      wasEnabled = true
-        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-            if v.Name == "Stone" or v.Name == "Dirt" then
-                for _, texture in pairs(v:GetChildren()) do
-                    texture.Transparency = 1
-                end
-            end
-        end
-        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-            if v.Name == "Stone" or v.Name == "Dirt" then
-                v.Transparency = 1
-            end
-        end
-
-        -- Force chunk reload
-        local pos = humanroot2.Position
-        task.wait()
-        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-        task.wait()
-        humanroot2.CFrame = CFrame.new(pos)
-
-    elseif not xr then
-      for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-        if v.Name == "Stone" or v.Name == "Dirt" then
-          for _, texture in pairs(v:GetChildren()) do
-            texture.Transparency = 0
-          end
-        end
-      end
-      for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-        if v.Name == "Stone" or v.Name == "Dirt" then
-          v.Transparency = 0
-        end
-      end
-      
-      if wasEnabled then
-        local pos = humanroot2.Position
-        task.wait()
-        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-        task.wait()
-        humanroot2.CFrame = CFrame.new(pos)
-        wasEnabled = false
-      end
-    end
-  end
   
   function conv(txt)
     local str = ""
@@ -855,7 +596,31 @@ end
     Default = false,
     Callback = function(k)
       ka = k
-      KillAura(k)
+      local LP = game.Players.LocalPlayer
+      local function attackLoop()
+        while ka do
+          local target
+            if selectedTargeting == "lowest" then
+              target = getLowestHealthNearbyPlayer()
+            elseif selectedTargeting == "nearest" then
+              target = getClosestPlayer()
+            end
+
+            if target and target.Character then
+              local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
+              if humanoidRootPart and (LP:DistanceFromCharacter(humanoidRootPart.Position) < 16) then
+                game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(target.Character)
+              end
+            end
+          task.wait(delay)
+        end
+      end
+      
+      if useTaskSpawn then
+        task.spawn(attackLoop)
+      else
+        attackLoop()
+      end
     end 
   })
   
@@ -866,7 +631,29 @@ end
     Default = false,
     Callback = function(t)
       ts = t
-      TargetStrafe(t)
+      if ts then
+        RunService.Heartbeat:Connect(function(dt)
+          if not ts then return end
+        
+          local target2
+          if selectedTargeting == "lowest" then
+            target2 = getLowestHealthNearbyPlayer()
+          elseif selectedTargeting == "nearest" then
+            target2 = getClosestPlayer()
+          end
+          
+          if target2 and target2.Character and target2.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = 		LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+              local time = tick() * speed
+              local x = math.cos(time) * radius
+              local z = math.sin(time) * radius
+              local targetPos = target2.Character.HumanoidRootPart.Position
+              hrp.CFrame = CFrame.new(targetPos + Vector3.new(x, 0, z), targetPos)
+            end
+          end
+        end)
+      end
     end 
   })
 
@@ -926,7 +713,32 @@ end
     Default = false,
     Callback = function(c)
       cl = c
-      CombatLog(c)
+      
+      local function checkHealth()
+        local character = player.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+        
+        local healthThreshold = humanoid.MaxHealth * 0.4
+        if humanoid.Health <= healthThreshold then
+          game:Shutdown()
+        end
+      end
+      
+      local function healthLoop()
+        while cl do
+          checkHealth()
+          task.wait()
+        end
+      end
+      
+      if useTaskSpawn then
+        task.spawn(healthLoop) -- Runs the loop asynchronously
+      else
+        healthLoop() -- Runs normally (blocking)
+      end
     end 
   }) 
 
@@ -968,7 +780,11 @@ end
     Default = false,
     Callback = function(s)
       sp = s
-      Sprint(s)
+      if not sp then
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 12
+      else
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 20
+      end
     end 
   }) 
   
@@ -1094,7 +910,39 @@ end
     Default = false,
     Callback = function(ch)
       chplus = ch
-      UpdateCrosshair(ch)
+      if not chplus then
+        CrosshairSettings.HorizontalLine.Visible = false
+        CrosshairSettings.VerticalLine.Visible = false
+        for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+          if v.Name == "Crosshair" then
+            v.Visible = true
+          end
+        end
+        return
+      end
+        
+      local ViewportSize = Camera.ViewportSize / 2
+      local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
+      local Real_Size = CrosshairSettings.Size / 2
+	
+      for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+        if v.Name == "Crosshair" then
+          v.Visible = false
+        end
+      end
+        
+      CrosshairSettings.HorizontalLine.Color = CrosshairSettings.Color
+      CrosshairSettings.HorizontalLine.Thickness = CrosshairSettings.Thickness
+      CrosshairSettings.HorizontalLine.Visible = true
+      CrosshairSettings.HorizontalLine.Transparency = CrosshairSettings.Transparency
+      CrosshairSettings.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
+      CrosshairSettings.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
+      CrosshairSettings.VerticalLine.Color = CrosshairSettings.Color
+      CrosshairSettings.VerticalLine.Thickness = CrosshairSettings.Thickness
+      CrosshairSettings.VerticalLine.Visible = true
+      CrosshairSettings.VerticalLine.Transparency = CrosshairSettings.Transparency
+      CrosshairSettings.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
+      CrosshairSettings.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
     end 
   }) 
   
@@ -1164,7 +1012,48 @@ end
     Default = false,
     Callback = function(f)
       fb = f
-      FullBright(f)
+      local function Enable()
+        if not originalSettings.Brightness then
+          originalSettings.Brightness = Lighting.Brightness
+          originalSettings.ClockTime = Lighting.ClockTime
+          originalSettings.FogEnd = Lighting.FogEnd
+          originalSettings.GlobalShadows = Lighting.GlobalShadows
+          originalSettings.OutdoorAmbient = Lighting.OutdoorAmbient
+        end
+        
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        
+        clockTimeConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+          if Lighting.ClockTime < 6 or Lighting.ClockTime > 15 then
+            Lighting.ClockTime = 14
+          end
+        end)
+      end
+      
+      local function Disable()
+        if clockTimeConnection then
+          clockTimeConnection:Disconnect()
+          clockTimeConnection = nil
+        end
+        
+        if originalSettings.Brightness then
+          Lighting.Brightness = originalSettings.Brightness
+          Lighting.ClockTime = originalSettings.ClockTime
+          Lighting.FogEnd = originalSettings.FogEnd
+          Lighting.GlobalShadows = originalSettings.GlobalShadows
+          Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
+        end
+      end
+      
+      if fb then
+        Enable()
+      else
+        Disable()
+      end
     end 
   }) 
   
@@ -1175,7 +1064,52 @@ end
     Default = false,
     Callback = function(x)
       xr = x
-      Xray(x)
+      
+      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
+      
+      if xr then
+        wasEnabled = true
+        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            for _, texture in pairs(v:GetChildren()) do
+              texture.Transparency = 1
+            end
+          end
+        end
+        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            v.Transparency = 1
+          end
+        end
+        
+        local pos = humanroot2.Position
+        task.wait()
+        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
+        task.wait()
+        humanroot2.CFrame = CFrame.new(pos)
+      elseif not xr then
+        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            for _, texture in pairs(v:GetChildren()) do
+              texture.Transparency = 0
+            end
+          end
+        end
+        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            v.Transparency = 0
+          end
+        end
+        
+        if wasEnabled then
+          local pos = humanroot2.Position
+          task.wait()
+          humanroot2.CFrame = CFrame.new(30000, 180, 30000)
+          task.wait()
+          humanroot2.CFrame = CFrame.new(pos)
+          wasEnabled = false
+        end
+      end
     end 
   }) 
   
@@ -1219,7 +1153,30 @@ end
     Default = false,
     Callback = function(echest)
       ec = echest
-      EnderChest(echest)
+      while ec do
+      local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+      local inventory = playerGui.HUDGui.Inventory
+      
+      inventory.Chest.Visible = true
+      inventory.Crafting.Visible = false
+      inventory.Mirror.Visible = false
+      inventory.ResultSlot.Visible = false
+      
+      local slots = {
+        "Slot100", "Slot101", "Slot102", "Slot103",
+        "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", 
+        "Slot85", "Slot86", "Slot87", "Slot88"
+      }
+
+      for _, slotName in ipairs(slots) do
+        local slot = inventory.Slots:FindFirstChild(slotName)
+        if slot then
+          slot.Visible = false
+        end
+      end
+
+      task.wait()
+    end
     end 
   })
   
@@ -1299,7 +1256,11 @@ end
     Title = "Chest Stealer / Dumper",
     Description = "Steals/Dumps everything from/into a chest",
     Callback = function()
-      cheststealer()
+      for i = 36, 62 do
+        task.spawn(function()
+          game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
+        end)
+      end
     end
   })
   
