@@ -40,6 +40,7 @@ if not getgenv().bytehubLoaded then
   local speed = 2
   local strafeRange = 50 -- how close they must be to strafe
   local wasEnabled = false
+  local selectedTargeting = "nearest"
   
   local whitelist = {
     "sbjmp",
@@ -60,16 +61,6 @@ if not getgenv().bytehubLoaded then
   local useblock = gameremotes.UseBlock
   
   local CrosshairSettings = {
-    Visible = false,
-    Size = 35,
-    Thickness = 2.5,
-    Color = Color3.fromRGB(188, 50, 252),
-    Transparency = 1,
-    HorizontalLine = Drawing.new("Line"),
-    VerticalLine = Drawing.new("Line")
-  }
-  
-  local CrosshairSettings2 = {
     Visible = false,
     Size = 35,
     Thickness = 2.5,
@@ -139,56 +130,32 @@ if not getgenv().bytehubLoaded then
     
     return targetPlayer
   end
-  
-  function KillAura()
-    local localPlayer = game.Players.LocalPlayer
 
-    local function attackLoop()
-      while ka do
-        for _, player in ipairs(game.Players:GetPlayers()) do
-          if player ~= localPlayer and player.Character then
-            local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-            if humanoidRootPart and (localPlayer:DistanceFromCharacter(humanoidRootPart.Position) < 16) then
-              game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(player.Character)
+  local function getClosestPlayer()
+    local closest = nil
+    local shortest = math.huge
+    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
+            if dist < shortest then
+                shortest = dist
+                closest = player
             end
-          end
         end
-        task.wait(delay)
-      end
     end
-
-    if useTaskSpawn then
-      task.spawn(attackLoop) -- Runs attackLoop asynchronously
-    else
-      attackLoop() -- Runs attackLoop normally (blocking)
-    end
+    return closest
   end
-  
-  function CombatLog()
-    local function checkHealth()
-      local character = player.Character
-      if not character then return end
 
-      local humanoid = character:FindFirstChildOfClass("Humanoid")
-      if not humanoid then return end
-      
-      local healthThreshold = humanoid.MaxHealth * 0.4
-        if humanoid.Health <= healthThreshold then
-          game:Shutdown()
-        end
-    end
-    
-    local function healthLoop()
-        while cl do
-            checkHealth()
-            task.wait(0.25)
-        end
-    end
-
-    if useTaskSpawn then
-        task.spawn(healthLoop) -- Runs the loop asynchronously
-    else
-        healthLoop() -- Runs normally (blocking)
+  local function changeTorsoSize(player, size, Massless, transparency)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+    if torso then
+      torso.Size = size  
+      torso.Massless = Massless  
+      torso.Transparency = transparency
     end
   end
   
@@ -303,7 +270,7 @@ if not getgenv().bytehubLoaded then
         for _, part in ipairs(chestParts) do
           outlinePart(part)
         end
-        task.wait()
+        task.wait(1)
       end
 
       -- Cleanup when `cesp` is false
@@ -404,6 +371,55 @@ if not getgenv().bytehubLoaded then
       task.wait()
     end
   end
+  
+function Scaffold()
+    if So then
+        local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
+        local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
+        local BlocksByName = M_IDs.ByName.Blocks
+
+        local dir = 1 
+        _G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord:GetPropertyChangedSignal("Text"):Connect(function()
+	        if game.Players.LocalPlayer.Character ~= nil and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and game.Players.LocalPlayer.Character.Humanoid.Health > 0 then
+		        local placeSlot = game.Players.LocalPlayer.Character.SelectedSlot.Value
+		        local Coords = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+		        local strDev = string.split(Coords, " ")
+		        local pl_x = tonumber(strDev[2]:sub(0, -2))
+		        local pl_y = tonumber(strDev[3]:sub(0, -2))
+		        local pl_z = tonumber(strDev[4])
+		        local realBlock
+		        if game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot].Slot.Display:FindFirstChild("SlotB") then
+			        for i, v in pairs(game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot].Slot.Display.SlotB:GetChildren()) do
+				        realBlock = v.Name
+				        local canPlaceBlock = false
+				        local block, chunk = M_World.getBlock(pl_x, pl_y-1, pl_z)
+				        if block == nil then
+					        canPlaceBlock = true
+				        else
+					        for i, v in pairs(block) do
+						        if v == 0 then
+							        canPlaceBlock = true
+							        break
+						        end
+					        end
+				        end
+				        if canPlaceBlock == true and realBlock ~= nil then
+				        	local itemblock_info = BlocksByName[realBlock]
+				        	local did_place = M_World.placeBlock(pl_x, pl_y-1, pl_z, chunk, dir, itemblock_info.id)
+					        local Call, Name = game.ReplicatedStorage.GameRemotes.PlaceBlock:InvokeServer(pl_x, pl_y-1, pl_z, placeSlot, dir)
+					        if not Call then
+					        	chunk:change(pl_x%16,pl_y-1,pl_z%16,Name)
+				        	end
+			        	end
+			        	break
+			        end
+		        end
+	        end
+        end)
+    else
+        _G.CoordsChannel:Disconnect()
+    end
+end
 
   function Nuker()
     local function nukerLoop()
@@ -462,57 +478,6 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  function EnderChest()
-    while ec do
-      local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-      local inventory = playerGui.HUDGui.Inventory
-      
-      inventory.Chest.Visible = true
-      inventory.Crafting.Visible = false
-      inventory.Mirror.Visible = false
-      inventory.ResultSlot.Visible = false
-      
-      local slots = {
-        "Slot100", "Slot101", "Slot102", "Slot103",
-        "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", 
-        "Slot85", "Slot86", "Slot87", "Slot88"
-      }
-
-      for _, slotName in ipairs(slots) do
-        local slot = inventory.Slots:FindFirstChild(slotName)
-        if slot then
-          slot.Visible = false
-        end
-      end
-
-      task.wait()
-    end
-  end
-
-  function infhealth()
-    local function healthLoop()
-      while infh do
-        moveitems:InvokeServer(101, 9, true)
-        moveitems:InvokeServer(9, 101, true)
-        task.wait()
-      end
-    end
-
-    if useTaskSpawn then
-      task.spawn(healthLoop) -- Runs asynchronously
-    else
-      healthLoop() -- Runs normally (blocking)
-    end
-  end
-
-  function cheststealer()
-    for i = 36, 62 do
-      task.spawn(function()
-        game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
-      end)
-    end
-  end
-  
   function chestdupe(mode)
     if mode == 1 then
       sortitems:InvokeServer(36)
@@ -525,209 +490,7 @@ if not getgenv().bytehubLoaded then
     end
   end
   
-  local function UpdateCrosshair()
-    if not chplus then
-      CrosshairSettings.HorizontalLine.Visible = false
-      CrosshairSettings.VerticalLine.Visible = false
-      for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-        if v.Name == "Crosshair" then
-          v.Visible = true
-        end
-      end
-      return
-    end
-
-    local ViewportSize = Camera.ViewportSize / 2
-    local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
-    local Real_Size = CrosshairSettings.Size / 2
-	
-    for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-      if v.Name == "Crosshair" then
-        v.Visible = false
-      end
-    end
-    
-    CrosshairSettings.HorizontalLine.Color = CrosshairSettings.Color
-    CrosshairSettings.HorizontalLine.Thickness = CrosshairSettings.Thickness
-    CrosshairSettings.HorizontalLine.Visible = true
-    CrosshairSettings.HorizontalLine.Transparency = CrosshairSettings.Transparency
-    CrosshairSettings.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
-    CrosshairSettings.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
-    CrosshairSettings.VerticalLine.Color = CrosshairSettings.Color
-    CrosshairSettings.VerticalLine.Thickness = CrosshairSettings.Thickness
-    CrosshairSettings.VerticalLine.Visible = true
-    CrosshairSettings.VerticalLine.Transparency = CrosshairSettings.Transparency
-    CrosshairSettings.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
-    CrosshairSettings.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
-  end
-  
-  local function RBCrosshair()
-    if not chr then
-      CrosshairSettings2.HorizontalLine.Visible = false
-      CrosshairSettings2.VerticalLine.Visible = false
-      for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-        if v.Name == "Crosshair" then
-          v.Visible = true
-        end
-      end
-      return
-    end
-
-    local ViewportSize = Camera.ViewportSize / 2
-    local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
-    local Real_Size = CrosshairSettings.Size / 2
-
-    for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-      if v.Name == "Crosshair" then
-        v.Visible = false
-      end
-    end
-
-    -- Calculate the rainbow color
-    local hue = (tick() * 0.2) % 1
-    local rainbowColor = Color3.fromHSV(hue, 1, 1)
-
-    CrosshairSettings2.HorizontalLine.Color = rainbowColor
-    CrosshairSettings2.HorizontalLine.Thickness = CrosshairSettings.Thickness
-    CrosshairSettings2.HorizontalLine.Visible = true
-    CrosshairSettings2.HorizontalLine.Transparency = CrosshairSettings.Transparency
-    CrosshairSettings2.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
-    CrosshairSettings2.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
-
-    CrosshairSettings2.VerticalLine.Color = rainbowColor
-    CrosshairSettings2.VerticalLine.Thickness = CrosshairSettings.Thickness
-    CrosshairSettings2.VerticalLine.Visible = true
-    CrosshairSettings2.VerticalLine.Transparency = CrosshairSettings.Transparency
-    CrosshairSettings2.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
-    CrosshairSettings2.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
-  end
-  
-  RunService.RenderStepped:Connect(RBCrosshair)
-  
-  function Sprint()
-    if not sp then
-      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 12
-    else
-      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 20
-    end
-  end
-  
   local originalSettings = {}
-
-  function FullBright()
-    local function Enable()
-      if not originalSettings.Brightness then
-        originalSettings.Brightness = Lighting.Brightness
-        originalSettings.ClockTime = Lighting.ClockTime
-        originalSettings.FogEnd = Lighting.FogEnd
-        originalSettings.GlobalShadows = Lighting.GlobalShadows
-        originalSettings.OutdoorAmbient = Lighting.OutdoorAmbient
-      end
-      
-      Lighting.Brightness = 2
-      Lighting.ClockTime = 14
-      Lighting.FogEnd = 100000
-      Lighting.GlobalShadows = false
-      Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-      
-      clockTimeConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
-        if Lighting.ClockTime < 6 or Lighting.ClockTime > 15 then
-          Lighting.ClockTime = 14
-        end
-      end)
-    end
-    
-    local function Disable()
-      if clockTimeConnection then
-        clockTimeConnection:Disconnect()
-        clockTimeConnection = nil
-      end
-      
-      if originalSettings.Brightness then
-        Lighting.Brightness = originalSettings.Brightness
-        Lighting.ClockTime = originalSettings.ClockTime
-        Lighting.FogEnd = originalSettings.FogEnd
-        Lighting.GlobalShadows = originalSettings.GlobalShadows
-        Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
-      end
-    end
-
-    if fb then
-      Enable()
-    else
-      Disable()
-    end
-  end
-  
-  function TargetStrafe()
-    if ts then
-      RunService.Heartbeat:Connect(function(dt)
-        if not ts then return end
-        
-        local target = getLowestHealthNearbyPlayer()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-          local hrp = 		LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-          if hrp then
-            local time = tick() * speed
-            local x = math.cos(time) * radius
-            local z = math.sin(time) * radius
-            local targetPos = target.Character.HumanoidRootPart.Position
-            hrp.CFrame = CFrame.new(targetPos + Vector3.new(x, 0, z), targetPos)
-          end
-        end
-      end)
-    end
-  end
-  
-  function Xray()
-    local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-    
-    if xr then
-      wasEnabled = true
-        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-            if v.Name == "Stone" or v.Name == "Dirt" then
-                for _, texture in pairs(v:GetChildren()) do
-                    texture.Transparency = 1
-                end
-            end
-        end
-        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-            if v.Name == "Stone" or v.Name == "Dirt" then
-                v.Transparency = 1
-            end
-        end
-
-        -- Force chunk reload
-        local pos = humanroot2.Position
-        task.wait()
-        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-        task.wait()
-        humanroot2.CFrame = CFrame.new(pos)
-
-    elseif not xr then
-      for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-        if v.Name == "Stone" or v.Name == "Dirt" then
-          for _, texture in pairs(v:GetChildren()) do
-            texture.Transparency = 0
-          end
-        end
-      end
-      for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-        if v.Name == "Stone" or v.Name == "Dirt" then
-          v.Transparency = 0
-        end
-      end
-      
-      if wasEnabled then
-        local pos = humanroot2.Position
-        task.wait()
-        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-        task.wait()
-        humanroot2.CFrame = CFrame.new(pos)
-        wasEnabled = false
-      end
-    end
-  end
   
   function conv(txt)
     local str = ""
@@ -755,12 +518,18 @@ if not getgenv().bytehubLoaded then
     });
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
   end
-  
+
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
+  ExunysDeveloperAimbot.Settings.Enabled = false
+  ExunysDeveloperAimbot.Settings.LockPart = "Torso"
+  ExunysDeveloperAimbot.Settings.TriggerKey = Enum.KeyCode.F or Enum.UserInputType.Touch
+  ExunysDeveloperAimbot.Settings.Toggle = true
+  ExunysDeveloperAimbot.FOVSettings.Enabled = false
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v4.1",
+    Title = "Minecraft (Byte Hub) v4.2",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 300),
@@ -785,7 +554,7 @@ if not getgenv().bytehubLoaded then
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv4.1\nDupe Gui: Argentum\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv4.2\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -827,7 +596,31 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(k)
       ka = k
-      KillAura(k)
+      local LP = game.Players.LocalPlayer
+      local function attackLoop()
+        while ka do
+          local target
+            if selectedTargeting == "lowest" then
+              target = getLowestHealthNearbyPlayer()
+            elseif selectedTargeting == "nearest" then
+              target = getClosestPlayer()
+            end
+
+            if target and target.Character then
+              local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
+              if humanoidRootPart and (LP:DistanceFromCharacter(humanoidRootPart.Position) < 16) then
+                game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(target.Character)
+              end
+            end
+          task.wait(delay)
+        end
+      end
+      
+      if useTaskSpawn then
+        task.spawn(attackLoop)
+      else
+        attackLoop()
+      end
     end 
   })
   
@@ -838,8 +631,79 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(t)
       ts = t
-      TargetStrafe(t)
+      if ts then
+        RunService.Heartbeat:Connect(function(dt)
+          if not ts then return end
+        
+          local target2
+          if selectedTargeting == "lowest" then
+            target2 = getLowestHealthNearbyPlayer()
+          elseif selectedTargeting == "nearest" then
+            target2 = getClosestPlayer()
+          end
+          
+          if target2 and target2.Character and target2.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = 		LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+              local time = tick() * speed
+              local x = math.cos(time) * radius
+              local z = math.sin(time) * radius
+              local targetPos = target2.Character.HumanoidRootPart.Position
+              hrp.CFrame = CFrame.new(targetPos + Vector3.new(x, 0, z), targetPos)
+            end
+          end
+        end)
+      end
     end 
+  })
+
+  local hboxtog = Tabs.cs:AddToggle("HitboxToggle",
+  {
+    Title = "Hitbox Expander", 
+    Description = "Expands other player's hitboxes\nCredits to Ket Hub",
+    Default = false,
+    Callback = function(h)
+      he = h
+      if he then
+        connection = RunService.Heartbeat:Connect(function()
+          for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+              changeTorsoSize(player, Vector3.new(10, 10, 10), true, 0.999)
+            end
+          end
+        end)
+      else
+        if connection then connection:Disconnect() end
+          for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer then
+              changeTorsoSize(player, Vector3.new(2, 2, 1), true, 0)
+            end
+          end
+        end
+      end 
+  })
+
+  local abtog = Tabs.cs:AddToggle("Aimbot Tog",
+  {
+    Title = "Aimbot (F)", 
+    Description = "Automatically aims at a player",
+    Default = false,
+    Callback = function(ab)
+      abot = ab
+      if abot then
+        ExunysDeveloperAimbot.Settings.Enabled = true
+      else
+        ExunysDeveloperAimbot.Settings.Enabled = false
+      end
+    end 
+  }) 
+
+  Tabs.cs:AddButton({
+    Title = "Aimbot Button for Mobile",
+    Description = "Presses F",
+    Callback = function()
+      game.VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+    end
   })
 
   local acltog = Tabs.cs:AddToggle("Auto Combat Log",
@@ -849,7 +713,32 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(c)
       cl = c
-      CombatLog(c)
+      
+      local function checkHealth()
+        local character = player.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then return end
+        
+        local healthThreshold = humanoid.MaxHealth * 0.4
+        if humanoid.Health <= healthThreshold then
+          game:Shutdown()
+        end
+      end
+      
+      local function healthLoop()
+        while cl do
+          checkHealth()
+          task.wait()
+        end
+      end
+      
+      if useTaskSpawn then
+        task.spawn(healthLoop) -- Runs the loop asynchronously
+      else
+        healthLoop() -- Runs normally (blocking)
+      end
     end 
   }) 
 
@@ -884,14 +773,18 @@ if not getgenv().bytehubLoaded then
     end 
   }) 
 
-  local Toggle = Tabs.lp:AddToggle("Toggle",
+  local sptog = Tabs.lp:AddToggle("Toggle",
   {
     Title = "Sprint", 
     Description = "Makes you a tiny bit faster",
     Default = false,
     Callback = function(s)
       sp = s
-      Sprint(s)
+      if not sp then
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 12
+      else
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 20
+      end
     end 
   }) 
   
@@ -914,14 +807,26 @@ if not getgenv().bytehubLoaded then
     end 
   })
   
-  local infhtog = Tabs.lp:AddToggle("Infi HP",
+  local Toggle = Tabs.lp:AddToggle("Toggle",
   {
     Title = "Infinite Health",
     Description = "Increases your hp (only works with emerald leggings)",
     Default = false,
     Callback = function(infihp)
       infh = infihp
-      infhealth(infihp)
+      local function healthLoop()
+        while infh do
+          moveitems:InvokeServer(101, 9, true)
+          moveitems:InvokeServer(9, 101, true)
+          task.wait()
+        end
+      end
+
+      if useTaskSpawn then
+        task.spawn(healthLoop)
+      else
+        healthLoop()
+      end
     end 
   })
   
@@ -944,8 +849,8 @@ if not getgenv().bytehubLoaded then
     Placeholder = "Enter a number",
     Numeric = false, -- Ensure input is numeric
     Finished = false,
-    Callback = function(ws)
-      game.Players.LocalPlayer.Character.Humanoid.JumpPower = tonumber(ws)
+    Callback = function(jp)
+      game.Players.LocalPlayer.Character.Humanoid.JumpPower = tonumber(jp)
     end
   })
 
@@ -1005,17 +910,98 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(ch)
       chplus = ch
-      UpdateCrosshair(ch)
+      if not chplus then
+        CrosshairSettings.HorizontalLine.Visible = false
+        CrosshairSettings.VerticalLine.Visible = false
+        for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+          if v.Name == "Crosshair" then
+            v.Visible = true
+          end
+        end
+        return
+      end
+        
+      local ViewportSize = Camera.ViewportSize / 2
+      local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
+      local Real_Size = CrosshairSettings.Size / 2
+	
+      for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+        if v.Name == "Crosshair" then
+          v.Visible = false
+        end
+      end
+        
+      CrosshairSettings.HorizontalLine.Color = CrosshairSettings.Color
+      CrosshairSettings.HorizontalLine.Thickness = CrosshairSettings.Thickness
+      CrosshairSettings.HorizontalLine.Visible = true
+      CrosshairSettings.HorizontalLine.Transparency = CrosshairSettings.Transparency
+      CrosshairSettings.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
+      CrosshairSettings.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
+      CrosshairSettings.VerticalLine.Color = CrosshairSettings.Color
+      CrosshairSettings.VerticalLine.Thickness = CrosshairSettings.Thickness
+      CrosshairSettings.VerticalLine.Visible = true
+      CrosshairSettings.VerticalLine.Transparency = CrosshairSettings.Transparency
+      CrosshairSettings.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
+      CrosshairSettings.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
     end 
   }) 
   
-  local Toggle = Tabs.vs:AddToggle("Toggle", {
+  local rbchtog = Tabs.vs:AddToggle("Toggle", {
     Title = "Rainbow Crosshair", 
     Description = "Makes Crosshair Rainbow\n(Must have Crosshair+ disabled)",
     Default = false,
     Callback = function(chpr)
         chr = chpr
-        RBCrosshair(chpr)
+        local CrosshairSettings2 = {
+          Visible = false,
+          Size = 35,
+          Thickness = 2.5,
+          Color = Color3.fromRGB(188, 50, 252),
+          Transparency = 1,
+          HorizontalLine = Drawing.new("Line"),
+          VerticalLine = Drawing.new("Line")
+        }
+
+        local function RainbowCrosshair()
+          if not chr then
+            CrosshairSettings2.HorizontalLine.Visible = false
+            CrosshairSettings2.VerticalLine.Visible = false
+            for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+              if v.Name == "Crosshair" then
+                v.Visible = true
+              end
+            end
+            return
+          end
+
+          local ViewportSize = Camera.ViewportSize / 2
+          local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
+          local Real_Size = CrosshairSettings.Size / 2
+
+          for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
+            if v.Name == "Crosshair" then
+              v.Visible = false
+            end
+          end
+
+          local hue = (tick() * 0.2) % 1
+          local rainbowColor = Color3.fromHSV(hue, 1, 1)
+
+          CrosshairSettings2.HorizontalLine.Color = rainbowColor
+          CrosshairSettings2.HorizontalLine.Thickness = CrosshairSettings.Thickness
+          CrosshairSettings2.HorizontalLine.Visible = true
+          CrosshairSettings2.HorizontalLine.Transparency = CrosshairSettings.Transparency
+          CrosshairSettings2.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
+          CrosshairSettings2.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
+
+          CrosshairSettings2.VerticalLine.Color = rainbowColor
+          CrosshairSettings2.VerticalLine.Thickness = CrosshairSettings.Thickness
+          CrosshairSettings2.VerticalLine.Visible = true
+          CrosshairSettings2.VerticalLine.Transparency = CrosshairSettings.Transparency
+          CrosshairSettings2.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
+          CrosshairSettings2.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
+        end
+        RunService.RenderStepped:Connect(RainbowCrosshair)
     end 
   })
   
@@ -1026,7 +1012,48 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(f)
       fb = f
-      FullBright(f)
+      local function Enable()
+        if not originalSettings.Brightness then
+          originalSettings.Brightness = Lighting.Brightness
+          originalSettings.ClockTime = Lighting.ClockTime
+          originalSettings.FogEnd = Lighting.FogEnd
+          originalSettings.GlobalShadows = Lighting.GlobalShadows
+          originalSettings.OutdoorAmbient = Lighting.OutdoorAmbient
+        end
+        
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+        
+        clockTimeConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+          if Lighting.ClockTime < 6 or Lighting.ClockTime > 15 then
+            Lighting.ClockTime = 14
+          end
+        end)
+      end
+      
+      local function Disable()
+        if clockTimeConnection then
+          clockTimeConnection:Disconnect()
+          clockTimeConnection = nil
+        end
+        
+        if originalSettings.Brightness then
+          Lighting.Brightness = originalSettings.Brightness
+          Lighting.ClockTime = originalSettings.ClockTime
+          Lighting.FogEnd = originalSettings.FogEnd
+          Lighting.GlobalShadows = originalSettings.GlobalShadows
+          Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
+        end
+      end
+      
+      if fb then
+        Enable()
+      else
+        Disable()
+      end
     end 
   }) 
   
@@ -1037,7 +1064,52 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(x)
       xr = x
-      Xray(x)
+      
+      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
+      
+      if xr then
+        wasEnabled = true
+        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            for _, texture in pairs(v:GetChildren()) do
+              texture.Transparency = 1
+            end
+          end
+        end
+        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            v.Transparency = 1
+          end
+        end
+        
+        local pos = humanroot2.Position
+        task.wait()
+        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
+        task.wait()
+        humanroot2.CFrame = CFrame.new(pos)
+      elseif not xr then
+        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            for _, texture in pairs(v:GetChildren()) do
+              texture.Transparency = 0
+            end
+          end
+        end
+        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
+          if v.Name == "Stone" or v.Name == "Dirt" then
+            v.Transparency = 0
+          end
+        end
+        
+        if wasEnabled then
+          local pos = humanroot2.Position
+          task.wait()
+          humanroot2.CFrame = CFrame.new(30000, 180, 30000)
+          task.wait()
+          humanroot2.CFrame = CFrame.new(pos)
+          wasEnabled = false
+        end
+      end
     end 
   }) 
   
@@ -1081,7 +1153,30 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(echest)
       ec = echest
-      EnderChest(echest)
+      while ec do
+      local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+      local inventory = playerGui.HUDGui.Inventory
+      
+      inventory.Chest.Visible = true
+      inventory.Crafting.Visible = false
+      inventory.Mirror.Visible = false
+      inventory.ResultSlot.Visible = false
+      
+      local slots = {
+        "Slot100", "Slot101", "Slot102", "Slot103",
+        "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", 
+        "Slot85", "Slot86", "Slot87", "Slot88"
+      }
+
+      for _, slotName in ipairs(slots) do
+        local slot = inventory.Slots:FindFirstChild(slotName)
+        if slot then
+          slot.Visible = false
+        end
+      end
+
+      task.wait()
+    end
     end 
   })
   
@@ -1114,6 +1209,29 @@ if not getgenv().bytehubLoaded then
       FastBreak(f)
     end 
   })
+
+  local adstog = Tabs.wr:AddToggle("Toggle",
+  {
+    Title = "Auto Drop Selected Item", 
+    Description = "Automatically Drops Selected Item",
+    Default = false,
+    Callback = function(adsi)
+      ad = adsi
+      local function AutoDrop()
+        while ad do
+          local args = {
+	    true
+          }
+          game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("DropItem"):InvokeServer(unpack(args))
+        end 
+      end
+      if useTaskSpawn then
+        task.spawn(AutoDrop)
+      else
+        AutoDrop(ad)
+      end
+    end
+  })
   
   Tabs.wr:AddButton({
     Title = "Reload Chunks",
@@ -1138,7 +1256,11 @@ if not getgenv().bytehubLoaded then
     Title = "Chest Stealer / Dumper",
     Description = "Steals/Dumps everything from/into a chest",
     Callback = function()
-      cheststealer()
+      for i = 36, 62 do
+        task.spawn(function()
+          game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
+        end)
+      end
     end
   })
   
@@ -1184,6 +1306,17 @@ if not getgenv().bytehubLoaded then
     Callback = function(n3)
       nk3 = n3
       Nuker3(n3)
+    end 
+  })
+  
+  local Stog = Tabs.wr:AddToggle("Scaffold",
+  {
+    Title = "Scaffold", 
+    Description = "Place block below you",
+    Default = false,
+    Callback = function(S)
+      So = S
+      Scaffold(S)
     end 
   })
 
@@ -1237,12 +1370,30 @@ if not getgenv().bytehubLoaded then
       chestdupe(2)
     end
   })
+
+  local Toggle = Tabs.dt:AddToggle("Toggle",
+  {
+    Title = "Auto Dupe Entire Chest", 
+    Description = "Automatically dupes entire chest",
+    Default = false,
+    Callback = function(a2)
+      ad = a2
+      while ad do
+        chestdupe(2)
+        task.wait()
+      end
+    end 
+  })
   
   Tabs.dt:AddButton({
     Title = "Dupe Entire Chest + Dump",
     Description = "Dumps your inv to a chest, then dupes it",
     Callback = function()
-      cheststealer()
+      for i = 36, 62 do
+        task.spawn(function()
+          game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
+        end)
+      end
       chestdupe(2)
     end
   })
@@ -1255,7 +1406,7 @@ if not getgenv().bytehubLoaded then
         [1] = -1,
         [2] = 0,
         [3] = true,
-        [4] = -99e99+100
+        [4] = -9.99999999919999999919999919999919199191919999199191919991999199e100
       }
       local args2 = {[1] = {}}
       if usetables then
@@ -1457,6 +1608,17 @@ if not getgenv().bytehubLoaded then
           Duration = 3
         })
       end
+    end
+  })
+  
+  local Dropdown = Tabs.st:AddDropdown("Dropdown", {
+    Title = "Select Targeting Method",
+    Description = "Selects targeting method for\nKill Aura and Target Strafe",
+    Values = {"lowest", "nearest"},
+    Multi = false,
+    Default = "nearest",
+    Callback = function(Value)
+      selectedTargeting = Value
     end
   })
   
