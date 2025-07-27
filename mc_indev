@@ -269,8 +269,8 @@ if not getgenv().bytehubLoaded then
         local chestParts = findChestParts()
         for _, part in ipairs(chestParts) do
           outlinePart(part)
-          task.wait()
         end
+        task.wait(1)
       end
 
       -- Cleanup when `cesp` is false
