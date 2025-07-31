@@ -424,13 +424,10 @@ end
   function Nuker()
     local function nukerLoop()
       while nk do
-        local playerPos = player.Character.HumanoidRootPart.Position / 3
-        local roundedX, roundedY, roundedZ =
-        math.floor(playerPos.x), 
-        math.floor(playerPos.y - 1), 
-        math.floor(playerPos.z)
+        local coordText2 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+        local roundedX, roundedY, roundedZ = coordText2:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
         
-        bb:FireServer(roundedX, roundedY, roundedZ)
+        bb:FireServer(roundedX, roundedY - 1, roundedZ)
         abb:InvokeServer()
         
         task.wait()
@@ -529,7 +526,7 @@ end
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v4.2",
+    Title = "Minecraft (Byte Hub) v4.3",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 300),
@@ -554,7 +551,7 @@ end
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv4.2\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv4.3\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
