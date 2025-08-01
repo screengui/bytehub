@@ -442,54 +442,54 @@ end
   end
   
   function Nuker3()
-  local nukerIndex = 1
-  local positions = {}
+    local nukerIndex = 1
+    local positions = {}
 
-  local function nuker3Loop()
-    while nk3 do
-      -- Rebuild 3×3 grid only if empty
-      if #positions == 0 then
-        -- Read the coordinate text
-        local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-        local xStr, yStr, zStr = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+    local function nuker3Loop()
+      while nk3 do
+        -- Rebuild 3×3 grid only if empty
+        if #positions == 0 then
+          -- Read the coordinate text
+          local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+          local xStr, yStr, zStr = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
 
-        local baseX = tonumber(xStr)
-        local baseY = tonumber(yStr) - 1 -- adjust Y like before
-        local baseZ = tonumber(zStr)
+          local baseX = tonumber(xStr)
+          local baseY = tonumber(yStr) - 1 -- adjust Y like before
+          local baseZ = tonumber(zStr)
 
-        for offsetX = -1, 1 do
-          for offsetZ = -1, 1 do
-            local roundedX = baseX + offsetX
-            local roundedY = baseY
-            local roundedZ = baseZ + offsetZ
-            table.insert(positions, {roundedX, roundedY, roundedZ})
+          for offsetX = -1, 1 do
+            for offsetZ = -1, 1 do
+              local roundedX = baseX + offsetX
+              local roundedY = baseY
+              local roundedZ = baseZ + offsetZ
+              table.insert(positions, {roundedX, roundedY, roundedZ})
+            end
           end
         end
-      end
 
-      -- Break one block per loop
-      local pos = positions[nukerIndex]
-      if pos then
-        bb:FireServer(pos[1], pos[2], pos[3])
-      end
+        -- Break one block per loop
+        local pos = positions[nukerIndex]
+        if pos then
+          bb:FireServer(pos[1], pos[2], pos[3])
+        end
 
-      nukerIndex += 1
-      if nukerIndex > #positions then
-        nukerIndex = 1
-        positions = {} -- Clear to follow player’s new coord next loop
-      end
+        nukerIndex += 1
+        if nukerIndex > #positions then
+          nukerIndex = 1
+          positions = {} -- Clear to follow player’s new coord next loop
+        end
 
-      abb:InvokeServer()
-      task.wait()
+        abb:InvokeServer()
+        task.wait()
+      end
+    end
+
+    if useTaskSpawn then
+      task.spawn(nuker3Loop)
+    else
+      nuker3Loop()
     end
   end
-
-  if useTaskSpawn then
-    task.spawn(nuker3Loop)
-  else
-    nuker3Loop()
-  end
-end
   
   function chestdupe(mode)
     if mode == 1 then
