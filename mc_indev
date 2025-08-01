@@ -442,7 +442,6 @@ end
   end
   
   function Nuker3()
-  function Nuker3()
   local nukerIndex = 1
   local positions = {}
 
