@@ -473,11 +473,11 @@ end
           bb:FireServer(pos[1], pos[2], pos[3])
         end
 
-        nukerIndex += 1
-        if nukerIndex > #positions then
-          nukerIndex = 1
-          positions = {} -- Clear to follow player’s new coord next loop
-        end
+        nukerIndex = nukerIndex + 1
+if nukerIndex > #positions then
+  nukerIndex = 1
+  positions = {}
+end
 
         abb:InvokeServer()
         task.wait()
