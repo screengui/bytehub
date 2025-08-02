@@ -443,30 +443,45 @@ end
   
   function Nuker3()
 	if nk3 then
-		_G.putanynamehere = RunService.Heartbeat:Connect(function()
-			-- Get coordinates from GUI
-			local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-			local roundedX, roundedY, roundedZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+		local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
 
-			local baseX = tonumber(roundedX)
-			local baseY = tonumber(roundedY) - 1
-			local baseZ = tonumber(roundedZ)
+		local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+		local baseX = tonumber(playerPosX)
+		local baseY = tonumber(playerPosY) - 1
+		local baseZ = tonumber(playerPosZ)
 
-			for offsetX = -1, 1 do
-				for offsetZ = -1, 1 do
-					local x = baseX + offsetX
-					local y = baseY
-					local z = baseZ
+		local positions = {}
 
-					bb:FireServer(x, y, z)
-				end
+		for offsetX = -1, 1 do
+			for offsetZ = -1, 1 do
+				table.insert(positions, {
+					baseX + offsetX,
+					baseY,
+					baseZ + offsetZ
+				})
 			end
+		end
 
-			abb:InvokeServer()
+		local nukerIndex = 1
+
+		_G.putanynamehere = task.spawn(function()
+			while nk3 do
+				local pos = positions[nukerIndex]
+
+				bb:FireServer(pos[1], pos[2], pos[3])
+				abb:InvokeServer()
+
+				nukerIndex = nukerIndex + 1
+				if nukerIndex > #positions then
+					nukerIndex = 1
+				end
+
+				task.wait()
+			end
 		end)
 	else
 		if _G.putanynamehere then
-			_G.putanynamehere:Disconnect()
+			task.cancel(_G.putanynamehere)
 			_G.putanynamehere = nil
 		end
 	end
