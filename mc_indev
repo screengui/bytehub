@@ -445,6 +445,7 @@ end
 	if nk3 then
 		_G.putanynamehere = task.spawn(function()
 			while nk3 do
+				-- Get coordinate from GUI
 				local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
 				local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
 				local baseX = tonumber(playerPosX)
@@ -453,27 +454,33 @@ end
 
 				local positions = {}
 
+				-- Build 3×3×3 area: -1 to 1 in X, Y, Z
 				for offsetX = -1, 1 do
-					for offsetZ = -1, 1 do
-						table.insert(positions, {
-							baseX + offsetX,
-							baseY,
-							baseZ + offsetZ
-						})
+					for offsetY = -1, 1 do
+						for offsetZ = -1, 1 do
+							table.insert(positions, {
+								baseX + offsetX,
+								baseY + offsetY,
+								baseZ + offsetZ
+							})
+						end
 					end
 				end
-                                task.spawn(function()
-				for i = 1, #positions do
-					if not nk3 then break end
 
-					task.spawn(function()
-						local pos = positions[i]
-						bb:FireServer(pos[1], pos[2], pos[3])
-						abb:InvokeServer()
-					end)
-				end
-                                end)
-				task.wait() -- short cooldown for next full cycle
+				-- Loop through all 27 blocks
+				task.spawn(function()
+					for i = 1, #positions do
+						if not nk3 then break end
+
+						task.spawn(function()
+							local pos = positions[i]
+							bb:FireServer(pos[1], pos[2], pos[3])
+							abb:InvokeServer()
+						end)
+					end
+				end)
+
+				task.wait() -- short cooldown for next cycle
 			end
 		end)
 	else
