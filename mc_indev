@@ -462,7 +462,7 @@ end
 						})
 					end
 				end
-
+                                task.spawn(function()
 				for i = 1, #positions do
 					if not nk3 then break end
 
@@ -472,7 +472,7 @@ end
 						abb:InvokeServer()
 					end)
 				end
-
+                                end)
 				task.wait() -- short cooldown for next full cycle
 			end
 		end)
