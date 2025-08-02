@@ -1321,6 +1321,61 @@ end
       Nuker3(n3)
     end 
   })
+
+  local nktog = Tabs.wr:AddToggle("Nuker",
+  {
+    Title = "Nuker 5x5", 
+    Description = "Breaks blocks below you",
+    Default = false,
+    Callback = function(n5)
+      nk5 = n5
+      if nk5 then
+		_G.putanynamehere = task.spawn(function()
+			while nk5 do
+				local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+				local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+				local baseX = tonumber(playerPosX)
+				local baseY = tonumber(playerPosY) - 1
+				local baseZ = tonumber(playerPosZ)
+
+				local positions = {}
+
+				-- 5×5×5 area: -2 to 2 in X, Y, Z
+				for offsetX = -2, 2 do
+					for offsetY = -2, 2 do
+						for offsetZ = -2, 2 do
+							table.insert(positions, {
+								baseX + offsetX,
+								baseY + offsetY,
+								baseZ + offsetZ
+							})
+						end
+					end
+				end
+
+				task.spawn(function()
+					for i = 1, #positions do
+						if not nk5 then break end
+
+						task.spawn(function()
+							local pos = positions[i]
+							bb:FireServer(pos[1], pos[2], pos[3])
+							abb:InvokeServer()
+						end)
+					end
+				end)
+
+				task.wait()
+			end
+		end)
+	else
+		if _G.putanynamehere then
+			task.cancel(_G.putanynamehere)
+			_G.putanynamehere = nil
+		end
+	end
+    end 
+  })
   
   local Stog = Tabs.wr:AddToggle("Scaffold",
   {
