@@ -466,11 +466,14 @@ end
 				for i = 1, #positions do
 					if not nk3 then break end
 
-					local pos = positions[i]
-					bb:FireServer(pos[1], pos[2], pos[3])
-					abb:InvokeServer()
-					task.wait()
+					task.spawn(function()
+						local pos = positions[i]
+						bb:FireServer(pos[1], pos[2], pos[3])
+						abb:InvokeServer()
+					end)
 				end
+
+				task.wait() -- short cooldown for next full cycle
 			end
 		end)
 	else
