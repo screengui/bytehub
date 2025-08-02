@@ -443,40 +443,34 @@ end
   
   function Nuker3()
 	if nk3 then
-		local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-
-		local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
-		local baseX = tonumber(playerPosX)
-		local baseY = tonumber(playerPosY) - 1
-		local baseZ = tonumber(playerPosZ)
-
-		local positions = {}
-
-		for offsetX = -1, 1 do
-			for offsetZ = -1, 1 do
-				table.insert(positions, {
-					baseX + offsetX,
-					baseY,
-					baseZ + offsetZ
-				})
-			end
-		end
-
-		local nukerIndex = 1
-
 		_G.putanynamehere = task.spawn(function()
 			while nk3 do
-				local pos = positions[nukerIndex]
+				local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+				local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+				local baseX = tonumber(playerPosX)
+				local baseY = tonumber(playerPosY) - 1
+				local baseZ = tonumber(playerPosZ)
 
-				bb:FireServer(pos[1], pos[2], pos[3])
-				abb:InvokeServer()
+				local positions = {}
 
-				nukerIndex = nukerIndex + 1
-				if nukerIndex > #positions then
-					nukerIndex = 1
+				for offsetX = -1, 1 do
+					for offsetZ = -1, 1 do
+						table.insert(positions, {
+							baseX + offsetX,
+							baseY,
+							baseZ + offsetZ
+						})
+					end
 				end
 
-				task.wait()
+				for i = 1, #positions do
+					if not nk3 then break end
+
+					local pos = positions[i]
+					bb:FireServer(pos[1], pos[2], pos[3])
+					abb:InvokeServer()
+					task.wait()
+				end
 			end
 		end)
 	else
