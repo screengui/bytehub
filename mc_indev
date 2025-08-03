@@ -532,6 +532,9 @@ end
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
   end
 
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/inv-viewer.lua",true))()
+  game.Players.LocalPlayer.PlayerGUI.invviewer.Enabled = false
+  
   loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
   ExunysDeveloperAimbot.Settings.Enabled = false
   ExunysDeveloperAimbot.Settings.LockPart = "Torso"
@@ -1158,6 +1161,17 @@ end
       playeresp(p)
     end 
   })
+
+  local Toggle = Tabs.vs:AddToggle("Chest ESP",
+  {
+    Title = "Inventory Viewer", 
+    Description = "Makes you see other player's inventories",
+    Default = false,
+    Callback = function(in)
+      inv = in
+      game.Players.LocalPlayer.PlayerGUI.invviewer.Enabled = inv and true or false
+    end 
+  }) 
 
   local ectog = Tabs.vs:AddToggle("Enderchest",
   {
