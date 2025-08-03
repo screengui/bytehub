@@ -1169,7 +1169,7 @@ end
     Default = false,
     Callback = function(in)
       inv = in
-      game.Players.LocalPlayer.PlayerGUI.invviewer.Enabled = inv and true or false
+      game.Players.LocalPlayer.PlayerGUI.invviewer.Enabled = in and true or false
     end 
   }) 
 
