@@ -533,7 +533,7 @@ end
   end
 
   loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/inv-viewer.lua",true))()
-  game.Players.LocalPlayer.PlayerGUI.invviewer.Enabled = false
+  game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = false
   
   loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()()
   ExunysDeveloperAimbot.Settings.Enabled = false
@@ -1169,7 +1169,7 @@ end
     Default = false,
     Callback = function(inv)
       invv = inv
-      game.Players.LocalPlayer.PlayerGUI.invviewer.Enabled = inv
+      game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = inv
     end 
   }) 
 
