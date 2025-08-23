@@ -70,8 +70,8 @@ if not getgenv().bytehubLoaded then
     VerticalLine = Drawing.new("Line")
   }
 
-loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
-	
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
+
   -- Anti Kick --
   
   local oldhmmi
