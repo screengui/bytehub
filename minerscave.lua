@@ -70,6 +70,7 @@ if not getgenv().bytehubLoaded then
     VerticalLine = Drawing.new("Line")
   }
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
 
   -- Anti Kick --
   
@@ -542,6 +543,7 @@ end
   ExunysDeveloperAimbot.Settings.TriggerKey = Enum.KeyCode.F or Enum.UserInputType.Touch
   ExunysDeveloperAimbot.Settings.Toggle = true
   ExunysDeveloperAimbot.FOVSettings.Enabled = false
+  loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
