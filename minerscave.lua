@@ -71,7 +71,7 @@ if not getgenv().bytehubLoaded then
   }
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
-
+wait()
   -- Anti Kick --
   
   local oldhmmi
