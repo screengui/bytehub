@@ -62,3 +62,10 @@ end
 for _, planks in pairs(plank:GetChildren()) do
 	planks.Texture = "rbxassetid://9359126646"
 end
+
+game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.T.Texture = "rbxassetid://74701054061922"
+game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.Bottom.Texture = "rbxassetid://95972312598754"
+game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.F.Texture = "rbxassetid://107460718741342"
+game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.B.Texture = "rbxassetid://107460718741342"
+game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.L.Texture = "rbxassetid://107460718741342"
+game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.R.Texture = "rbxassetid://107460718741342"
