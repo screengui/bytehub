@@ -1,4 +1,14 @@
 local names = {"T", "Bottom", "F", "B", "L", "R"}
+local faces = {
+	Enum.NormalId.Top,
+	Enum.NormalId.Bottom,
+	Enum.NormalId.Front,
+	Enum.NormalId.Back,
+	Enum.NormalId.Left,
+	Enum.NormalId.Right
+}
+
+local log = game:GetService("ReplicatedFirst").Blocks.OakLog
 
 game:GetService("ReplicatedFirst").MetaBlocks.GrassBlock.T.Texture = "rbxassetid://82130822566092"
 game:GetService("ReplicatedFirst").MetaBlocks.GrassBlock.Bottom.Texture = "rbxassetid://95972312598754"
@@ -14,13 +24,17 @@ end
 game:GetService("ReplicatedFirst").Blocks.OakLog.TextureID = ""
 
 for i = 1, 6 do
-  local oakLogTexture = Instance.new("Texture", game:GetService("ReplicatedFirst").Blocks.OakLog)
-  oakLogTexture.Name = names[i]
+	local tex = Instance.new("Texture", log)
+	tex.Name = names[i]
+	tex.Face = faces[i]
+	tex.OffsetStudsU = 1.5
+	tex.OffsetStudsV = 1.5
+	tex.StudsPerTileU = 3
+	tex.StudsPerTileV = 3
 end
-
-game:GetService("ReplicatedFirst").MetaBlocks.OakLog.T.Texture = "rbxassetid://9359130096"
-game:GetService("ReplicatedFirst").MetaBlocks.OakLog.Bottom.Texture = "rbxassetid://9359130096"
-game:GetService("ReplicatedFirst").MetaBlocks.OakLog.F.Texture = "rbxassetid://9359131807"
-game:GetService("ReplicatedFirst").MetaBlocks.OakLog.B.Texture = "rbxassetid://9359131807"
-game:GetService("ReplicatedFirst").MetaBlocks.OakLog.L.Texture = "rbxassetid://9359131807"
-game:GetService("ReplicatedFirst").MetaBlocks.OakLog.R.Texture = "rbxassetid://9359131807"
+game:GetService("ReplicatedFirst").Blocks.OakLog.T.Texture = "rbxassetid://9359130096"
+game:GetService("ReplicatedFirst").Blocks.OakLog.Bottom.Texture = "rbxassetid://9359130096"
+game:GetService("ReplicatedFirst").Blocks.OakLog.F.Texture = "rbxassetid://9359131807"
+game:GetService("ReplicatedFirst").Blocks.OakLog.B.Texture = "rbxassetid://9359131807"
+game:GetService("ReplicatedFirst").Blocks.OakLog.L.Texture = "rbxassetid://9359131807"
+game:GetService("ReplicatedFirst").Blocks.OakLog.R.Texture = "rbxassetid://9359131807"
