@@ -9,6 +9,7 @@ local faces = {
 }
 
 local log = game:GetService("ReplicatedFirst").Blocks.OakLog
+local plank = game:GetService("ReplicatedFirst").Blocks.OakPlanks
 
 game:GetService("ReplicatedFirst").MetaBlocks.GrassBlock.T.Texture = "rbxassetid://82130822566092"
 game:GetService("ReplicatedFirst").MetaBlocks.GrassBlock.Bottom.Texture = "rbxassetid://95972312598754"
@@ -22,6 +23,7 @@ for _, dirt in pairs(game.ReplicatedFirst.MetaBlocks.Dirt:GetChildren()) do
 end
 
 game:GetService("ReplicatedFirst").Blocks.OakLog.TextureID = ""
+game:GetService("ReplicatedFirst").Blocks.OakPlanks.TextureID = ""
 
 for i = 1, 6 do
 	local tex = Instance.new("Texture", log)
@@ -38,3 +40,25 @@ game:GetService("ReplicatedFirst").Blocks.OakLog.F.Texture = "rbxassetid://93591
 game:GetService("ReplicatedFirst").Blocks.OakLog.B.Texture = "rbxassetid://9359131807"
 game:GetService("ReplicatedFirst").Blocks.OakLog.L.Texture = "rbxassetid://9359131807"
 game:GetService("ReplicatedFirst").Blocks.OakLog.R.Texture = "rbxassetid://9359131807"
+
+for _, leaves in pairs(game.ReplicatedFirst.MetaBlocks.Leaves:GetChildren()) do
+	leaves.Texture = "rbxassetid://11589055088"
+end
+
+for _, sand in pairs(game.ReplicatedFirst.MetaBlocks.Sand:GetChildren()) do
+	sand.Texture = "rbxassetid://9277770677"
+end
+
+for i = 1, 6 do
+	local tex = Instance.new("Texture", plank)
+	tex.Name = names[i]
+	tex.Face = faces[i]
+	tex.OffsetStudsU = 1.5
+	tex.OffsetStudsV = 1.5
+	tex.StudsPerTileU = 3
+	tex.StudsPerTileV = 3
+end
+
+for _, planks in pairs(plank:GetChildren()) do
+	planks.Texture = "rbxassetid://9359126646"
+end
