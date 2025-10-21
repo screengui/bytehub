@@ -133,7 +133,7 @@ end
 
 --Underground--
 for _, stone in pairs(game.ReplicatedFirst.MetaBlocks.Stone:GetChildren()) do
-	sand.Texture = "rbxassetid://17175732807"
+	ice.Texture = "rbxassetid://17175732807"
 end
 
 --Others--
