@@ -12,11 +12,13 @@ local faces = {
 -- Define blocks
 local log = game:GetService("ReplicatedFirst").Blocks.OakLog
 local jlog = game:GetService("ReplicatedFirst").Blocks.JungleLog
+local blog = game:GetService("ReplicatedFirst").Blocks.BirchLog
 local plank = game:GetService("ReplicatedFirst").Blocks.OakPlanks
 
 -- Clear default textures
 game:GetService("ReplicatedFirst").Blocks.OakLog.TextureID = ""
 game:GetService("ReplicatedFirst").Blocks.JungleLog.TextureID = ""
+game:GetService("ReplicatedFirst").Blocks.BirchLog.TextureID = ""
 game:GetService("ReplicatedFirst").Blocks.OakPlanks.TextureID = ""
 
 -- Create Textures
@@ -32,6 +34,16 @@ end
 
 for i = 1, 6 do
 	local tex = Instance.new("Texture", jlog)
+	tex.Name = names[i]
+	tex.Face = faces[i]
+	tex.OffsetStudsU = 1.5
+	tex.OffsetStudsV = 1.5
+	tex.StudsPerTileU = 3
+	tex.StudsPerTileV = 3
+end
+
+for i = 1, 6 do
+	local tex = Instance.new("Texture", blog)
 	tex.Name = names[i]
 	tex.Face = faces[i]
 	tex.OffsetStudsU = 1.5
@@ -64,6 +76,13 @@ game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.B.Texture = "rbxasseti
 game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.L.Texture = "rbxassetid://107460718741342"
 game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.R.Texture = "rbxassetid://107460718741342"
 
+game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.T.Texture = "rbxassetid://17181784442"
+game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.Bottom.Texture = "rbxassetid://95972312598754"
+game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.F.Texture = "rbxassetid://17181782170"
+game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.B.Texture = "rbxassetid://17181782170"
+game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.L.Texture = "rbxassetid://17181782170"
+game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.R.Texture = "rbxassetid://17181782170"
+
 for _, dirt in pairs(game.ReplicatedFirst.MetaBlocks.Dirt:GetChildren()) do
     dirt.Texture = "rbxassetid://95972312598754"
 end
@@ -83,13 +102,12 @@ game:GetService("ReplicatedFirst").Blocks.JungleLog.B.Texture = "rbxassetid://17
 game:GetService("ReplicatedFirst").Blocks.JungleLog.L.Texture = "rbxassetid://17175994462"
 game:GetService("ReplicatedFirst").Blocks.JungleLog.R.Texture = "rbxassetid://17175994462"
 
-game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.T.Texture = "rbxassetid://17181784442"
-game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.Bottom.Texture = "rbxassetid://95972312598754"
-game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.F.Texture = "rbxassetid://17181782170"
-game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.B.Texture = "rbxassetid://17181782170"
-game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.L.Texture = "rbxassetid://17181782170"
-game:GetService("ReplicatedFirst").MetaBlocks.SnowBlock.R.Texture = "rbxassetid://17181782170"
-
+game:GetService("ReplicatedFirst").Blocks.BirchLog.T.Texture = "rbxassetid://17151681352"
+game:GetService("ReplicatedFirst").Blocks.BirchLog.Bottom.Texture = "rbxassetid://17151681352"
+game:GetService("ReplicatedFirst").Blocks.BirchLog.F.Texture = "rbxassetid://17151684861"
+game:GetService("ReplicatedFirst").Blocks.BirchLog.B.Texture = "rbxassetid://17151684861"
+game:GetService("ReplicatedFirst").Blocks.BirchLog.L.Texture = "rbxassetid://17151684861"
+game:GetService("ReplicatedFirst").Blocks.BirchLog.R.Texture = "rbxassetid://17151684861"
 --Leaves--
 for _, leaves in pairs(game.ReplicatedFirst.MetaBlocks.Leaves:GetChildren()) do
 	leaves.Texture = "rbxassetid://11589055088"
@@ -97,6 +115,10 @@ end
 
 for _, jleaves in pairs(game.ReplicatedFirst.MetaBlocks.JungleLeaves:GetChildren()) do
 	jleaves.Texture = "rbxassetid://111295347358202"
+end
+
+for _, bleaves in pairs(game.ReplicatedFirst.MetaBlocks.BirchLeaves:GetChildren()) do
+	bleaves.Texture = "rbxassetid://136504352957570"
 end
 
 --Planks--
@@ -115,3 +137,6 @@ for _, stone in pairs(game.ReplicatedFirst.MetaBlocks.Stone:GetChildren()) do
 end
 
 --Others--
+for _, ice in pairs(game.ReplicatedFirst.MetaBlocks.Ice:GetChildren()) do
+	sand.Texture = "rbxassetid://75408908999960"
+end
