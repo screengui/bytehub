@@ -9,6 +9,7 @@ local faces = {
 }
 
 local log = game:GetService("ReplicatedFirst").Blocks.OakLog
+local jlog = game:GetService("ReplicatedFirst").Blocks.JungleLog
 local plank = game:GetService("ReplicatedFirst").Blocks.OakPlanks
 
 game:GetService("ReplicatedFirst").MetaBlocks.GrassBlock.T.Texture = "rbxassetid://82130822566092"
@@ -23,6 +24,7 @@ for _, dirt in pairs(game.ReplicatedFirst.MetaBlocks.Dirt:GetChildren()) do
 end
 
 game:GetService("ReplicatedFirst").Blocks.OakLog.TextureID = ""
+game:GetService("ReplicatedFirst").Blocks.JungleLog.TextureID = ""
 game:GetService("ReplicatedFirst").Blocks.OakPlanks.TextureID = ""
 
 for i = 1, 6 do
@@ -69,3 +71,24 @@ game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.F.Texture = "rbxasseti
 game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.B.Texture = "rbxassetid://107460718741342"
 game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.L.Texture = "rbxassetid://107460718741342"
 game:GetService("ReplicatedFirst").MetaBlocks.JungleBlock.R.Texture = "rbxassetid://107460718741342"
+
+for i = 1, 6 do
+	local tex = Instance.new("Texture", jlog)
+	tex.Name = names[i]
+	tex.Face = faces[i]
+	tex.OffsetStudsU = 1.5
+	tex.OffsetStudsV = 1.5
+	tex.StudsPerTileU = 3
+	tex.StudsPerTileV = 3
+end
+
+game:GetService("ReplicatedFirst").Blocks.JungleLog.T.Texture = "rbxassetid://17175996147"
+game:GetService("ReplicatedFirst").Blocks.JungleLog.Bottom.Texture = "rbxassetid://17175996147"
+game:GetService("ReplicatedFirst").Blocks.JungleLog.F.Texture = "rbxassetid://17175994462"
+game:GetService("ReplicatedFirst").Blocks.JungleLog.B.Texture = "rbxassetid://17175994462"
+game:GetService("ReplicatedFirst").Blocks.JungleLog.L.Texture = "rbxassetid://17175994462"
+game:GetService("ReplicatedFirst").Blocks.JungleLog.R.Texture = "rbxassetid://17175994462"
+
+for _, jleaves in pairs(game.ReplicatedFirst.MetaBlocks.JungleLeaves:GetChildren()) do
+	jleaves.Texture = "rbxassetid://111295347358202"
+end
