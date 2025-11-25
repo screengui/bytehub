@@ -1,5 +1,5 @@
 if game.PlaceId == 13890902087 then
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Math%20Boxing",true))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/MathBoxing.lua",true))()
 elseif game.PlaceId == 10476933477 then
   loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Strong%20Ninja%20Simulator%20Modded.lua",true))()
 elseif game.PlaceId == 6741970382 then
