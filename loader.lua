@@ -5,7 +5,7 @@ elseif game.PlaceId == 10476933477 then
 elseif game.PlaceId == 6741970382 then
   loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/zombielab.lua",true))()
 elseif game.PlaceId == 15686049105 then
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Longest%20flag%20wins.lua",true))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Longest_flag_wins.lua",true))()
 else
   print("Not Supported")
   game.Players.LocalPlayer:Kick("Game is not supported")
