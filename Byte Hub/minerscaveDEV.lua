@@ -48,7 +48,7 @@ if not getgenv().bytehubLoaded then
     "CraftTopiaIsAwesome",
     "Epicguy_616161"
   }
-  
+
   -- Remotes --
   local gameremotes = ReplicatedStorage.GameRemotes
   local GameRemotes = ReplicatedStorage.GameRemotes
@@ -166,6 +166,14 @@ if not getgenv().bytehubLoaded then
       torso.Massless = Massless  
       torso.Transparency = transparency
     end
+  end
+		
+  local function getPlayerNames()
+	  local t = {}
+	  for _, p in ipairs(Players:GetPlayers()) do
+		  table.insert(t, p.Name)
+	  end
+	  return t
   end
   
   function chestdupe(mode)
@@ -629,10 +637,10 @@ if not getgenv().bytehubLoaded then
   Tabs.lp:AddDropdown("PlayerTP", {
     Title = "Teleport to Player",
     Description = "Teleports to selected player",
-    Values = game:GetService("Players"):GetChildren(),
-    Default = Fluent.Theme,
+    Values = getPlayerNames(),
+    Default = getPlayerNames()[1],
     Callback = function(Value)
-        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players[Value].Character.HumanoidRootPart.CFrame)
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players[Value].Character.HumanoidRootPart.Position)
     end
   })
   
