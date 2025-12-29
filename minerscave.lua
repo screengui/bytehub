@@ -160,7 +160,11 @@ wait()
       torso.Transparency = transparency
     end
   end
-  
+
+  if game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame:FindFirstChild("coordinates") then
+	game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame:FindFirstChild("coordinates").Name = "Coord"
+  end
+	
   function CombatTp()
     local function checkHealth2()
       local character = player.Character
@@ -379,9 +383,8 @@ function Scaffold()
         local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
         local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
         local BlocksByName = M_IDs.ByName.Blocks
-		local cords = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame:FindFirstChild("Coord") or game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame:FindFirstChild("coordinates")
         local dir = 1 
-        _G.CoordsChannel = cords:GetPropertyChangedSignal("Text"):Connect(function()
+        _G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord:GetPropertyChangedSignal("Text"):Connect(function()
 	        if game.Players.LocalPlayer.Character ~= nil and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and game.Players.LocalPlayer.Character.Humanoid.Health > 0 then
 		        local placeSlot = game.Players.LocalPlayer.Character.SelectedSlot.Value
 		        local Coords = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
