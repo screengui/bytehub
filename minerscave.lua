@@ -161,10 +161,6 @@ wait()
     end
   end
 
-  if game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame:FindFirstChild("coordinates") then
-	game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame:FindFirstChild("coordinates").Name = "Coord"
-  end
-	
   function CombatTp()
     local function checkHealth2()
       local character = player.Character
