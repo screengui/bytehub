@@ -1237,7 +1237,7 @@ if not getgenv().bytehubLoaded then
       nk5 = n5
       if nk5 then
 		_G.putanynamehere = task.spawn(function()
-			while nk3 do
+			while nk5 do
 
 				local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
 				local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
@@ -1261,7 +1261,7 @@ if not getgenv().bytehubLoaded then
 			  
 				task.spawn(function()
 					for i = 1, #positions do
-						if not nk3 then break end
+						if not nk5 then break end
 
 						task.spawn(function()
 							local pos = positions[i]
@@ -1279,7 +1279,8 @@ if not getgenv().bytehubLoaded then
 			task.cancel(_G.putanynamehere)
 			_G.putanynamehere = nil
 		end
-    end 
+	end 
+			end
   })
   
   local Stog = Tabs.wr:AddToggle("Scaffold",
