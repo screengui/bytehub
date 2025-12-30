@@ -110,12 +110,12 @@ if not getgenv().bytehubLoaded then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
   end
 
-  _G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
+  --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
       if child:IsA("UnionOperation") then
           task.wait()
           child:Destroy()
       end
-  end)
+  end)]]--
   
   local function getLowestHealthNearbyPlayer()
     local lowestHealth = math.huge
@@ -292,11 +292,9 @@ if not getgenv().bytehubLoaded then
     Default = false,
     Callback = function(k)
       ka = k
-      local LP = game.Players.LocalPlayer
-
-	  local function attackLoop()
+      local function attackLoop()
 		while ka do
-		  local lpChar = Players.LocalPlayer.Character
+		  local lpChar = game.Players.LocalPlayer.Character
           local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
 
           if lpHRP then
