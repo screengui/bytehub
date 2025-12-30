@@ -217,7 +217,7 @@ if not getgenv().bytehubLoaded then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
   end
 
-  loadstring(game:HttpGet("https://pastebin.com/raw/7dYZ7i3b",true))()
+  loadstring(game:HttpGet("https://github.com/screengui/archives/blob/main/inv-viewerV2.lua",true))()
   game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = false
   
   loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
