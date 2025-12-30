@@ -41,7 +41,8 @@ if not getgenv().bytehubLoaded then
   local strafeRange = 50 -- how close they must be to strafe
   local wasEnabled = false
   local selectedTargeting = "nearest"
-  
+  local RANGE_SQ = 16*16
+	
   local whitelist = {
     "sbjmp",
     "CraftBloxPro9999",
@@ -292,30 +293,34 @@ if not getgenv().bytehubLoaded then
     Callback = function(k)
       ka = k
       local LP = game.Players.LocalPlayer
-      local function attackLoop()
-        while ka do
-          local target
-            if selectedTargeting == "lowest" then
-              target = getLowestHealthNearbyPlayer()
-            elseif selectedTargeting == "nearest" then
-              target = getClosestPlayer()
-            end
+
+	  local function attackLoop()
+		while ka do
+		  local lpChar = Players.LocalPlayer.Character
+          local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
+
+          if lpHRP then
+            local target =
+            selectedTargeting == "lowest" and getLowestHealthNearbyPlayer()
+            or getClosestPlayer()
 
             if target and target.Character then
-              local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
-              if humanoidRootPart and (LP:DistanceFromCharacter(humanoidRootPart.Position) < 16) then
-                game.ReplicatedStorage.GameRemotes.Attack:InvokeServer(target.Character)
-              end
+                local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
+                if tHRP then
+                    local d = lpHRP.Position - tHRP.Position
+                    if (d.X*d.X + d.Z*d.Z) <= RANGE_SQ then
+                        Attack:InvokeServer(target.Character)
+                    end
+                end
             end
-          task.wait(delay)
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(attackLoop)
-      else
-        attackLoop()
-      end
+           end
+		   task.wait(delay)
+		end
+	  end
+
+	  if ka then
+		task.spawn(attackLoop)
+	  end
     end 
   })
   
