@@ -34,7 +34,6 @@ if not getgenv().bytehubLoaded then
   local delay = 0
   local useTaskSpawn = false
   local clockTimeConnection = nil
-  local slot = player.PlayerGui.HUDGui.Inventory.Slots:FindFirstChild("Slot-1")
   local strafeEnabled = false
   local radius = 10
   local speed = 2
@@ -199,8 +198,8 @@ if not getgenv().bytehubLoaded then
       str = str .. e
     end)
     return str;
-  end
-
+	end
+	
   if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
     isPC = true
     local Notify = AkaliNotif.Notify;
@@ -514,46 +513,68 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
       game.ReplicatedStorage.GameRemotes.MoveItem:InvokeServer(101, 9, true)
     end
   })
-  
+
+  local eattog = Tabs.lp:AddToggle("EatToggle",
+  {
+    Title = "Auto Eat",
+    Description = "Automatically eats for you",
+    Default = false,
+    Callback = function(aeat)
+      ae = aeat
+      while ae do
+          game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("ConsumeItem"):InvokeServer(game:GetService("Players").LocalPlayer.Character:WaitForChild("Inventory"), game.Players.LocalPlayer.Character.SelectedSlot.Value)
+      end
+	end)
+  })
+	
   local jetog = Tabs.lp:AddToggle("Jesus",
   {
-    Title = "Jesus", 
-    Description = "Walk On Water",
-    Default = false,
-    Callback = function(j)
-      je = j
-      local fluidFolder = Workspace:FindFirstChild("Fluid")
-      if not je or not fluidFolder then return end
-      
-      local function waterLoop()
-        while je do
-          for _, child in pairs(fluidFolder:GetChildren()) do
-            for _, grandchild in pairs(child:GetChildren()) do
-              if grandchild:IsA("BasePart") and (grandchild.Name == "Water" or grandchild.Name == "Lava") then
-                grandchild.CanCollide = true
-              end
-            end
-          end
-          task.wait()
-        end
-        
-        for _, child in pairs(fluidFolder:GetChildren()) do
-          for _, grandchild in pairs(child:GetChildren()) do
-            if grandchild:IsA("BasePart") and (grandchild.Name == "Water" or grandchild.Name == "Lava") then
-              grandchild.CanCollide = false
-            end
-          end
+  Title = "Jesus",
+  Description = "Walk On Water",
+  Default = false,
+  Callback = function(j)
+    je = j
+
+    local fluidFolder = Workspace:FindFirstChild("Fluid")
+    if not fluidFolder then return end
+
+    local function isWater(part)
+      return part:IsA("BasePart")
+        and (part.Name == "Water" or part.Name == "Lava")
+    end
+
+    if je then
+      -- ENABLE: set collide ON (scan once)
+      for _, obj in ipairs(fluidFolder:GetDescendants()) do
+        if isWater(obj) then
+          obj.CanCollide = true
         end
       end
-      
-      if useTaskSpawn then
-        task.spawn(waterLoop)
-      else
-        waterLoop()
+
+      -- handle newly added water
+      _G.jesusConn = fluidFolder.DescendantAdded:Connect(function(obj)
+        if isWater(obj) then
+          obj.CanCollide = true
+        end
+      end)
+
+    else
+      -- DISABLE: disconnect listener
+      if _G.jesusConn then
+        _G.jesusConn:Disconnect()
+        _G.jesusConn = nil
       end
-    end 
-  })
-  
+
+      -- FORCE reset existing parts (scan once)
+      for _, obj in ipairs(fluidFolder:GetDescendants()) do
+        if isWater(obj) then
+          obj.CanCollide = false
+        end
+      end
+    end
+  end
+})
+	
   local Toggle = Tabs.lp:AddToggle("Toggle",
   {
     Title = "Infinite Health",
@@ -1198,17 +1219,17 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     end 
   })
   
-  local nktog = Tabs.wr:AddToggle("Nuker",
+  local nk3tog = Tabs.wr:AddToggle("Nuker3",
   {
     Title = "Nuker 3x3", 
-    Description = "Breaks blocks around you",
+    Description = "Breaks blocks around you in a 3³ area",
     Default = false,
     Callback = function(n3)
       nk3 = n3
       if nk3 then
           _G.putanynamehere = task.spawn(function()
               while nk3 do
-                  local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+                  local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.coordinates.Text
 				          local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
 				          local baseX = tonumber(playerPosX)
 				          local baseY = tonumber(playerPosY) - 1
@@ -1465,8 +1486,9 @@ end)
   
   Tabs.dt:AddButton({
     Title = "Dupe Selected Item",
-    Description = "Dupes the first chest slot",
+    Description = "Dupes the selected item",
     Callback = function()
+	  local slot = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots:FindFirstChild("Slot-1")
       local b = slot.SlotNA.Count
       local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
       local bCount = tonumber(b.Text)
@@ -1522,7 +1544,7 @@ end)
   })
   
   Tabs.dt:AddButton({
-    Title = "Dupe Entire Chest + Dump",
+    Title = "Dump + Dupe Entire Chest",
     Description = "Dumps your inv to a chest, then dupes it",
     Callback = function()
       for i = 36, 62 do
