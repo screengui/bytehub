@@ -1625,6 +1625,7 @@ end)
       if isMobile then
         game.CoreGui.Toggleui:Destroy()
       end
+	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
       loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Wolfmoons.lua",true))()
     end
   })
@@ -1638,6 +1639,7 @@ end)
       if isMobile then
         game.CoreGui.Toggleui:Destroy()
       end
+	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
       loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Minerscraft.lua",true))()
     end
   })
@@ -1831,6 +1833,7 @@ end)
       if isMobile then
         game.CoreGui.Toggleui:Destroy()
       end
+	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
     end
   })
   
