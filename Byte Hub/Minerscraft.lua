@@ -46,6 +46,10 @@ if not getgenv().bytehubLoaded then
     "sbjmp",
     "CraftBloxPro9999",
     "CraftTopiaIsAwesome",
+    "vconviict",
+	"minerscraftdupedemon",
+	"MinersCraftPro9999",
+	"werewareikyouseethis",
     "Epicguy_616161"
   }
 
@@ -1796,6 +1800,7 @@ end)
       if isMobile then
         game.CoreGui.Toggleui:Destroy()
       end
+	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
     end
   })
   
