@@ -524,7 +524,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
       while ae do
           game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("ConsumeItem"):InvokeServer(game:GetService("Players").LocalPlayer.Character:WaitForChild("Inventory"), game.Players.LocalPlayer.Character.SelectedSlot.Value)
       end
-	end)
+	end
   })
 	
   local jetog = Tabs.lp:AddToggle("Jesus",
