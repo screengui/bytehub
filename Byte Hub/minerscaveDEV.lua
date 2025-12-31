@@ -1628,7 +1628,20 @@ end)
       loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Wolfmoons.lua",true))()
     end
   })
-  
+
+  Tabs.ot:AddButton({
+    Title = "Load Minerscraft",
+    Description = "Loads ByteHub for Minerscraft",
+    Callback = function()
+      Fluent:Destroy()
+      getgenv().bytehubLoaded = false
+      if isMobile then
+        game.CoreGui.Toggleui:Destroy()
+      end
+      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Minerscraft.lua",true))()
+    end
+  })
+	
   Tabs.ot:AddButton({
     Title = "Infinite Yield",
     Description = "Loads Infinite Yield admin commands",
