@@ -60,6 +60,8 @@ if not getgenv().bytehubLoaded then
   local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
   local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
   local useblock = gameremotes.UseBlock
+  local hbConn
+  local timeAcc = 0
   
   local CrosshairSettings = {
     Visible = false,
@@ -322,38 +324,49 @@ if not getgenv().bytehubLoaded then
     end 
   })
   
-  local Toggle = Tabs.cs:AddToggle("Toggle",
-  {
-    Title = "Target Strafe", 
-    Description = "Circles around your target",
-    Default = false,
-    Callback = function(t)
-      ts = t
-      if ts then
-        RunService.Heartbeat:Connect(function(dt)
-          if not ts then return end
-        
-          local target2
-          if selectedTargeting == "lowest" then
-            target2 = getLowestHealthNearbyPlayer()
-          elseif selectedTargeting == "nearest" then
-            target2 = getClosestPlayer()
-          end
-          
-          if target2 and target2.Character and target2.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = 		LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-              local time = tick() * speed
-              local x = math.cos(time) * radius
-              local z = math.sin(time) * radius
-              local targetPos = target2.Character.HumanoidRootPart.Position
-              hrp.CFrame = CFrame.new(targetPos + Vector3.new(x, 0, z), targetPos)
-            end
-          end
-        end)
+local Toggle = Tabs.cs:AddToggle("Toggle", {
+  Title = "Target Strafe",
+  Description = "Circles around your target",
+  Default = false,
+  Callback = function(t)
+    ts = t
+
+    if not ts then
+      if hbConn then
+        hbConn:Disconnect()
+        hbConn = nil
       end
-    end 
-  })
+      return
+    end
+
+    hbConn = RunService.Heartbeat:Connect(function(dt)
+      if not ts then return end
+
+      local lpChar = LP.Character
+      local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
+      if not lpHRP then return end
+
+      local target =
+        selectedTargeting == "lowest" and getLowestHealthNearbyPlayer()
+        or getClosestPlayer()
+
+      local tChar = target and target.Character
+      local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
+      if not tHRP then return end
+
+      timeAcc += dt * speed
+
+      local offset = Vector3.new(
+        math.cos(timeAcc) * radius,
+        0,
+        math.sin(timeAcc) * radius
+      )
+
+      local targetPos = tHRP.Position
+      lpHRP.CFrame = CFrame.new(targetPos + offset, targetPos)
+    end)
+  end
+})
 
   local hboxtog = Tabs.cs:AddToggle("HitboxToggle",
   {
