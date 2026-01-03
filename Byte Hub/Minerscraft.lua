@@ -75,9 +75,7 @@ if not getgenv().bytehubLoaded then
     HorizontalLine = Drawing.new("Line"),
     VerticalLine = Drawing.new("Line")
   }
-  
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
-  wait()
+	
   -- Anti Kick --
   
   local oldhmmi
