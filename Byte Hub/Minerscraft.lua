@@ -51,6 +51,9 @@ if not getgenv().bytehubLoaded then
 	"MinersCraftPro9999",
 	"werewareikyouseethis",
 	"scyphicxv",
+	"iclaimnoharm",
+	"vzens2k",
+		
     "Epicguy_616161"
   }
 
