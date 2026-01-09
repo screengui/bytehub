@@ -46,6 +46,7 @@ if not getgenv().bytehubLoaded then
     "sbjmp",
     "CraftBloxPro9999",
     "CraftTopiaIsAwesome",
+	"MinersCraftPro9999",
     "Epicguy_616161"
   }
 
@@ -226,7 +227,7 @@ if not getgenv().bytehubLoaded then
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v4.4",
+    Title = "Minecraft (Byte Hub) v4.5",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 300),
@@ -251,7 +252,7 @@ if not getgenv().bytehubLoaded then
   
   Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv4.4\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\nv4.5\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
   })
 
   Tabs.Credits:AddButton({
@@ -1476,6 +1477,102 @@ end)
     end 
   })
 
+  local HighwayToggle = Tabs.wr:AddToggle("HighwayBuilder",
+  {
+    Title = "Highway Builder", 
+    Description = "Builds a highway below you",
+    Default = false,
+    Callback = function(H)
+      HB = H
+      if HB then
+        local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
+local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
+local BlocksByName = M_IDs.ByName.Blocks
+
+local dir = 1
+
+_G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord
+:GetPropertyChangedSignal("Text"):Connect(function()
+
+    local lp = game.Players.LocalPlayer
+    local char = lp.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return end
+
+    local placeSlot = char.SelectedSlot.Value
+    local slotGui = lp.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot]
+    if not slotGui or not slotGui.Slot.Display:FindFirstChild("SlotB") then return end
+
+    local realBlock
+    for _, v in pairs(slotGui.Slot.Display.SlotB:GetChildren()) do
+        realBlock = v.Name
+        break
+    end
+    if not realBlock then return end
+
+    local itemblock_info = BlocksByName[realBlock]
+    if not itemblock_info then return end
+
+    local coordText = lp.PlayerGui.HUDGui.DataFrame.Coord.Text
+    local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+    if not x then return end
+
+    x = tonumber(x)
+    y = tonumber(y) - 1
+    z = tonumber(z)
+
+    -- build 3x3 positions
+    local positions = {}
+    for ox = -2, 2 do
+    -- base line
+    positions[#positions + 1] = {x + ox, y, z}
+
+    -- raised edges (only ends)
+    if ox == -2 or ox == 2 then
+        positions[#positions + 1] = {x + ox, y + 1, z}
+    end
+							end
+
+    -- instant placement burst
+    for i = 1, #positions do
+    task.spawn(function()
+        local px, py, pz = unpack(positions[i])
+
+        local block, chunk = M_World.getBlock(px, py, pz)
+        local canPlace = false
+
+        if not block then
+            canPlace = true
+        else
+            for _, v in pairs(block) do
+                if v == 0 then
+                    canPlace = true
+                    break
+                end
+            end
+        end
+
+        if not canPlace then return end
+
+        -- client-side prediction
+        M_World.placeBlock(px, py, pz, chunk, dir, itemblock_info.id)
+
+        -- server call (this yields, but now isolated)
+        local ok, name = game.ReplicatedStorage.GameRemotes.PlaceBlock
+            :InvokeServer(px, py, pz, placeSlot, dir)
+
+        if not ok then
+            chunk:change(px % 16, py, pz % 16, name)
+        end
+    end)
+							end
+end)
+    else
+        _G.CoordsChannel:Disconnect()
+    end
+    end 
+  })
+
   Tabs.dt:AddButton({
     Title = "Dupe GUI",
     Description = "Loads the Dupe GUI by Argentum Exploitz",
@@ -1625,6 +1722,7 @@ end)
       if isMobile then
         game.CoreGui.Toggleui:Destroy()
       end
+	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
       loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Wolfmoons.lua",true))()
     end
   })
@@ -1638,6 +1736,7 @@ end)
       if isMobile then
         game.CoreGui.Toggleui:Destroy()
       end
+	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
       loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Minerscraft.lua",true))()
     end
   })
@@ -1831,6 +1930,7 @@ end)
       if isMobile then
         game.CoreGui.Toggleui:Destroy()
       end
+	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
     end
   })
   
