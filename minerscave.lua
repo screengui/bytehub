@@ -46,10 +46,7 @@ if not getgenv().bytehubLoaded then
     "sbjmp",
     "CraftBloxPro9999",
     "CraftTopiaIsAwesome",
-    "vconviict",
-	"minerscraftdupedemon",
 	"MinersCraftPro9999",
-	"werewareikyouseethis",
     "Epicguy_616161"
   }
 
