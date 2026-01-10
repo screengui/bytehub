@@ -24,6 +24,6 @@ local function attackLoop()
 	end
 end
 
-if ka then
+if _G.KillAura then
     task.spawn(attackLoop)
 end
