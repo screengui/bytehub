@@ -1,5 +1,6 @@
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
 wait()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/globals.lua",true))()
 -- Anti Kick --
   
 local oldhmmi
@@ -30,7 +31,7 @@ local function getLowestHealthNearbyPlayer()
       local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
       if humanoid and targetHRP and humanoid.Health > 0 then
         local distance = (targetHRP.Position - localHRP.Position).Magnitude
-        if distance <= strafeRange and humanoid.Health < lowestHealth then
+        if distance <= _G.strafeRange and humanoid.Health < lowestHealth then
           lowestHealth = humanoid.Health
           targetPlayer = player
         end
