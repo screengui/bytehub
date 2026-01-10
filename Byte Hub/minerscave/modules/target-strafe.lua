@@ -10,7 +10,7 @@ if not _G.TargetStrafe then
   return
 end
 
-hbConn = RunService.Heartbeat:Connect(function(dt)
+hbConn = game:GetService("RunService").Heartbeat:Connect(function(dt)
   if not _G.TargetStrafe then return end
   local lpChar = game.Players.LocalPlayer.Character
   local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
