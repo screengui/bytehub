@@ -108,6 +108,7 @@ game:GetService("ReplicatedFirst").Blocks.BirchLog.F.Texture = "rbxassetid://171
 game:GetService("ReplicatedFirst").Blocks.BirchLog.B.Texture = "rbxassetid://17151684861"
 game:GetService("ReplicatedFirst").Blocks.BirchLog.L.Texture = "rbxassetid://17151684861"
 game:GetService("ReplicatedFirst").Blocks.BirchLog.R.Texture = "rbxassetid://17151684861"
+
 --Leaves--
 for _, leaves in pairs(game.ReplicatedFirst.MetaBlocks.Leaves:GetChildren()) do
 	leaves.Texture = "rbxassetid://11589055088"
@@ -133,10 +134,17 @@ end
 
 --Underground--
 for _, stone in pairs(game.ReplicatedFirst.MetaBlocks.Stone:GetChildren()) do
-	ice.Texture = "rbxassetid://17175732807"
+	stone.Texture = "rbxassetid://17175732807"
+end
+
+--Building Blocks--
+for _, cobblestone in pairs(game.ReplicatedFirst.MetaBlocks.Cobblestone:GetChildren()) do
+    cobblestone.Texture = "rbxassetid://12616185352"
 end
 
 --Others--
 for _, ice in pairs(game.ReplicatedFirst.MetaBlocks.Ice:GetChildren()) do
 	ice.Texture = "rbxassetid://75408908999960"
 end
+
+game.ReplicatedFirst.Blocks.CraftingTable.TextureID = "rbxassetid://79176881242151"
