@@ -1,4 +1,6 @@
 local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
+local hbConn
+local timeAcc = 0
 
 if not _G.TargetStrafe then
   if hbConn then
