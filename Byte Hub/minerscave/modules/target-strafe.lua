@@ -19,7 +19,7 @@ hbConn = RunService.Heartbeat:Connect(function(dt)
   local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
   if not tHRP then return end
 
-  timeAcc += dt * speed
+  timeAcc += dt * _G.speed
 
   local offset = Vector3.new(
     math.cos(timeAcc) * _G.radius,
