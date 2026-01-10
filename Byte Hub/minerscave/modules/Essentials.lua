@@ -48,7 +48,7 @@ local function getClosestPlayer()
   local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
   if not hrp then return nil end
 
-  for _, player in ipairs(Players:GetPlayers()) do
+  for _, player in ipairs(game.Players:GetPlayers()) do
     if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
       local dist = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
       if dist < shortest then
@@ -59,3 +59,8 @@ local function getClosestPlayer()
   end
   return closest
 end
+
+return {
+    getLowestHealthNearbyPlayer = getLowestHealthNearbyPlayer,
+    getClosestPlayer = getClosestPlayer
+}
