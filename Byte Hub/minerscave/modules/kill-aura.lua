@@ -1,12 +1,14 @@
 local Attack = game.ReplicatedStorage.GameRemotes.Attack
 
+local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
+
 local function attackLoop()
-		while _G.KillAura do
-		    local lpChar = game.Players.LocalPlayer.Character
+	while _G.KillAura do
+		local lpChar = game.Players.LocalPlayer.Character
         local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
         
         if lpHRP then
-            local target = selectedTargeting == "lowest" and getLowestHealthNearbyPlayer() or getClosestPlayer()
+            local target = selectedTargeting == "lowest" and EssentialsModule.getLowestHealthNearbyPlayer() or EssentialsModule.getClosestPlayer()
 
             if target and target.Character then
                 local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
@@ -18,11 +20,10 @@ local function attackLoop()
                 end
             end
         end
-		    task.wait(delay)
-		 end
-  end
+		task.wait(delay)
+	end
+end
 
-	if ka then
-		  task.spawn(attackLoop)
-  end
+if ka then
+    task.spawn(attackLoop)
 end
