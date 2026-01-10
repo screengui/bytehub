@@ -8,19 +8,19 @@ local function attackLoop()
         local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
         
         if lpHRP then
-            local target = selectedTargeting == "lowest" and EssentialsModule.getLowestHealthNearbyPlayer() or EssentialsModule.getClosestPlayer()
+            local target = _G.selectedTargeting == "lowest" and EssentialsModule.getLowestHealthNearbyPlayer() or EssentialsModule.getClosestPlayer()
 
             if target and target.Character then
                 local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
                 if tHRP then
                     local d = lpHRP.Position - tHRP.Position
-                    if (d.X*d.X + d.Z*d.Z) <= RANGE_SQ then
+                    if (d.X*d.X + d.Z*d.Z) <= _G.RANGE_SQ then
                         Attack:InvokeServer(target.Character)
                     end
                 end
             end
         end
-		task.wait(delay)
+		task.wait(_G.delay)
 	end
 end
 
