@@ -127,6 +127,10 @@ for _, planks in pairs(plank:GetChildren()) do
 	planks.Texture = "rbxassetid://9359126646"
 end
 
+for _, oakslab in pairs(game.ReplicatedFirst.Blocks.OakSlab:GetChildren()) do
+	oakslab.Texture = "rbxassetid://9359126646"
+end
+
 --Desert--
 for _, sand in pairs(game.ReplicatedFirst.MetaBlocks.Sand:GetChildren()) do
 	sand.Texture = "rbxassetid://9277770677"
@@ -148,3 +152,4 @@ for _, ice in pairs(game.ReplicatedFirst.MetaBlocks.Ice:GetChildren()) do
 end
 
 game.ReplicatedFirst.Blocks.CraftingTable.TextureID = "rbxassetid://79176881242151"
+game.ReplicatedFirst.Blocks.Cactus.TextureID = "rbxassetid://105791029617543"
