@@ -127,9 +127,7 @@ for _, planks in pairs(plank:GetChildren()) do
 	planks.Texture = "rbxassetid://9359126646"
 end
 
-for _, oakslab in pairs(game.ReplicatedFirst.Blocks.OakSlab:GetChildren()) do
-	oakslab.Texture = "rbxassetid://9359126646"
-end
+game.ReplicatedFirst.Blocks.OakSlab.TextureID = "rbxassetid://9359126646"
 
 --Desert--
 for _, sand in pairs(game.ReplicatedFirst.MetaBlocks.Sand:GetChildren()) do
@@ -146,6 +144,9 @@ for _, cobblestone in pairs(game.ReplicatedFirst.MetaBlocks.Cobblestone:GetChild
     cobblestone.Texture = "rbxassetid://12616185352"
 end
 
+game.ReplicatedFirst.Blocks.CobblestoneSlab.TextureID = "rbxassetid://12616185352"
+
+
 --Others--
 for _, ice in pairs(game.ReplicatedFirst.MetaBlocks.Ice:GetChildren()) do
 	ice.Texture = "rbxassetid://75408908999960"
@@ -153,3 +154,9 @@ end
 
 game.ReplicatedFirst.Blocks.CraftingTable.TextureID = "rbxassetid://79176881242151"
 game.ReplicatedFirst.Blocks.Cactus.TextureID = "rbxassetid://105791029617543"
+
+
+--=====TOOLS=====--
+game:GetService("StarterPlayer").StarterPlayerScripts.MainLocalScript.ItemTextures.woodensword.ImageLabel = "rbxassetid://15941608817"
+game:GetService("StarterPlayer").StarterPlayerScripts.MainLocalScript.ItemTextures.woodenaxe.ImageLabel = "rbxassetid://15682969050"
+game:GetService("StarterPlayer").StarterPlayerScripts.MainLocalScript.ItemTextures.woodenpickaxe.ImageLabel = "rbxassetid://130644035273341"
