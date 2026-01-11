@@ -25,16 +25,16 @@ if not getgenv().bytehubLoaded then
   local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
   local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
   local blocks = workspace.Blocks
-  local strafeEnabled = false
   local features = {}
   local usetables = false
   local isMobile
   local isPC
   local hasGiveExploit
+  local selectedPlayerName = nil
+	
   local delay = 0
   local useTaskSpawn = false
   local clockTimeConnection = nil
-  local strafeEnabled = false
   local radius = 10
   local speed = 2
   local strafeRange = 50 -- how close they must be to strafe
@@ -327,7 +327,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "No Fall", 
     Description = "Removes Fall Damage",
     Default = false,
-    Callback = function(n)
+    Callback = function(state)
       if state then
 	    NoFall.start()
       else
@@ -389,14 +389,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     end
 
     if je then
-      -- ENABLE: set collide ON (scan once)
       for _, obj in ipairs(fluidFolder:GetDescendants()) do
         if isWater(obj) then
           obj.CanCollide = true
         end
       end
 
-      -- handle newly added water
       _G.jesusConn = fluidFolder.DescendantAdded:Connect(function(obj)
         if isWater(obj) then
           obj.CanCollide = true
@@ -404,13 +402,11 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
       end)
 
     else
-      -- DISABLE: disconnect listener
       if _G.jesusConn then
         _G.jesusConn:Disconnect()
         _G.jesusConn = nil
       end
 
-      -- FORCE reset existing parts (scan once)
       for _, obj in ipairs(fluidFolder:GetDescendants()) do
         if isWater(obj) then
           obj.CanCollide = false
@@ -516,14 +512,44 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     end
   })
 
-  Tabs.lp:AddDropdown("PlayerTP", {
-    Title = "Teleport to Player",
-    Description = "Teleports to selected player",
-    Values = getPlayerNames(),
-    Default = getPlayerNames()[1],
-    Callback = function(Value)
-        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players[Value].Character.HumanoidRootPart.Position)
-    end
+  local playerDropdown = Tabs.lp:AddDropdown("PlayerTP", {
+	Title = "Select Player",
+	Description = "Choose a player to teleport to",
+	Values = getPlayerNames(),
+	Default = nil,
+	Callback = function(value)
+		selectedPlayerName = value
+	end
+  })
+
+  Tabs.lp:AddButton({
+	Title = "Refresh Player List",
+	Description = "Updates the dropdown player list",
+	Callback = function()
+		playerDropdown:SetValues(getPlayerNames())
+		selectedPlayerName = nil
+	end
+  })
+
+  Tabs.lp:AddButton({
+	Title = "Teleport to Player",
+	Description = "Teleport to selected player",
+	Callback = function()
+		if not selectedPlayerName then return end
+
+		local target = Players:FindFirstChild(selectedPlayerName)
+		if not target then return end
+
+		local char = LP.Character
+		local tChar = target.Character
+		if not (char and tChar) then return end
+
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		local tHRP = tChar:FindFirstChild("HumanoidRootPart")
+		if not (hrp and tHRP) then return end
+
+		hrp.CFrame = tHRP.CFrame
+	end
   })
   
   local chp = Tabs.vs:AddToggle("CH+",
