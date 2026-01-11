@@ -4,9 +4,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local LP = Players.LocalPlayer
-local Essentials = loadstring(game:HttpGet(
-  "https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"
-))()
+local Essentials = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
 
 local running = false
 local hbConn
