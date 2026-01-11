@@ -120,7 +120,11 @@ if not getgenv().bytehubLoaded then
   local CombatLog = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
   local AutoSafeZone = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
   local NoFall = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
-	
+  local Sprint = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/sprint.lua"))()
+  local AutoEat = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-eat.lua"))()
+  local Jesus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/jesus.lua"))()
+  local InfiniteHealth = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/infinite-health.lua"))()
+  
   --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
       if child:IsA("UnionOperation") then
           task.wait()
@@ -341,13 +345,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Sprint", 
     Description = "Makes you a tiny bit faster",
     Default = false,
-    Callback = function(s)
-      sp = s
-      if not sp then
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 12
+    Callback = function(state)
+      if state then
+	    Sprint.start()
       else
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 20
-      end
+        Sprint.stop()
+	  end
     end 
   }) 
   
@@ -364,11 +367,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Auto Eat",
     Description = "Automatically eats for you",
     Default = false,
-    Callback = function(aeat)
-      ae = aeat
-      while ae do
-          game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("ConsumeItem"):InvokeServer(game:GetService("Players").LocalPlayer.Character:WaitForChild("Inventory"), game.Players.LocalPlayer.Character.SelectedSlot.Value)
-      end
+    Callback = function(state)
+      if state then
+	    AutoEat.start()
+      else
+        AutoEat.stop()
+	  end
 	end
   })
 	
@@ -377,65 +381,26 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
   Title = "Jesus",
   Description = "Walk On Water",
   Default = false,
-  Callback = function(j)
-    je = j
-
-    local fluidFolder = Workspace:FindFirstChild("Fluid")
-    if not fluidFolder then return end
-
-    local function isWater(part)
-      return part:IsA("BasePart")
-        and (part.Name == "Water" or part.Name == "Lava")
-    end
-
-    if je then
-      for _, obj in ipairs(fluidFolder:GetDescendants()) do
-        if isWater(obj) then
-          obj.CanCollide = true
-        end
-      end
-
-      _G.jesusConn = fluidFolder.DescendantAdded:Connect(function(obj)
-        if isWater(obj) then
-          obj.CanCollide = true
-        end
-      end)
-
+  Callback = function(state)
+    if state then
+	    Jesus.start()
     else
-      if _G.jesusConn then
-        _G.jesusConn:Disconnect()
-        _G.jesusConn = nil
-      end
-
-      for _, obj in ipairs(fluidFolder:GetDescendants()) do
-        if isWater(obj) then
-          obj.CanCollide = false
-        end
-      end
-    end
+        Jesus.stop()
+	end
   end
-})
+  })
 	
   local Toggle = Tabs.lp:AddToggle("Toggle",
   {
     Title = "Infinite Health",
     Description = "Increases your hp (only works with emerald leggings)",
     Default = false,
-    Callback = function(infihp)
-      infh = infihp
-      local function healthLoop()
-        while infh do
-          moveitems:InvokeServer(101, 9, true)
-          moveitems:InvokeServer(9, 101, true)
-          task.wait()
-        end
-      end
-
-      if useTaskSpawn then
-        task.spawn(healthLoop)
-      else
-        healthLoop()
-      end
+    Callback = function(t)
+      if t then
+		InfiniteHealth.start(moveitems, _G.useTaskSpawn)
+	  else
+		InfiniteHealth.stop()
+	  end
     end 
   })
   
@@ -1645,7 +1610,7 @@ end)
     Callback = function(zi)
       local newDelay = tonumber(zi)
       if newDelay then
-        delay = newDelay -- Update the delay value dynamically
+        _G.delay = newDelay -- Update the delay value dynamically
         Fluent:Notify({
           Title = "Success!",
           Content = "Successfully edited delay",
@@ -1673,7 +1638,7 @@ end)
     Callback = function(tad)
       local newRadius = tonumber(tad)
       if newRadius then
-        radius = newRadius -- Update the delay value dynamically
+        _G.radius = newRadius -- Update the delay value dynamically
         Fluent:Notify({
           Title = "Success!",
           Content = "Successfully edited radius",
@@ -1708,7 +1673,7 @@ end)
     Callback = function(tas)
       local newSpeed = tonumber(tas)
       if newSpeed then
-        speed = newSpeed -- Update the delay value dynamically
+        _G.speed = newSpeed -- Update the delay value dynamically
         Fluent:Notify({
           Title = "Success!",
           Content = "Successfully edited speed",
@@ -1758,7 +1723,7 @@ end)
     Multi = false,
     Default = "nearest",
     Callback = function(Value)
-      selectedTargeting = Value
+      _G.selectedTargeting = Value
     end
   })
   
@@ -1768,7 +1733,7 @@ end)
     Default = false,
     Callback = function(uts)
         ut = uts
-        useTaskSpawn = uts
+        _G.useTaskSpawn = uts
     end 
   })
   
