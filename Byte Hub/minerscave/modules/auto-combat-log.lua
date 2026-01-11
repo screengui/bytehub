@@ -1,26 +1,38 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
+local CombatLog = {}
+
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+
+local running = false
+local thread
+
 local function checkHealth()
-    local character = game.Players.LocalPlayer.Character
-    if not character then return end
-        
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-        
-    local healthThreshold = humanoid.MaxHealth * 0.4
-    if humanoid.Health <= healthThreshold then
-        game:Shutdown()
-    end
+	local char = LP.Character
+	if not char then return end
+
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	if humanoid.Health <= humanoid.MaxHealth * 0.4 then
+		game:Shutdown()
+	end
 end
-      
-local function healthLoop()
-    while _G.CombatLog do
-        checkHealth()
-        task.wait()
-    end
+
+local function loop()
+	while running do
+		checkHealth()
+		task.wait()
+	end
 end
-      
-if _G.useTaskSpawn then
-    task.spawn(healthLoop)
-else
-    healthLoop()
+
+function CombatLog.start()
+	if running then return end
+	running = true
+	thread = task.spawn(loop)
 end
+
+function CombatLog.stop()
+	running = false
+end
+
+return CombatLog
