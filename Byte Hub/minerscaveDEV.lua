@@ -114,11 +114,12 @@ if not getgenv().bytehubLoaded then
 
   --===MODULES===--
   local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/kill-aura.lua"))()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
+  local KillAura = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/kill-aura.lua"))()
+  local TargetStrafe = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/target-strafe.lua"))()
+  local Hitbox = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
+  local CombatLog = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
+  local AutoSafeZone = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
+  local NoFall = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
 	
   --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
       if child:IsA("UnionOperation") then
@@ -245,57 +246,29 @@ if not getgenv().bytehubLoaded then
     end
   })
 
-  local katog = Tabs.cs:AddToggle("Kill Aura",
-  {
-    Title = "Kill Aura", 
+  Tabs.cs:AddToggle("Kill Aura", {
+	Title = "Kill Aura",
     Description = "Attacks people within your reach",
     Default = false,
-    Callback = function(k)
-      _G.KillAura = k
-    end 
+    Callback = function(state)
+      if state then
+        KillAura.start()
+      else
+        KillAura.stop()
+      end
+    end
   })
   
 local Toggle = Tabs.cs:AddToggle("Toggle", {
   Title = "Target Strafe",
   Description = "Circles around your target",
   Default = false,
-  Callback = function(t)
-    ts = t
-
-    if not ts then
-      if hbConn then
-        hbConn:Disconnect()
-        hbConn = nil
-      end
-      return
-    end
-
-    hbConn = RunService.Heartbeat:Connect(function(dt)
-      if not ts then return end
-
-      local lpChar = LP.Character
-      local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
-      if not lpHRP then return end
-
-      local target =
-        selectedTargeting == "lowest" and EssentialsModule.getLowestHealthNearbyPlayer()
-        or EssentialsModule.getClosestPlayer()
-
-      local tChar = target and target.Character
-      local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
-      if not tHRP then return end
-
-      timeAcc += dt * speed
-
-      local offset = Vector3.new(
-        math.cos(timeAcc) * radius,
-        0,
-        math.sin(timeAcc) * radius
-      )
-
-      local targetPos = tHRP.Position
-      lpHRP.CFrame = CFrame.new(targetPos + offset, targetPos)
-    end)
+  Callback = function(state)
+    if state then
+      TargetStrafe.start()
+    else
+      TargetStrafe.stop()
+	end
   end
 })
 
@@ -304,8 +277,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Hitbox Expander", 
     Description = "Expands other player's hitboxes\nCredits to Ket Hub",
     Default = false,
-    Callback = function(h)
-      _G.HitboxExpander = h
+    Callback = function(state)
+      if state then
+		Hitbox.start()
+	  else
+		Hitbox.stop()
+	  end
     end 
   })
 
@@ -314,8 +291,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Auto Combat Log", 
     Description = "Automatically leaves when you have less than 30% hp",
     Default = false,
-    Callback = function(c)
-      _G.CombatLog = c
+    Callback = function(state)
+      if state then
+		CombatLog.start()
+	  else
+		CombatLog.stop()
+	  end
     end 
   }) 
 
@@ -324,8 +305,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Auto Safe Zone", 
     Description = "Auto Combat Log, but it teleports you to a safe zone.",
     Default = false,
-    Callback = function(c2)
-      _G.CombatTp = c2
+    Callback = function(state)
+        if state then
+		    AutoSafeZone.start()
+	    else
+		    AutoSafeZone.stop()
+		end
     end 
   }) 
 
@@ -343,7 +328,11 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Description = "Removes Fall Damage",
     Default = false,
     Callback = function(n)
-      _G.NoFall = n
+      if state then
+	    NoFall.start()
+      else
+        NoFall.stop()
+	  end
     end 
   }) 
 
