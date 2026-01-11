@@ -1,3 +1,4 @@
+_G.useTaskSpawn = false
 _G.selectedTargeting = "nearest"
 _G.RANGE_SQ = 16*16
 _G.radius = 10
