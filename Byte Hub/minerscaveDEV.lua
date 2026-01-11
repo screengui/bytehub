@@ -112,6 +112,14 @@ if not getgenv().bytehubLoaded then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
   end
 
+  --===MODULES===--
+  local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/kill-aura.lua"))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
+	
   --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
       if child:IsA("UnionOperation") then
           task.wait()
@@ -119,57 +127,7 @@ if not getgenv().bytehubLoaded then
       end
   end)]]--
   
-  local function getLowestHealthNearbyPlayer()
-    local lowestHealth = math.huge
-    local targetPlayer = nil
-    
-    local localHRP = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not localHRP then return nil end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-      if player ~= LP and player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
-        if humanoid and targetHRP and humanoid.Health > 0 then
-          local distance = (targetHRP.Position - localHRP.Position).Magnitude
-          if distance <= strafeRange and humanoid.Health < lowestHealth then
-            lowestHealth = humanoid.Health
-            targetPlayer = player
-          end
-        end
-      end
-    end
-    
-    return targetPlayer
-  end
-
-  local function getClosestPlayer()
-    local closest = nil
-    local shortest = math.huge
-    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nil end
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local dist = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
-            if dist < shortest then
-                shortest = dist
-                closest = player
-            end
-        end
-    end
-    return closest
-  end
-
-  local function changeTorsoSize(player, size, Massless, transparency)
-    local character = player.Character or player.CharacterAdded:Wait()
-    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
-    if torso then
-      torso.Size = size  
-      torso.Massless = Massless  
-      torso.Transparency = transparency
-    end
-  end
+  
 		
   local function getPlayerNames()
 	  local t = {}
@@ -293,34 +251,7 @@ if not getgenv().bytehubLoaded then
     Description = "Attacks people within your reach",
     Default = false,
     Callback = function(k)
-      ka = k
-      local function attackLoop()
-		while ka do
-		  local lpChar = game.Players.LocalPlayer.Character
-          local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
-
-          if lpHRP then
-            local target =
-            selectedTargeting == "lowest" and getLowestHealthNearbyPlayer()
-            or getClosestPlayer()
-
-            if target and target.Character then
-                local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
-                if tHRP then
-                    local d = lpHRP.Position - tHRP.Position
-                    if (d.X*d.X + d.Z*d.Z) <= RANGE_SQ then
-                        Attack:InvokeServer(target.Character)
-                    end
-                end
-            end
-           end
-		   task.wait(delay)
-		end
-	  end
-
-	  if ka then
-		task.spawn(attackLoop)
-	  end
+      _G.KillAura = k
     end 
   })
   
@@ -347,8 +278,8 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
       if not lpHRP then return end
 
       local target =
-        selectedTargeting == "lowest" and getLowestHealthNearbyPlayer()
-        or getClosestPlayer()
+        selectedTargeting == "lowest" and EssentialsModule.getLowestHealthNearbyPlayer()
+        or EssentialsModule.getClosestPlayer()
 
       local tChar = target and target.Character
       local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
@@ -374,24 +305,8 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Description = "Expands other player's hitboxes\nCredits to Ket Hub",
     Default = false,
     Callback = function(h)
-      he = h
-      if he then
-        connection = RunService.Heartbeat:Connect(function()
-          for _, player in ipairs(game.Players:GetPlayers()) do
-            if player ~= game.Players.LocalPlayer then
-              changeTorsoSize(player, Vector3.new(10, 10, 10), true, 0.999)
-            end
-          end
-        end)
-      else
-        if connection then connection:Disconnect() end
-          for _, player in ipairs(game.Players:GetPlayers()) do
-            if player ~= game.Players.LocalPlayer then
-              changeTorsoSize(player, Vector3.new(2, 2, 1), true, 0)
-            end
-          end
-        end
-      end 
+      _G.HitboxExpander = h
+    end 
   })
 
   local acltog = Tabs.cs:AddToggle("Auto Combat Log",
@@ -400,33 +315,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Description = "Automatically leaves when you have less than 30% hp",
     Default = false,
     Callback = function(c)
-      cl = c
-      
-      local function checkHealth()
-        local character = player.Character
-        if not character then return end
-        
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
-        
-        local healthThreshold = humanoid.MaxHealth * 0.4
-        if humanoid.Health <= healthThreshold then
-          game:Shutdown()
-        end
-      end
-      
-      local function healthLoop()
-        while cl do
-          checkHealth()
-          task.wait()
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(healthLoop) -- Runs the loop asynchronously
-      else
-        healthLoop() -- Runs normally (blocking)
-      end
+      _G.CombatLog = c
     end 
   }) 
 
@@ -436,32 +325,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Description = "Auto Combat Log, but it teleports you to a safe zone.",
     Default = false,
     Callback = function(c2)
-      ctp = c2
-      local function checkHealth2()
-      local character = player.Character
-        if not character then return end
-        local humanoid = character:FindFirstChild("Humanoid")
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not humanoidRootPart then return end
-        local healthThreshold = humanoid.MaxHealth * 0.4
-        if humanoid.Health <= healthThreshold then
-          local teleportPosition = CFrame.new(1000 * 3, 60 * 3, 1000 * 3)
-          humanoidRootPart.CFrame = teleportPosition
-        end
-      end
-      
-      local function tpLoop()
-        while ctp do
-          checkHealth2()
-          task.wait(0.25)
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(tpLoop)
-      else
-        tpLoop()
-      end
+      _G.CombatTp = c2
     end 
   }) 
 
@@ -479,16 +343,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Description = "Removes Fall Damage",
     Default = false,
     Callback = function(n)
-      nf = n
-      if nf then
-        if Demo.Parent == GameRemotes then
-          Demo.Parent = Workspace
-        end
-      else
-        if Demo.Parent == Workspace then
-          Demo.Parent = GameRemotes
-        end
-      end
+      _G.NoFall = n
     end 
   }) 
 
