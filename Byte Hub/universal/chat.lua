@@ -8,7 +8,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- JSONBin info
 local BIN_ID = "6968e2ddae596e708fde2aa3"
-local BIN_KEY = "$2a$10$tpgmQDlY6eAgPP2/gRVZu.Cqzx23n2O893joHWjyVLRCPxvYwCtNa"
+local BIN_KEY = "$2a$10$PCJCehLoZMNINvvj8XjrZ.93B3iqH/uzGx70aU9lN9i7RY9bZsJuO"
 local API_URL = "https://api.jsonbin.io/v3/b/"..BIN_ID
 
 -- Create ScreenGui
