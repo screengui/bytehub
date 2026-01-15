@@ -158,6 +158,33 @@ local function sendMessage(text)
     updateMessages(messages)
 end
 
+-- Keep track of last messages to avoid duplicates
+local lastMessages = {}
+
+-- Function to refresh messages from JSONBin
+local function refreshMessages()
+    local messages = fetchMessages()
+    for i, msg in ipairs(messages) do
+        -- only append if we haven't already displayed this message
+        local found = false
+        for _, m in ipairs(lastMessages) do
+            if m.user == msg.user and m.text == msg.text then
+                found = true
+                break
+            end
+        end
+        if not found then
+            appendMessage(msg)
+            table.insert(lastMessages, msg)
+        end
+    end
+end
+
+-- RunService loop to periodically fetch new messages
+RunService.Heartbeat:Connect(function()
+    refreshMessages()
+end)
+
 SendButton.MouseButton1Click:Connect(function()
     if InputBox.Text ~= "" then
         sendMessage(InputBox.Text)
