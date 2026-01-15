@@ -8,7 +8,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- JSONBin info
 local BIN_ID = "6968e2ddae596e708fde2aa3"
-local BIN_KEY = "$2a$10$PCJCehLoZMNINvvj8XjrZ.93B3iqH/uzGx70aU9lN9i7RY9bZsJuO"
+local MASTER_KEY = "$2a$10$PCJCehLoZMNINvvj8XjrZ.93B3iqH/uzGx70aU9lN9i7RY9bZsJuO"
 local API_URL = "https://api.jsonbin.io/v3/b/"..BIN_ID
 
 -- Create ScreenGui
@@ -22,10 +22,10 @@ local ChatFrame = Instance.new("Frame")
 ChatFrame.Size = UDim2.new(0, 300, 0, 400)
 ChatFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
 ChatFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-ChatFrame.Visible = false -- start closed
-ChatFrame.Parent = ScreenGui
+ChatFrame.Visible = false
 ChatFrame.Active = true
-ChatFrame.Draggable = true -- draggable
+ChatFrame.Draggable = true
+ChatFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
 UICorner.Parent = ChatFrame
@@ -37,9 +37,9 @@ ToggleButton.Position = UDim2.new(0.5, -50, 0, 50)
 ToggleButton.Text = "Open Chat"
 ToggleButton.BackgroundColor3 = Color3.fromRGB(0,120,215)
 ToggleButton.TextColor3 = Color3.fromRGB(255,255,255)
-ToggleButton.Parent = ScreenGui
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 18
+ToggleButton.Parent = ScreenGui
 
 ToggleButton.MouseButton1Click:Connect(function()
     ChatFrame.Visible = not ChatFrame.Visible
@@ -51,7 +51,6 @@ local MessagesFrame = Instance.new("ScrollingFrame")
 MessagesFrame.Size = UDim2.new(1, -10, 1, -50)
 MessagesFrame.Position = UDim2.new(0,5,0,5)
 MessagesFrame.BackgroundTransparency = 1
-MessagesFrame.CanvasSize = UDim2.new(0,0,0,0)
 MessagesFrame.ScrollBarThickness = 4
 MessagesFrame.Parent = ChatFrame
 
@@ -60,7 +59,7 @@ UIListLayout.Parent = MessagesFrame
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Padding = UDim.new(0,5)
 
--- TextBox for input
+-- Input Box
 local InputBox = Instance.new("TextBox")
 InputBox.Size = UDim2.new(1, -60, 0, 30)
 InputBox.Position = UDim2.new(0,5,1,-35)
@@ -70,6 +69,7 @@ InputBox.TextColor3 = Color3.fromRGB(255,255,255)
 InputBox.ClearTextOnFocus = false
 InputBox.Parent = ChatFrame
 
+-- Send button
 local SendButton = Instance.new("TextButton")
 SendButton.Size = UDim2.new(0,50,0,30)
 SendButton.Position = UDim2.new(1,-55,1,-35)
@@ -78,9 +78,12 @@ SendButton.BackgroundColor3 = Color3.fromRGB(0,120,215)
 SendButton.TextColor3 = Color3.fromRGB(255,255,255)
 SendButton.Parent = ChatFrame
 
--- Function to fetch chat messages
+-- Last displayed messages
+local lastMessages = {}
+
+-- Fetch messages from JSONBin
 local function fetchMessages()
-    local headers = {["X-Master-Key"] = BIN_KEY}
+    local headers = {["X-Master-Key"] = MASTER_KEY}
     local success, res = pcall(function()
         return HttpService:GetAsync(API_URL, false, headers)
     end)
@@ -91,11 +94,11 @@ local function fetchMessages()
     return {}
 end
 
--- Function to update bin
+-- Update JSONBin with messages
 local function updateMessages(messages)
     local headers = {
         ["Content-Type"] = "application/json",
-        ["X-Master-Key"] = BIN_KEY
+        ["X-Master-Key"] = MASTER_KEY
     }
     local body = HttpService:JSONEncode(messages)
     pcall(function()
@@ -103,33 +106,7 @@ local function updateMessages(messages)
     end)
 end
 
--- Function to display messages
-local function displayMessages(messages)
-    -- clear only labels, not the frame itself
-    for _, child in ipairs(MessagesFrame:GetChildren()) do
-        if child:IsA("TextLabel") then
-            child:Destroy()
-        end
-    end
-
-    for i, msg in ipairs(messages) do
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1,0,0,20)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.fromRGB(255,255,255)
-        label.Font = Enum.Font.SourceSans
-        label.TextSize = 16
-        label.Text = "["..msg.user.."]: "..msg.text
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.LayoutOrder = i
-        label.Parent = MessagesFrame
-    end
-
-    -- make scrolling frame size match content
-    MessagesFrame.CanvasSize = UDim2.new(0,0,0,UIListLayout.AbsoluteContentSize.Y + 10)
-    MessagesFrame.CanvasPosition = Vector2.new(0, UIListLayout.AbsoluteContentSize.Y) -- scroll to bottom
-end
-
+-- Add a message to UI
 local function appendMessage(msg)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1,0,0,20)
@@ -142,30 +119,27 @@ local function appendMessage(msg)
     label.LayoutOrder = MessagesFrame.UIListLayout.AbsoluteContentSize.Y + 1
     label.Parent = MessagesFrame
 
-    -- Update CanvasSize so scrolling works
     MessagesFrame.CanvasSize = UDim2.new(0,0,0,MessagesFrame.UIListLayout.AbsoluteContentSize.Y + 10)
 end
 
+-- Send a message
 local function sendMessage(text)
     local msg = {user = LocalPlayer.Name, text = text}
     
-    -- append to UI immediately
+    -- Add to UI immediately
     appendMessage(msg)
+    table.insert(lastMessages, msg)
     
-    -- update JSONBin
+    -- Add to JSONBin
     local messages = fetchMessages()
     table.insert(messages, msg)
     updateMessages(messages)
 end
 
--- Keep track of last messages to avoid duplicates
-local lastMessages = {}
-
--- Function to refresh messages from JSONBin
+-- Refresh messages from JSONBin
 local function refreshMessages()
     local messages = fetchMessages()
-    for i, msg in ipairs(messages) do
-        -- only append if we haven't already displayed this message
+    for _, msg in ipairs(messages) do
         local found = false
         for _, m in ipairs(lastMessages) do
             if m.user == msg.user and m.text == msg.text then
@@ -180,11 +154,15 @@ local function refreshMessages()
     end
 end
 
--- RunService loop to periodically fetch new messages
-RunService.Heartbeat:Connect(function()
-    refreshMessages()
+-- Auto refresh every second
+spawn(function()
+    while true do
+        refreshMessages()
+        task.wait(1)
+    end
 end)
 
+-- Connect UI events
 SendButton.MouseButton1Click:Connect(function()
     if InputBox.Text ~= "" then
         sendMessage(InputBox.Text)
@@ -198,7 +176,3 @@ InputBox.FocusLost:Connect(function(enterPressed)
         InputBox.Text = ""
     end
 end)
-
--- Optional: manually refresh by calling this later
--- local messages = fetchMessages()
--- displayMessages(messages)
