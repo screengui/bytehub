@@ -546,7 +546,11 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
           VerticalLine = Drawing.new("Line")
         }
 
-        
+        if state then
+			RainbowCrosshair.start(CrosshairSettings2, Camera)
+		else
+			RainbowCrosshair.stop(CrosshairSettings2)
+		end
     end 
   })
   
