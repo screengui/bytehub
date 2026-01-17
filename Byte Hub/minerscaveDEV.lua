@@ -535,8 +535,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Rainbow Crosshair", 
     Description = "Makes Crosshair Rainbow\n(Must have Crosshair+ disabled)",
     Default = false,
-    Callback = function(chpr)
-        chr = chpr
+    Callback = function(state)
         local CrosshairSettings2 = {
           Visible = false,
           Size = 35,
@@ -547,46 +546,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
           VerticalLine = Drawing.new("Line")
         }
 
-        local function RainbowCrosshair()
-          if not chr then
-            CrosshairSettings2.HorizontalLine.Visible = false
-            CrosshairSettings2.VerticalLine.Visible = false
-            for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-              if v.Name == "Crosshair" then
-                v.Visible = true
-              end
-            end
-            return
-          end
-
-          local ViewportSize = Camera.ViewportSize / 2
-          local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
-          local Real_Size = CrosshairSettings.Size / 2
-
-          for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-            if v.Name == "Crosshair" then
-              v.Visible = false
-            end
-          end
-
-          local hue = (tick() * 0.2) % 1
-          local rainbowColor = Color3.fromHSV(hue, 1, 1)
-
-          CrosshairSettings2.HorizontalLine.Color = rainbowColor
-          CrosshairSettings2.HorizontalLine.Thickness = CrosshairSettings.Thickness
-          CrosshairSettings2.HorizontalLine.Visible = true
-          CrosshairSettings2.HorizontalLine.Transparency = CrosshairSettings.Transparency
-          CrosshairSettings2.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
-          CrosshairSettings2.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
-
-          CrosshairSettings2.VerticalLine.Color = rainbowColor
-          CrosshairSettings2.VerticalLine.Thickness = CrosshairSettings.Thickness
-          CrosshairSettings2.VerticalLine.Visible = true
-          CrosshairSettings2.VerticalLine.Transparency = CrosshairSettings.Transparency
-          CrosshairSettings2.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
-          CrosshairSettings2.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
-        end
-        RunService.RenderStepped:Connect(RainbowCrosshair)
+        
     end 
   })
   
