@@ -522,41 +522,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Crosshair+", 
     Description = "Makes your crosshair look cooler",
     Default = false,
-    Callback = function(ch)
-      chplus = ch
-      if not chplus then
-        CrosshairSettings.HorizontalLine.Visible = false
-        CrosshairSettings.VerticalLine.Visible = false
-        for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-          if v.Name == "Crosshair" then
-            v.Visible = true
-          end
-        end
-        return
-      end
-        
-      local ViewportSize = Camera.ViewportSize / 2
-      local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
-      local Real_Size = CrosshairSettings.Size / 2
-	
-      for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-        if v.Name == "Crosshair" then
-          v.Visible = false
-        end
-      end
-        
-      CrosshairSettings.HorizontalLine.Color = CrosshairSettings.Color
-      CrosshairSettings.HorizontalLine.Thickness = CrosshairSettings.Thickness
-      CrosshairSettings.HorizontalLine.Visible = true
-      CrosshairSettings.HorizontalLine.Transparency = CrosshairSettings.Transparency
-      CrosshairSettings.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
-      CrosshairSettings.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
-      CrosshairSettings.VerticalLine.Color = CrosshairSettings.Color
-      CrosshairSettings.VerticalLine.Thickness = CrosshairSettings.Thickness
-      CrosshairSettings.VerticalLine.Visible = true
-      CrosshairSettings.VerticalLine.Transparency = CrosshairSettings.Transparency
-      CrosshairSettings.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
-      CrosshairSettings.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
+    Callback = function(state)
+      if state then
+		CrosshairPlus.start(CrosshairSettings, Camera)
+	  else
+		CrosshairPlus.stop(CrosshairSettings)
+	  end
     end 
   }) 
   
