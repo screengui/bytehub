@@ -124,6 +124,9 @@ if not getgenv().bytehubLoaded then
   local AutoEat = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-eat.lua"))()
   local Jesus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/jesus.lua"))()
   local InfiniteHealth = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/infinite-health.lua"))()
+  local CrosshairPlus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/crosshair-plus.lua"))()
+  local RainbowCrosshair = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/rainbow-crosshair.lua"))()
+  local Fullbright = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/fullbright.lua"))()
   
   --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
       if child:IsA("UnionOperation") then
@@ -559,50 +562,12 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Title = "Fullbright", 
     Description = "Makes it very bright",
     Default = false,
-    Callback = function(f)
-      fb = f
-      local function Enable()
-        if not originalSettings.Brightness then
-          originalSettings.Brightness = Lighting.Brightness
-          originalSettings.ClockTime = Lighting.ClockTime
-          originalSettings.FogEnd = Lighting.FogEnd
-          originalSettings.GlobalShadows = Lighting.GlobalShadows
-          originalSettings.OutdoorAmbient = Lighting.OutdoorAmbient
-        end
-        
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-        
-        clockTimeConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
-          if Lighting.ClockTime < 6 or Lighting.ClockTime > 15 then
-            Lighting.ClockTime = 14
-          end
-        end)
-      end
-      
-      local function Disable()
-        if clockTimeConnection then
-          clockTimeConnection:Disconnect()
-          clockTimeConnection = nil
-        end
-        
-        if originalSettings.Brightness then
-          Lighting.Brightness = originalSettings.Brightness
-          Lighting.ClockTime = originalSettings.ClockTime
-          Lighting.FogEnd = originalSettings.FogEnd
-          Lighting.GlobalShadows = originalSettings.GlobalShadows
-          Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
-        end
-      end
-      
-      if fb then
-        Enable()
-      else
-        Disable()
-      end
+    Callback = function(state)
+        if state then
+			Fullbright.start()
+		else
+			Fullbright.stop()
+		end
     end 
   }) 
   
