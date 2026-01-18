@@ -57,8 +57,8 @@ function RainbowCrosshair.stop(CrosshairSettings)
         RainbowCrosshair._conn = nil
     end
 
-    CrosshairSettings.HorizontalLine.Visible = false
-    CrosshairSettings.VerticalLine.Visible = false
+    H.HorizontalLine.Visible = false
+    V.VerticalLine.Visible = false
 
     showDefaultCrosshair(true)
 end
