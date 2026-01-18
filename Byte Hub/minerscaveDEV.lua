@@ -1,69 +1,59 @@
 local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))(); -- Notif Library
-if not getgenv().bytehubLoaded then
-  getgenv().bytehubLoaded = true
-  
-  -- Services --
-  local TweenService = game:GetService("TweenService")
-  local UserInputService = game:GetService("UserInputService")
-  local RunService = game:GetService("RunService")
-  local ReplicatedStorage = game:GetService("ReplicatedStorage")
-  local Workspace = game:GetService("Workspace")
-  local Lighting = game:GetService("Lighting")
-  local Camera = game.Workspace.CurrentCamera
-  local Players = game:GetService("Players")
-  
-  -- Variables --
-  
-  local player = game:GetService("Players").LocalPlayer
-  local LP = game.Players.LocalPlayer
-  local Character = player.Character
-  
-  local Gamemode = Instance.new("IntValue")
-  Gamemode.Name = "Gamemode"
-  Gamemode.Parent = game.Players.LocalPlayer.Character
-  
-  local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
-  local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
-  local blocks = workspace.Blocks
-  local features = {}
-  local usetables = false
-  local isMobile
-  local isPC
-  local hasGiveExploit
-  local selectedPlayerName = nil
+if getgenv().bytehubLoaded then
+	local Notify = AkaliNotif.Notify;
+
+    Notify({
+        Description = "Byte Hub is already loaded!";
+        Title = "Error!";
+        Duration = 3;
+    });
+    wait(1)
+	return
+end
+
+getgenv().bytehubLoaded = true
 	
-  local delay = 0
-  local useTaskSpawn = false
-  local clockTimeConnection = nil
-  local radius = 10
-  local speed = 2
-  local strafeRange = 50 -- how close they must be to strafe
-  local wasEnabled = false
-  local selectedTargeting = "nearest"
-  local RANGE_SQ = 16*16
-	
-  local whitelist = {
+-- Services --
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local Camera = game.Workspace.CurrentCamera
+local Players = game:GetService("Players")
+  
+-- Variables --
+  
+local player = game:GetService("Players").LocalPlayer
+local LP = game.Players.LocalPlayer
+local Character = player.Character
+  
+local Gamemode = Instance.new("IntValue")
+Gamemode.Name = "Gamemode"
+Gamemode.Parent = game.Players.LocalPlayer.Character
+  
+local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
+local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
+local blocks = workspace.Blocks
+local features = {}
+local usetables = false
+local isMobile
+local isPC
+local hasGiveExploit
+local selectedPlayerName = nil
+local clockTimeConnection = nil
+
+-- Configs --
+local whitelist = {
     "sbjmp",
     "CraftBloxPro9999",
     "CraftTopiaIsAwesome",
 	"MinersCraftPro9999",
     "Epicguy_616161"
-  }
+}
 
-  -- Remotes --
-  local gameremotes = ReplicatedStorage.GameRemotes
-  local GameRemotes = ReplicatedStorage.GameRemotes
-  local Demo = gameremotes:FindFirstChild("Demo") or Workspace:FindFirstChild("Demo")
-  local abb = gameremotes.AcceptBreakBlock
-  local bb = gameremotes.BreakBlock
-  local Attack = gameremotes:WaitForChild("Attack")
-  local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
-  local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
-  local useblock = gameremotes.UseBlock
-  local hbConn
-  local timeAcc = 0
-  
-  local CrosshairSettings = {
+local CrosshairSettings = {
     Visible = false,
     Size = 35,
     Thickness = 2.5,
@@ -71,30 +61,42 @@ if not getgenv().bytehubLoaded then
     Transparency = 1,
     HorizontalLine = Drawing.new("Line"),
     VerticalLine = Drawing.new("Line")
-  }
+}
+
+-- Remotes --
+local gameremotes = ReplicatedStorage.GameRemotes
+local GameRemotes = ReplicatedStorage.GameRemotes
+local Demo = gameremotes:FindFirstChild("Demo") or Workspace:FindFirstChild("Demo")
+local abb = gameremotes.AcceptBreakBlock
+local bb = gameremotes.BreakBlock
+local Attack = gameremotes:WaitForChild("Attack")
+local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
+local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
+local useblock = gameremotes.UseBlock
   
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
-  wait()
-  -- Anti Kick --
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
+wait()
   
-  local oldhmmi
-  local oldhmmnc
-  oldhmmi = hookmetamethod(game, "__index", function(self, method)
+-- Anti Kick --
+  
+local oldhmmi
+local oldhmmnc
+oldhmmi = hookmetamethod(game, "__index", function(self, method)
     if self == player and method:lower() == "kick" then
-      return error("Expected ':' not '.' calling member function Kick", 2)
+        return error("Expected ':' not '.' calling member function Kick", 2)
     end
     return oldhmmi(self, method)
-  end)
-  oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
+end)
+oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
     if self == player and getnamecallmethod():lower() == "kick" then
-      return
+        return
     end
     return oldhmmnc(self, ...)
-  end)
+end)
   
-  -- Functions --
+-- Functions --
 
-  if game.ReplicatedStorage:FindFirstChild("admingui") then
+if game.ReplicatedStorage:FindFirstChild("admingui") then
     hasGiveExploit = true
     local Notify = AkaliNotif.Notify;
 
@@ -103,93 +105,95 @@ if not getgenv().bytehubLoaded then
       Title = "Give Exploit Detected!";
       Duration = 3;
     });
-  else
+else
     hasGiveExploit = false
-  end
+end
   
-  if not table.find(whitelist, player.Name) then
+if not table.find(whitelist, player.Name) then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
-  end
+end
 
-  --===MODULES===--
-  local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
-  local KillAura = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/kill-aura.lua"))()
-  local TargetStrafe = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/target-strafe.lua"))()
-  local Hitbox = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
-  local CombatLog = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
-  local AutoSafeZone = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
-  local NoFall = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
-  local Sprint = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/sprint.lua"))()
-  local AutoEat = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-eat.lua"))()
-  local Jesus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/jesus.lua"))()
-  local InfiniteHealth = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/infinite-health.lua"))()
-  local CrosshairPlus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/crosshair-plus.lua"))()
-  local RainbowCrosshair = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/rainbow-crosshair.lua"))()
-  local Fullbright = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/fullbright.lua"))()
-  
-  --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
-      if child:IsA("UnionOperation") then
-          task.wait()
-          child:Destroy()
-      end
-  end)]]--
-  
-  
-		
-  local function getPlayerNames()
-	  local t = {}
-	  for _, p in ipairs(Players:GetPlayers()) do
-		  table.insert(t, p.Name)
-	  end
-	  return t
-  end
-  
-  function chestdupe(mode)
-    if mode == 1 then
-      sortitems:InvokeServer(36)
-    elseif mode == 2 then
-      for i = 36, 62 do
-        task.spawn(function()
-          sortitems:InvokeServer(i)
-        end)
-      end
+_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
+    if child:IsA("UnionOperation") then
+        task.wait()
+        child:Destroy()
     end
-  end
+end)
   
-  local originalSettings = {}
+local function getPlayerNames()
+	local t = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		table.insert(t, p.Name)
+	end
+	return t
+end
   
-  function conv(txt)
+function chestdupe(mode)
+    if mode == 1 then
+        sortitems:InvokeServer(36)
+    elseif mode == 2 then
+        for i = 36, 62 do
+            task.spawn(function()
+                sortitems:InvokeServer(i)
+            end)
+        end
+    end
+end
+  
+local originalSettings = {}
+  
+function conv(txt)
     local str = ""
     string.gsub(txt,"%d+",function(e)
-      str = str .. e
+        str = str .. e
     end)
     return str;
-	end
+end
 	
-  if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
+if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
     isPC = true
     local Notify = AkaliNotif.Notify;
     Notify({
-      Description = "PC Detected, Infinite Health might not work...";
-      Title = "PC Detected!";
-      Duration = 3;
+        Description = "PC Detected, Infinite Health might not work...";
+        Title = "PC Detected!";
+        Duration = 3;
     });
-  elseif UserInputService.TouchEnabled then
+elseif UserInputService.TouchEnabled then
     isMobile = true
     local Notify = AkaliNotif.Notify;
     Notify({
-      Description = "Mobile Device Detected, executing button...";
-      Title = "Mobile Device Detected!";
-      Duration = 3;
+        Description = "Mobile Device Detected, executing button...";
+        Title = "Mobile Device Detected!";
+        Duration = 3;
     });
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
-  end
+end
 
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/inv-viewerV2.lua",true))()
-  game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = false
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/inv-viewerV2.lua",true))()
+game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = false
+
+--===MODULES===--
+local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
+local KillAura = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/kill-aura.lua"))()
+local TargetStrafe = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/target-strafe.lua"))()
+local Hitbox = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
+local CombatLog = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
+local AutoSafeZone = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
+local NoFall = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
+local Sprint = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/sprint.lua"))()
+local AutoEat = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-eat.lua"))()
+local Jesus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/jesus.lua"))()
+local InfiniteHealth = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/infinite-health.lua"))()
+local CrosshairPlus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/crosshair-plus.lua"))()
+local RainbowCrosshair = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/rainbow-crosshair.lua"))()
+local Fullbright = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/fullbright.lua"))()
+local XRay = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/xray.lua"))()
+local ChestESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/chest-esp.lua"))()
+local LavaESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/lava-esp.lua"))()
+local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/player-esp.lua"))()
   
-  loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
+
   local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
   local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
   local Window = Fluent:CreateWindow({
@@ -571,207 +575,62 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     end 
   }) 
   
-  local Toggle = Tabs.vs:AddToggle("Toggle",
-  {
+local Toggle = Tabs.vs:AddToggle("Toggle",
+{
     Title = "X-Ray", 
     Description = "Makes you see ores through blocks",
     Default = false,
-    Callback = function(x)
-      xr = x
-      
-      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-      
-      if xr then
-        wasEnabled = true
-        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            for _, texture in pairs(v:GetChildren()) do
-              texture.Transparency = 1
-            end
-          end
-        end
-        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            v.Transparency = 1
-          end
-        end
-        
-        local pos = humanroot2.Position
-        task.wait()
-        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-        task.wait()
-        humanroot2.CFrame = CFrame.new(pos)
-      elseif not xr then
-        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            for _, texture in pairs(v:GetChildren()) do
-              texture.Transparency = 0
-            end
-          end
-        end
-        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            v.Transparency = 0
-          end
-        end
-        
-        if wasEnabled then
-          local pos = humanroot2.Position
-          task.wait()
-          humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-          task.wait()
-          humanroot2.CFrame = CFrame.new(pos)
-          wasEnabled = false
-        end
-      end
+    Callback = function(state)
+        if state then
+			XRay.start()
+		else
+			XRay.stop()
+		end
     end 
-  }) 
+}) 
   
-  local cesptog = Tabs.vs:AddToggle("Chest ESP",
-  {
+  
+local cesptog = Tabs.vs:AddToggle("Chest ESP",
+{
     Title = "Chest ESP", 
     Description = "Makes you see chests through blocks",
     Default = false,
-    Callback = function(c)
-      cesp = c
-      if not cesp then return end
-      
-      local function findChestParts()
-        local childParts = {}
-        for _, folder in pairs(workspace.Blocks:GetChildren()) do
-          if folder:IsA("Folder") then
-            for _, item in pairs(folder:GetChildren()) do
-              if item.Name == "Chest" then
-                table.insert(childParts, item)
-              end
-            end
-          end
-        end
-        return childParts
-      end
-      
-      local function outlinePart(part)
-        if not part:FindFirstChild("BoxHandleAdornment") then
-          local a = Instance.new("BoxHandleAdornment")
-          a.Adornee = part
-          a.AlwaysOnTop = true
-          a.ZIndex = 0
-          a.Size = part.Size
-          a.Transparency = 0.5
-          a.Color = BrickColor.new("Bright orange")
-          a.Parent = part
-        end
-      end
-      
-      local function chestLoop()
-        while cesp do
-          local chestParts = findChestParts()
-          for _, part in ipairs(chestParts) do
-            outlinePart(part)
-          end
-          task.wait(1)
-        end
-
-        for _, descendant in ipairs(workspace:GetDescendants()) do
-          local highlight = descendant:FindFirstChild("BoxHandleAdornment")
-          if highlight then
-            highlight:Destroy()
-          end
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(chestLoop)
-      else
-        chestLoop()
-      end
+    Callback = function(state)
+        if state then
+			ChestESP.start()
+		else
+			ChestESP.stop()
+		end
     end 
-  }) 
+}) 
 
-  local lesptog = Tabs.vs:AddToggle("Lava ESP",
-  {
+local lesptog = Tabs.vs:AddToggle("Lava ESP",
+{
     Title = "Lava ESP", 
     Description = "Makes you see lava through blocks",
     Default = false,
-    Callback = function(l)
-      lesp = l
-      if not lesp then return end
-      
-      local function findLava()
-        local lavaBlocks = {}
-        for _, folder in pairs(workspace.Fluid:GetChildren()) do
-          if folder:IsA("Folder") then
-            for _, item in pairs(folder:GetChildren()) do
-              if item.Name == "Lava" then
-                table.insert(lavaBlocks, item)
-              end
-            end
-          end
-        end
-        return lavaBlocks
-      end
-      
-      local function createOutline(target)
-        if not target:FindFirstChild("BoxHandleAdornment") then
-          local b = Instance.new("BoxHandleAdornment")
-          b.Adornee = target
-          b.AlwaysOnTop = true
-          b.ZIndex = 0
-          b.Size = target.Size
-          b.Transparency = 0.5
-          b.Color = BrickColor.new("Deep orange")
-          b.Parent = target
-        end
-      end
-      
-      local function lavaLoop()
-        while lesp do
-          local lavaParts = findLava()
-          for _, part in ipairs(lavaParts) do
-            createOutline(part)
-          end
-          task.wait()
-        end
-        
-        for _, descendant in ipairs(workspace:GetDescendants()) do
-          local bha = descendant:FindFirstChild("BoxHandleAdornment")
-          if bha then
-            bha:Destroy()
-          end
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(lavaLoop)
-      else
-        lavaLoop()
-      end
+    Callback = function(state)
+        if state then
+			LavaESP.start()
+		else
+			LavaESP.stop()
+		end
     end 
-  }) 
+}) 
 
-  local pesptog = Tabs.vs:AddToggle("Player ESP",
-  {
+local pesptog = Tabs.vs:AddToggle("Player ESP",
+{
     Title = "Player ESP", 
     Description = "Makes you see players through blocks",
     Default = false,
-    Callback = function(p)
-      pesp = p
-      while pesp do
-        for _, players in pairs(game.Players:GetPlayers()) do
-          if players ~= LP and not players.Character:FindFirstChild("Highlight") then
-            Instance.new("Highlight", players.Character)
-          end
-        end
-        task.wait()
-      end
-      for _, players in pairs(game.Players:GetPlayers()) do
-        local highlight = players.Character:FindFirstChild("Highlight")
-        if highlight then
-          highlight:Destroy()
-        end
-      end
+    Callback = function(state)
+        if state then
+			PlayerESP.start()
+		else
+			PlayerESP.stop()
+		end
     end 
-  })
+})
 
   local Toggle = Tabs.vs:AddToggle("Chest ESP",
   {
@@ -1674,14 +1533,3 @@ end)
   SaveManager:SetFolder("ByteHub/MC")
   SaveManager:BuildConfigSection(Tabs.st)
   SaveManager:LoadAutoloadConfig()
-  
-else
-  local Notify = AkaliNotif.Notify;
-
-  Notify({
-    Description = "Byte Hub is already loaded!";
-    Title = "Error!";
-    Duration = 3;
-  });
-  wait(1)
-end
