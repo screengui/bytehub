@@ -1528,8 +1528,12 @@ end)
     end
   })
   
-  Window:SelectTab(1)
-  SaveManager:SetLibrary(Fluent)
-  SaveManager:SetFolder("ByteHub/MC")
-  SaveManager:BuildConfigSection(Tabs.st)
-  SaveManager:LoadAutoloadConfig()
+Window:SelectTab(1)
+SaveManager:SetLibrary(Fluent)
+SaveManager:SetFolder("ByteHub/MC")
+SaveManager:BuildConfigSection(Tabs.st)
+SaveManager:LoadAutoloadConfig()
+
+_G.Fluent = Fluent
+_G.Window = Window
+_G.Tabs = Tabs
