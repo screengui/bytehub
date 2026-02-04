@@ -180,7 +180,6 @@ local TargetStrafe = loadstring(game:HttpGet("https://raw.githubusercontent.com/
 local Hitbox = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
 local CombatLog = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
 local AutoSafeZone = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
-local TriggerBot = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/trigger-bot.lua"))()
 local NoFall = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
 local Sprint = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/sprint.lua"))()
 local AutoEat = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-eat.lua"))()
@@ -325,21 +324,6 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
 		end
     end 
   }) 
-
-  local tbtot = Tabs.cs:AddToggle("Trigger Bot",
-  {
-    Title = "Trigger Bot", 
-    Description = "Hits a person whenever you aim at them.",
-    Default = false,
-    Callback = function(state)
-        if state then
-		    TriggerBot.start()
-	    else
-		    TriggerBot.stop()
-		end
-    end 
-  }) 
-
 
   Tabs.cs:AddButton({
     Title = "Arcade Recode Client",
