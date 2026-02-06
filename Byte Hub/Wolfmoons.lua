@@ -1488,7 +1488,7 @@ end)
         if usetables then
           moveitems:InvokeServer({[1] = -1, [2] = 82, [3] = true, [4] = -howmuch})
         else
-          moveitems:InvokeServer{-1, 82, true, -howmuch}
+          moveitems:InvokeServer{{-1, 82, true, -howmuch}}
         end
       end)
     end
