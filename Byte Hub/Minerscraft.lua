@@ -1343,11 +1343,11 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
             for offsetX = -8, 7 do
                 for offsetY = -8, 7 do
                     for offsetZ = -8, 7 do
-                        positions[#positions+1] = {
-                            baseX + offsetX,
-                            baseY + offsetY,
-                            baseZ + offsetZ
-                        }
+                        table.insert(positions, {
+								baseX + offsetX,
+								baseY + offsetY,
+								baseZ + offsetZ
+						})
                     end
                 end
             end
