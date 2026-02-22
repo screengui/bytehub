@@ -111,28 +111,7 @@ end
 
 BypassAdonis()
 
-local NamecallInstanceDetector = nil
-for Index, Table in getgc(true) do
-    if typeof(Table) ~= "table" then continue end
-    if not rawget(Table, "namecallInstance") then continue end
-    for SecondIndex, StackContainerTable in Table do
-        if typeof(StackContainerTable) ~= "table" then continue end
-        for ThirdIndex, Upvalues in StackContainerTable do
-            if StackContainerTable[ThirdIndex] ~= "kick" then continue end
-            if typeof(StackContainerTable[ThirdIndex + 1]) ~= "function" then continue end
-            local FrozenDetectionFunction = StackContainerTable[ThirdIndex + 1]
-            for _, DetectionIdentifier in getconstants(FrozenDetectionFunction) do
-                if DetectionIdentifier == "namecallInstance" then
-                    NamecallInstanceDetector = FrozenDetectionFunction
-                end
-            end
-        end
-    end
-end
-assert(NamecallInstanceDetector, "Error while finding anticheat.")
-hookfunction(NamecallInstanceDetector, function()
-    return false
-end)
+loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Adonis-AntiCheat-Bypass-40497"))()
 
 -- Anti Kick --
   
