@@ -1325,7 +1325,44 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
 	end 
 			end
   })
-  
+
+  local chunkToggle = Tabs.wr:AddButton("ChunkBreaker", {
+    Title = "Chunk Breaker 16x16x16",
+    Description = "Breaks a full chunk instantly [CREATIVE MODE ONLY]",
+    Callback = function()
+            local coordText = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.coordinates.Text
+            local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+
+            local baseX = tonumber(x)
+            local baseY = tonumber(y) - 1
+            local baseZ = tonumber(z)
+
+            local positions = {}
+
+            -- 16x16x16 area (centered around player)
+            for offsetX = -8, 7 do
+                for offsetY = -8, 7 do
+                    for offsetZ = -8, 7 do
+                        positions[#positions+1] = {
+                            baseX + offsetX,
+                            baseY + offsetY,
+                            baseZ + offsetZ
+                        }
+                    end
+                end
+            end
+
+            -- fire EVERYTHING at once (no loop delay)
+            for i = 1, #positions do
+                local pos = positions[i]
+                task.spawn(function()
+                    bb:FireServer(pos[1], pos[2], pos[3])
+                    abb:InvokeServer()
+                end)
+            end
+    end
+})
+	
   local ScaffoldToggle = Tabs.wr:AddToggle("Scaffold",
   {
     Title = "Scaffold", 
@@ -1662,7 +1699,14 @@ end)
     end
     end 
   })
-	
+
+  Tabs.wr:AddButton({
+    Title = "Dupe GUI",
+    Description = "Loads the Dupe GUI by Argentum Exploitz",
+    Callback = function()
+		loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
+    end
+  })
 	
   Tabs.dt:AddButton({
     Title = "Dupe GUI",
