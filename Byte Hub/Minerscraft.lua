@@ -1326,7 +1326,7 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
 			end
   })
 
-  local chunkToggle = Tabs.wr:AddButton("ChunkBreaker", {
+  local chunkToggle = Tabs.wr:AddButton({
     Title = "Chunk Breaker 16x16x16",
     Description = "Breaks a full chunk instantly [CREATIVE MODE ONLY]",
     Callback = function()
@@ -1607,7 +1607,7 @@ end)
 
 local HighwayToggle = Tabs.wr:AddToggle("HighwayBuilder",
   {
-    Title = "Highway Builder X", 
+    Title = "Highway Builder Z", 
     Description = "Builds a highway below you",
     Default = false,
     Callback = function(H)
