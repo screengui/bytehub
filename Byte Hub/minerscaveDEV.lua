@@ -75,10 +75,31 @@ local Attack = gameremotes:WaitForChild("Attack")
 local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
 local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
 local useblock = gameremotes.UseBlock
-  
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
-wait()
-  
+
+-- Adonis Bypass
+local NamecallInstanceDetector = nil
+for Index, Table in getgc(true) do
+    if typeof(Table) ~= "table" then continue end
+    if not rawget(Table, "namecallInstance") then continue end
+    for SecondIndex, StackContainerTable in Table do
+        if typeof(StackContainerTable) ~= "table" then continue end
+        for ThirdIndex, Upvalues in StackContainerTable do
+            if StackContainerTable[ThirdIndex] ~= "kick" then continue end
+            if typeof(StackContainerTable[ThirdIndex + 1]) ~= "function" then continue end
+            local FrozenDetectionFunction = StackContainerTable[ThirdIndex + 1]
+            for _, DetectionIdentifier in getconstants(FrozenDetectionFunction) do
+                if DetectionIdentifier == "namecallInstance" then
+                    NamecallInstanceDetector = FrozenDetectionFunction
+                end
+            end
+        end
+    end
+end
+assert(NamecallInstanceDetector, "Error while finding anticheat.")
+hookfunction(NamecallInstanceDetector, function()
+    return false
+end)
+
 -- Anti Kick --
   
 local oldhmmi
@@ -1070,9 +1091,9 @@ end)
     end 
   })
 
-  local HighwayToggle = Tabs.wr:AddToggle("HighwayBuilder",
+  local HighwayToggleX = Tabs.wr:AddToggle("HighwayBuilder",
   {
-    Title = "Highway Builder", 
+    Title = "Highway Builder X", 
     Description = "Builds a highway below you",
     Default = false,
     Callback = function(H)
@@ -1165,6 +1186,89 @@ end)
     end
     end 
   })
+
+local HighwayToggleZ = Tabs.wr:AddToggle("HighwayBuilder", {
+    Title = "Highway Builder Z", 
+    Description = "Builds a highway below you",
+    Default = false,
+    Callback = function(H)
+        HB = H
+        if HB then
+            local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
+			local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
+			local BlocksByName = M_IDs.ByName.Blocks
+
+			local dir = 1
+				
+			_G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.coordinates:GetPropertyChangedSignal("Text"):Connect(function()
+				local lp = game.Players.LocalPlayer
+				local char = lp.Character
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				local placeSlot = char.SelectedSlot.Value
+				local slotGui = lp.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot]
+				if not slotGui or not slotGui.Slot.Display:FindFirstChild("SlotB") then return end
+				local realBlock
+    
+				for _, v in pairs(slotGui.Slot.Display.SlotB:GetChildren()) do
+					realBlock = v.Name
+					break
+				end
+				if not realBlock then return end
+				local itemblock_info = BlocksByName[realBlock]
+				if not itemblock_info then return end
+
+				local coordText = lp.PlayerGui.HUDGui.DataFrame.coordinates.Text
+				local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+				if not z then return end
+
+				x = tonumber(x)
+				y = tonumber(y) - 1
+				z = tonumber(z)
+						
+				local positions = {}
+				for oz = -2, 2 do
+					positions[#positions + 1] = {x, y, z + oz}
+					if oz == -2 or oz == 2 then
+						positions[#positions + 1] = {x, y + 1, z + oz}
+					end
+				end
+				
+				for i = 1, #positions do
+					task.spawn(function()
+					    local px, py, pz = unpack(positions[i])
+						local block, chunk = M_World.getBlock(px, py, pz)
+					    local canPlace = false
+									
+						if not block then
+							canPlace = true
+						else
+						    for _, v in pairs(block) do
+							    if v == 0 then
+								    canPlace = true
+									break
+								end
+							end
+						end
+
+					    if not canPlace then return end
+										
+						M_World.placeBlock(px, py, pz, chunk, dir, itemblock_info.id)
+							
+						local ok, name = game.ReplicatedStorage.GameRemotes.PlaceBlock:InvokeServer(px, py, pz, placeSlot, dir)
+									
+						if not ok then
+							chunk:change(px % 16, py, pz % 16, name)
+						end
+					end)
+				end
+			end)
+		else
+			_G.CoordsChannel:Disconnect()
+		end
+    end 
+})
+
 
   Tabs.dt:AddButton({
     Title = "Dupe GUI",
