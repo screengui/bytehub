@@ -28,10 +28,12 @@ local Players = game:GetService("Players")
 local player = game:GetService("Players").LocalPlayer
 local LP = game.Players.LocalPlayer
 local Character = player.Character
-  
-local Gamemode = Instance.new("IntValue")
-Gamemode.Name = "Gamemode"
-Gamemode.Parent = game.Players.LocalPlayer.Character
+
+if not game.Players.LocalPlayer.Character:FindFirstChild("Gamemode") then
+	local Gamemode = Instance.new("IntValue")
+	Gamemode.Name = "Gamemode"
+	Gamemode.Parent = game.Players.LocalPlayer.Character
+end
   
 local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
 local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
@@ -194,9 +196,9 @@ local LavaESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/scree
 local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/player-esp.lua"))()
   
 
-  local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-  local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-  local Window = Fluent:CreateWindow({
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+local Window = Fluent:CreateWindow({
     Title = "Minecraft (Byte Hub) v4.5",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
@@ -204,9 +206,9 @@ local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/scr
     Acrylic = false,
     Theme = "Rose",
     MinimizeKey = Enum.KeyCode.LeftShift -- Used when theres no MinimizeKeybind
-  })
+})
 
-  local Tabs = {
+local Tabs = {
     Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
     cs = Window:AddTab({ Title = "Combat", Icon = "swords" }),
     lp = Window:AddTab({ Title = "Player", Icon = "user" }),
@@ -215,104 +217,101 @@ local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/scr
     dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
     ot = Window:AddTab({ Title = "Others", Icon = "list" }),
     st = Window:AddTab({ Title = "Settings", Icon = "settings" }),
-  }
+}
 
-  local Options = Fluent.Options
-  local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local Options = Fluent.Options
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
   
-  Tabs.Credits:AddParagraph({
+Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
     Content = "UI Library: Fluent\nv4.5\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
-  })
+})
 
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "YouTube",
     Description = "My YouTube Channel",
     Callback = function()
-      setclipboard("https://youtube.com/@inconsistenttutorialuploader")
+        setclipboard("https://youtube.com/@inconsistenttutorialuploader")
     end
-  })
+})
   
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "Discord",
     Description = "My Discord Server",
     Callback = function()
-      setclipboard("https://discord.gg/9y7JM7Anne")
+		setclipboard("https://discord.gg/9y7JM7Anne")
     end
-  })
+})
 
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "GitHub",
     Description = "My GitHub Page",
     Callback = function()
-      setclipboard("https://github.com/screengui")
+		setclipboard("https://github.com/screengui")
     end
-  })
+})
 
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "ScriptBlox",
     Description = "My ScriptBlox Account",
     Callback = function()
-      setclipboard("https://scriptblox.com/u/tycoonman95")
+		setclipboard("https://scriptblox.com/u/tycoonman95")
     end
-  })
+})
 
-  Tabs.cs:AddToggle("Kill Aura", {
+Tabs.cs:AddToggle("Kill Aura", {
 	Title = "Kill Aura",
     Description = "Attacks people within your reach",
     Default = false,
     Callback = function(state)
-      if state then
-        KillAura.start()
-      else
-        KillAura.stop()
-      end
-    end
-  })
+		if state then
+			KillAura.start()
+		else
+			KillAura.stop()
+		end
+	end
+})
   
 local Toggle = Tabs.cs:AddToggle("Toggle", {
   Title = "Target Strafe",
   Description = "Circles around your target",
   Default = false,
   Callback = function(state)
-    if state then
-      TargetStrafe.start()
-    else
-      TargetStrafe.stop()
-	end
+      if state then
+        TargetStrafe.start()
+      else
+        TargetStrafe.stop()
+  	  end
   end
 })
 
-  local hboxtog = Tabs.cs:AddToggle("HitboxToggle",
-  {
+local hboxtog = Tabs.cs:AddToggle("HitboxToggle", {
     Title = "Hitbox Expander", 
     Description = "Expands other player's hitboxes\nCredits to Ket Hub",
     Default = false,
     Callback = function(state)
-      if state then
-		Hitbox.start()
-	  else
-		Hitbox.stop()
-	  end
+        if state then
+		    Hitbox.start()
+	    else
+		    Hitbox.stop()
+	    end
     end 
-  })
+})
 
-  local acltog = Tabs.cs:AddToggle("Auto Combat Log",
-  {
+local acltog = Tabs.cs:AddToggle("Auto Combat Log", {
     Title = "Auto Combat Log", 
     Description = "Automatically leaves when you have less than 30% hp",
     Default = false,
     Callback = function(state)
-      if state then
-		CombatLog.start()
-	  else
-		CombatLog.stop()
-	  end
+        if state then
+		    CombatLog.start()
+	    else
+		    CombatLog.stop()
+	    end
     end 
-  }) 
+}) 
 
-  local acttog = Tabs.cs:AddToggle("Auto Combat TP",
-  {
+local acttog = Tabs.cs:AddToggle("Auto Combat TP", {
     Title = "Auto Safe Zone", 
     Description = "Auto Combat Log, but it teleports you to a safe zone.",
     Default = false,
@@ -323,15 +322,15 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
 		    AutoSafeZone.stop()
 		end
     end 
-  }) 
+}) 
 
-  Tabs.cs:AddButton({
+Tabs.cs:AddButton({
     Title = "Arcade Recode Client",
     Description = "Executes Arcade Recode Client",
     Callback = function()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
     end
-  })
+})
 
   local nftog = Tabs.lp:AddToggle("No Fall",
   {
