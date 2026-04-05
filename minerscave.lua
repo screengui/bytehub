@@ -47,7 +47,9 @@ if not getgenv().bytehubLoaded then
     "CraftBloxPro9999",
     "CraftTopiaIsAwesome",
 	"MinersCraftPro9999",
-    "Epicguy_616161"
+    "Epicguy_616161",
+	"ZDR_IwontTHISto",
+	"IwontTHISto",
   }
 
   -- Remotes --
