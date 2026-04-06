@@ -47,6 +47,7 @@ local hasGiveExploit
 local selectedPlayerName = nil
 local clockTimeConnection = nil
 local TB = false
+local currentTarget
 
 -- Configs --
 local whitelist = {
@@ -150,7 +151,10 @@ local function SetTrigger(state)
 end
 
 RunService.RenderStepped:Connect(function()
-    if not TB then return end
+    if not TB then 
+        currentTarget = nil
+        return 
+    end
 
     local char = LP.Character
     if not char then return end
@@ -161,29 +165,33 @@ RunService.RenderStepped:Connect(function()
     local viewport = Camera.ViewportSize
     local ray = Camera:ViewportPointToRay(viewport.X/2, viewport.Y/2)
 
-    local rayParams = RaycastParams.new()
-    rayParams.FilterDescendantsInstances = {char}
-    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {char}
+    params.FilterType = Enum.RaycastFilterType.Blacklist
 
-    local result = workspace:Raycast(ray.Origin, ray.Direction * 500, rayParams)
-    if not result then return end
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
 
-    local hit = result.Instance
-    local character = hit:FindFirstAncestorOfClass("Model")
+    if result then
+        local character = result.Instance:FindFirstAncestorOfClass("Model")
 
-    if character and character ~= char then
-        local hum = character:FindFirstChildOfClass("Humanoid")
-        local tHRP = character:FindFirstChild("HumanoidRootPart")
+        if character and character ~= char and character:FindFirstChildOfClass("Humanoid") then
+            currentTarget = character
+        end
+    end
 
-        if hum and tHRP then
+    if currentTarget then
+        local tHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+        local hum = currentTarget:FindFirstChildOfClass("Humanoid")
+
+        if hum and hum.Health > 0 and tHRP then
             local d = hrp.Position - tHRP.Position
             if (d.X*d.X + d.Z*d.Z) <= _G.RANGE_SQ then
-                Attack:InvokeServer(character)
+                Attack:InvokeServer(currentTarget)
             end
         end
     end
 end)
-  
+
 local originalSettings = {}
   
 function conv(txt)
