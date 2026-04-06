@@ -157,6 +157,8 @@ RunService.RenderStepped:Connect(function()
     local parent2 = parent and parent.Parent
 
     local character = parent and parent:FindFirstChildOfClass("Humanoid") and parent or parent2 and parent2:FindFirstChildOfClass("Humanoid") and parent2
+    local char = LP.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
     if character and character ~= player.Character then
         local tHRP = character:FindFirstChild("HumanoidRootPart")
