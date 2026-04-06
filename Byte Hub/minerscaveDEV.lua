@@ -151,18 +151,31 @@ end
 
 RunService.RenderStepped:Connect(function()
     if not TB then return end
-    if not mouse.Target then return end
 
-    local parent = mouse.Target.Parent
-    local parent2 = parent and parent.Parent
-
-    local character = parent and parent:FindFirstChildOfClass("Humanoid") and parent or parent2 and parent2:FindFirstChildOfClass("Humanoid") and parent2
     local char = LP.Character
-	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not char then return end
 
-    if character and character ~= player.Character then
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local viewport = Camera.ViewportSize
+    local ray = Camera:ViewportPointToRay(viewport.X/2, viewport.Y/2)
+
+    local rayParams = RaycastParams.new()
+    rayParams.FilterDescendantsInstances = {char}
+    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 500, rayParams)
+    if not result then return end
+
+    local hit = result.Instance
+    local character = hit:FindFirstAncestorOfClass("Model")
+
+    if character and character ~= char then
+        local hum = character:FindFirstChildOfClass("Humanoid")
         local tHRP = character:FindFirstChild("HumanoidRootPart")
-        if tHRP then
+
+        if hum and tHRP then
             local d = hrp.Position - tHRP.Position
             if (d.X*d.X + d.Z*d.Z) <= _G.RANGE_SQ then
                 Attack:InvokeServer(character)
