@@ -22,10 +22,11 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local Camera = game.Workspace.CurrentCamera
 local Players = game:GetService("Players")
-  
+
 -- Variables --
   
 local player = game:GetService("Players").LocalPlayer
+local mouse = player:GetMouse()
 local LP = game.Players.LocalPlayer
 local Character = player.Character
 
@@ -45,6 +46,7 @@ local isPC
 local hasGiveExploit
 local selectedPlayerName = nil
 local clockTimeConnection = nil
+local TB = false
 
 -- Configs --
 local whitelist = {
@@ -142,6 +144,30 @@ function chestdupe(mode)
         end
     end
 end
+
+local function SetTrigger(state)
+    TB = state
+end
+
+RunService.RenderStepped:Connect(function()
+    if not TB then return end
+    if not mouse.Target then return end
+
+    local parent = mouse.Target.Parent
+    local parent2 = parent and parent.Parent
+
+    local character = parent and parent:FindFirstChildOfClass("Humanoid") and parent or parent2 and parent2:FindFirstChildOfClass("Humanoid") and parent2
+
+    if character and character ~= player.Character then
+        local tHRP = character:FindFirstChild("HumanoidRootPart")
+        if tHRP then
+            local d = hrp.Position - tHRP.Position
+            if (d.X*d.X + d.Z*d.Z) <= _G.RANGE_SQ then
+                Attack:InvokeServer(character)
+            end
+        end
+    end
+end)
   
 local originalSettings = {}
   
@@ -273,16 +299,29 @@ Tabs.cs:AddToggle("Kill Aura", {
 })
   
 local Toggle = Tabs.cs:AddToggle("Toggle", {
-  Title = "Target Strafe",
-  Description = "Circles around your target",
-  Default = false,
-  Callback = function(state)
-      if state then
-        TargetStrafe.start()
-      else
-        TargetStrafe.stop()
-  	  end
-  end
+	Title = "Target Strafe (BLATANT)",
+    Description = "Circles around your target",
+    Default = false,
+    Callback = function(state)
+        if state then
+            TargetStrafe.start()
+        else
+            TargetStrafe.stop()
+  	    end
+    end
+})
+
+local Toggle = Tabs.cs:AddToggle("Toggle", {
+    Title = "Triggerbot",
+    Description = "Automatically attacks your target when you point at them.",
+    Default = false,
+    Callback = function(state)
+        if state then
+            TB = true
+        else
+            TB = false
+  	    end
+    end
 })
 
 local hboxtog = Tabs.cs:AddToggle("HitboxToggle", {
@@ -1135,7 +1174,7 @@ local HighwayToggleZ = Tabs.wr:AddToggle("HighwayBuilder", {
 
 			local dir = 1
 				
-			_G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.coordinates:GetPropertyChangedSignal("Text"):Connect(function()
+			_G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coords:GetPropertyChangedSignal("Text"):Connect(function()
 				local lp = game.Players.LocalPlayer
 				local char = lp.Character
 				local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -1153,7 +1192,7 @@ local HighwayToggleZ = Tabs.wr:AddToggle("HighwayBuilder", {
 				local itemblock_info = BlocksByName[realBlock]
 				if not itemblock_info then return end
 
-				local coordText = lp.PlayerGui.HUDGui.DataFrame.coordinates.Text
+				local coordText = lp.PlayerGui.HUDGui.DataFrame.Coords.Text
 				local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
 				if not z then return end
 
