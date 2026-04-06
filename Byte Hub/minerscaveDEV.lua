@@ -79,7 +79,7 @@ local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirs
 local useblock = gameremotes.UseBlock
 
 -- Adonis Bypass
-loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Adonis-anticheat-byppas-60444"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
 
 -- Anti Kick --
   
