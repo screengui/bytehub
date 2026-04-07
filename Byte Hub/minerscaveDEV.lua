@@ -22,6 +22,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local Camera = game.Workspace.CurrentCamera
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 
 -- Variables --
   
@@ -38,6 +39,8 @@ end
   
 local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
 local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
+local ItemInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemInfo"))
+local MoveItem = ReplicatedStorage:WaitForChild("GameRemotes"):WaitForChild("MoveItem")
 local blocks = workspace.Blocks
 local features = {}
 local usetables = false
@@ -47,7 +50,9 @@ local hasGiveExploit
 local selectedPlayerName = nil
 local clockTimeConnection = nil
 local TB = false
+local savedName = player.Name
 local currentTarget
+local connections = {}
 
 -- Configs --
 local whitelist = {
@@ -67,6 +72,9 @@ local CrosshairSettings = {
     HorizontalLine = Drawing.new("Line"),
     VerticalLine = Drawing.new("Line")
 }
+
+local TIERS = {Diamond = 4, Ruby = 3, Iron = 2, Gold = 2, Steel = 2, Stone = 1}
+local ARMOR = {Helmet = 103, Chestplate = 102, Leggings = 101, Boots = 100}
 
 -- Remotes --
 local gameremotes = ReplicatedStorage.GameRemotes
@@ -192,6 +200,110 @@ function TriggerBot()
     end
 end
 
+local function decode(slot)
+	local ok, data = pcall(HttpService.JSONDecode, HttpService, slot.Value)
+	return ok and data or nil
+end
+
+local function getTier(name)
+    for prefix, tier in pairs(TIERS) do
+        if string.find(name, "^" .. prefix) then 
+            local afterPrefix = string.sub(name, #prefix + 1, #prefix + 1)
+            if afterPrefix == "" or afterPrefix == " " or string.match(afterPrefix, "%u") then
+                return tier 
+            end
+        end
+    end
+    
+    local info = ItemInfo[name]
+    return info and (info.tier or info.Tier) or 0
+end
+
+local function getArmorType(name)
+    for aType, id in pairs(ARMOR) do
+        if string.find(name, aType) then 
+            return id 
+        end
+    end
+    return nil
+end
+
+local function isBetter(new, old)
+    local newTier = getTier(new.name)
+    local oldTier = getTier(old.name)
+    
+    local newDur = new.durability or 0
+    local oldDur = old.durability or 0
+
+    local newInfo = ItemInfo[new.name]
+    local oldInfo = ItemInfo[old.name]
+    local newMax = newInfo and newInfo.durability or 100
+    local oldMax = oldInfo and oldInfo.durability or 100
+
+    if oldDur <= (oldMax * 0.1) and newDur > (newMax * 0.1) then
+        if newTier >= (oldTier - 1) then
+            return true
+        end
+    end
+
+    if newTier > oldTier then
+        if newDur > (newMax * 0.1) or oldDur <= (oldMax * 0.05) then
+            return true
+        end
+    elseif newTier == oldTier then
+        if newDur > oldDur then
+            return true
+        end
+    end
+
+    if newTier == oldTier and newDur == oldDur then
+        return newMax > oldMax
+    end
+
+    return false
+end
+
+local function autoEquipArmor()
+	local inv = player.Character:FindFirstChild("Inventory")
+	if not inv then return end
+
+	local best = {
+		[103] = {tier = -1, dur = -1, idx = nil},
+		[102] = {tier = -1, dur = -1, idx = nil},
+		[101] = {tier = -1, dur = -1, idx = nil},
+		[100] = {tier = -1, dur = -1, idx = nil}
+	}
+
+	for i = 0, 35 do
+		local slot = inv:FindFirstChild("Slot" .. i)
+		local data = slot and decode(slot)
+
+		if data and data.count >= 1 and data.name then
+			local armorSlot = getArmorType(data.name)
+			if armorSlot then
+				local tier = getTier(data.name)
+				local dur = data.durability or 0
+
+				if tier > best[armorSlot].tier or (tier == best[armorSlot].tier and dur > best[armorSlot].dur) then
+					best[armorSlot] = {tier = tier, dur = dur, idx = i, name = data.name}
+				end
+			end
+		end
+	end
+
+	for slot, item in pairs(best) do
+		if item.idx then
+			local equipped = decode(inv:FindFirstChild("Slot" .. slot))
+			
+			if not equipped or equipped.count > 0 then
+				MoveItem:InvokeServer(item.idx, slot, true)
+			elseif isBetter(item, equipped) then
+				MoveItem:InvokeServer(item.idx, slot, true)
+			end
+		end
+	end
+end
+
 local originalSettings = {}
   
 function conv(txt)
@@ -248,7 +360,7 @@ local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/scr
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v4.5",
+    Title = "Minecraft (Byte Hub) v4.5.18",
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 300),
@@ -273,7 +385,7 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
   
 Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv4.5\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\npre-release v4.5.18\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -288,7 +400,7 @@ Tabs.Credits:AddButton({
     Title = "Discord",
     Description = "My Discord Server",
     Callback = function()
-		setclipboard("https://discord.gg/9y7JM7Anne")
+		setclipboard("https://discord.gg/9Nzzya6d46")
     end
 })
 
@@ -471,7 +583,20 @@ local Toggle = Tabs.lp:AddToggle("Toggle", {
 	    end
     end 
 })
-  
+
+local Toggle = Tabs.lp:AddToggle("ArmorToggle", {
+    Title = "Auto Armor",
+    Description = "Automatically equips the best armor",
+    Default = false,
+    Callback = function(aarmor)
+		aa = aarmor
+        while aa do
+			autoEquipArmor()
+			task.wait()
+		end
+	end
+})
+
 local Input = Tabs.lp:AddInput("Input", {
     Title = "Walkspeed",
     Description = "Sets your walkspeed amount (Default: 12)",
@@ -728,6 +853,77 @@ local ectog = Tabs.vs:AddToggle("Enderchest", {
             task.wait()
 		end
     end 
+})
+
+local NPtog = Tabs.vs:AddToggle("Name Protect", {
+    Title = "Name Protect",
+    Description = "Protects your name",
+    Default = false,
+    Callback = function(state)
+        if state then
+			getgenv().name = "Protected"
+
+			local Plr = game.Players.LocalPlayer
+			for Index, Value in next, game:GetDescendants() do 
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name) 
+				    if has then 
+					    local str = Value.Text:gsub(Plr.Name,name)
+					    Value.Text = str 
+					end
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+				end
+			end
+
+			game.DescendantAdded:Connect(function(Value)
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name)
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+					if has then 
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end
+				end
+			end)
+        else
+            getgenv().name = savedName
+
+			local Plr = game.Players.LocalPlayer
+			for Index, Value in next, game:GetDescendants() do 
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name) 
+				    if has then 
+					    local str = Value.Text:gsub(Plr.Name,name)
+					    Value.Text = str 
+					end
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+				end
+			end
+
+			game.DescendantAdded:Connect(function(Value)
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name)
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+					if has then 
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end
+				end
+			end)
+        end
+    end
 })
   
 Tabs.vs:AddButton({
