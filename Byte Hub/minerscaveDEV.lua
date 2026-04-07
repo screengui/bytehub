@@ -46,7 +46,6 @@ local isPC
 local hasGiveExploit
 local selectedPlayerName = nil
 local clockTimeConnection = nil
-local TB = false
 local currentTarget
 
 -- Configs --
@@ -146,11 +145,7 @@ function chestdupe(mode)
     end
 end
 
-local function SetTrigger(state)
-    TB = state
-end
-
-RunService.RenderStepped:Connect(function()
+function TriggerBot(TB)
     if not TB then 
         currentTarget = nil
         return 
@@ -190,7 +185,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-end)
+end
 
 local originalSettings = {}
   
@@ -340,9 +335,9 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Default = false,
     Callback = function(state)
         if state then
-            TB = true
+            TriggerBot(true)
         else
-            TB = false
+            TriggerBot(false)
   	    end
     end
 })
