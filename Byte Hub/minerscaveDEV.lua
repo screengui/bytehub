@@ -46,6 +46,7 @@ local isPC
 local hasGiveExploit
 local selectedPlayerName = nil
 local clockTimeConnection = nil
+local TB = false
 local currentTarget
 
 -- Configs --
@@ -145,7 +146,7 @@ function chestdupe(mode)
     end
 end
 
-function TriggerBot(TB)
+function TriggerBot()
     if not TB then 
         currentTarget = nil
         return 
@@ -166,13 +167,17 @@ function TriggerBot(TB)
 
     local result = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
 
+    local newTarget = nil
+
     if result then
         local character = result.Instance:FindFirstAncestorOfClass("Model")
 
         if character and character ~= char and character:FindFirstChildOfClass("Humanoid") then
-            currentTarget = character
+            newTarget = character
         end
     end
+
+    currentTarget = newTarget
 
     if currentTarget then
         local tHRP = currentTarget:FindFirstChild("HumanoidRootPart")
@@ -334,8 +339,15 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Description = "Automatically attacks your target when you point at them.",
     Default = false,
     Callback = function(state)
-        while state and task.wait() do
-		    TriggerBot(state)
+        TB = state
+
+        if state then
+            task.spawn(function()
+                while TB do
+                    TriggerBot()
+                    task.wait()
+                end
+            end)
 		end
     end
 })
