@@ -334,11 +334,9 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Description = "Automatically attacks your target when you point at them.",
     Default = false,
     Callback = function(state)
-        if state then
-            TriggerBot(true)
-        else
-            TriggerBot(false)
-  	    end
+        while state and task.wait() do
+		    TriggerBot(state)
+		end
     end
 })
 
