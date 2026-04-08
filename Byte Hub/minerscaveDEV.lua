@@ -12,7 +12,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "pre-release v4.5.19"
+local version = "pre-release v4.5.20"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -702,7 +702,17 @@ local Toggle = Tabs.lp:AddToggle("ToolToggle", {
 		end
 	end
 })
-			
+
+local ReachToggle = Tabs.lp:AddToggle("Reach", {
+    Title = "Reach", 
+    Description = "Increases BLOCK INTERACTION range\nNOT ATTACK RANGE",
+    Default = false,
+    Callback = function(r)
+        re = r
+        CGlobals["PLAYER_REACH"] = r and 9e9 or 19.5
+    end 
+})
+
 local Input = Tabs.lp:AddInput("Input", {
     Title = "Walkspeed",
     Description = "Sets your walkspeed amount (Default: 12)",
@@ -1857,6 +1867,34 @@ local Input = Tabs.st:AddInput("Input", {
         end
     end
 })
+
+local tbdelay = Tabs.st:AddInput("Input", {
+    Title = "Triggerbot Delay",
+    Description = "Seconds between each hit (Default: 0)",
+    Default = "0",
+    Placeholder = "Enter a number",
+    Numeric = false,
+    Finished = false,
+    Callback = function(zi)
+        local newDelay2 = tonumber(zi)
+        if newDelay2 then
+            _G.tbdelay = newDelay2 
+            Fluent:Notify({
+                Title = "Success!",
+                Content = "Successfully edited delay",
+                SubContent = "Delay: " .. newDelay2,
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Delay:" .. zi,
+                SubContent = "Please enter a number",
+                Duration = 3
+            })
+        end
+    end
+})
   
 local Input = Tabs.st:AddInput("Input", {
     Title = "Crosshair+ Color",
@@ -1901,6 +1939,24 @@ local utstog = Tabs.st:AddToggle("Toggle", {
     Callback = function(uts)
         ut = uts
         _G.useTaskSpawn = uts
+    end 
+})
+
+local afktog = Tabs.st:AddToggle("Toggle", {
+    Title = "Anti AFK", 
+    Description = "Disables disconnection due to idling.",
+    Default = false,
+    Callback = function(aafk)
+        afk = aafk
+		if afk then
+			for i,v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+			    v:Disable()
+			end
+		else
+			for i,v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+			    v:Enable()
+			end
+		end
     end 
 })
   
