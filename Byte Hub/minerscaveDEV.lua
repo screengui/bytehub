@@ -12,7 +12,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-	
+local version = "pre-release v4.5.19"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -24,35 +24,44 @@ local Camera = game.Workspace.CurrentCamera
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 
+-- Game Scripts --
+local MainScript = game:GetService("Players").LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("MainLocalScript")
+local CGlobals = require(MainScript:WaitForChild("CGlobals"))
+local BlockInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("BlockInfo"))
+local ItemInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemInfo"))
+local ItemLevels = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemLevels"))
+local BlockHighlights = require(MainScript:WaitForChild("BlockHighlights"))
+
 -- Variables --
-  
 local player = game:GetService("Players").LocalPlayer
 local mouse = player:GetMouse()
 local LP = game.Players.LocalPlayer
 local Character = player.Character
+  
+local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
+local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
+local ItemInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemInfo"))
+local blocks = workspace.Blocks
+local features = {}
+local Inventory = Character:WaitForChild("Inventory")
+
+-- Checks --
+local isMobile
+local isPC
+local currentTarget
+local hasGiveExploit
 
 if not game.Players.LocalPlayer.Character:FindFirstChild("Gamemode") then
 	local Gamemode = Instance.new("IntValue")
 	Gamemode.Name = "Gamemode"
 	Gamemode.Parent = game.Players.LocalPlayer.Character
 end
-  
-local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
-local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
-local ItemInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemInfo"))
-local MoveItem = ReplicatedStorage:WaitForChild("GameRemotes"):WaitForChild("MoveItem")
-local blocks = workspace.Blocks
-local features = {}
-local usetables = false
-local isMobile
-local isPC
-local hasGiveExploit
+
+-- Placeholders --
 local selectedPlayerName = nil
 local clockTimeConnection = nil
-local TB = false
+local autoToolConn = nil
 local savedName = player.Name
-local currentTarget
-local connections = {}
 
 -- Configs --
 local whitelist = {
@@ -73,6 +82,9 @@ local CrosshairSettings = {
     VerticalLine = Drawing.new("Line")
 }
 
+local TB = false
+local usetables = false
+
 local TIERS = {Diamond = 4, Ruby = 3, Iron = 2, Gold = 2, Steel = 2, Stone = 1}
 local ARMOR = {Helmet = 103, Chestplate = 102, Leggings = 101, Boots = 100}
 
@@ -84,10 +96,11 @@ local abb = gameremotes.AcceptBreakBlock
 local bb = gameremotes.BreakBlock
 local Attack = gameremotes:WaitForChild("Attack")
 local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
+local MoveItem = ReplicatedStorage:WaitForChild("GameRemotes"):WaitForChild("MoveItem")
 local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
 local useblock = gameremotes.UseBlock
 
--- Adonis Bypass
+-- Adonis Bypass --
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
 
 -- Anti Kick --
@@ -108,7 +121,6 @@ oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
 end)
   
 -- Functions --
-
 if game.ReplicatedStorage:FindFirstChild("admingui") then
     hasGiveExploit = true
     local Notify = AkaliNotif.Notify;
@@ -295,7 +307,7 @@ local function autoEquipArmor()
 		if item.idx then
 			local equipped = decode(inv:FindFirstChild("Slot" .. slot))
 			
-			if not equipped or equipped.count > 0 then
+			if not equipped or equipped.count <= 0 then
 				MoveItem:InvokeServer(item.idx, slot, true)
 			elseif isBetter(item, equipped) then
 				MoveItem:InvokeServer(item.idx, slot, true)
@@ -304,7 +316,78 @@ local function autoEquipArmor()
 	end
 end
 
-local originalSettings = {}
+player.CharacterAdded:Connect(function(newChar)
+	Character = newChar
+	Inventory = newChar:WaitForChild("Inventory")
+end)
+
+local function getHotbar()
+	return player.PlayerGui:FindFirstChild("HUDGui") and player.PlayerGui.HUDGui:FindFirstChild("Hotbar")
+end
+
+local function getSlotButton(index)
+	local Hotbar = getHotbar()
+	if not Hotbar then return nil end
+	
+	local targetX = index * 40 + 6
+	for _, btn in ipairs(Hotbar:GetChildren()) do
+		if btn:IsA("TextButton") and btn.Position.X.Offset == targetX then
+			return btn
+		end
+	end
+	return nil
+end
+
+local function setSlot(index)
+	local slot = getSlotButton(index)
+	if slot then
+		for _, conn in ipairs(getconnections(slot.MouseButton1Click)) do
+			conn:Fire()
+		end
+	end
+end
+
+local function decodeSlot(slotVal)
+	local success, data = pcall(HttpService.JSONDecode, HttpService, slotVal.Value)
+	return success and data and data.count > 0 and data or nil
+end
+
+local function getItemSpeed(itemName, reqType, betterTool)
+	local itemData = ItemInfo[itemName]
+	if itemData and (itemData.tooltype == reqType or itemData.tooltype == betterTool) then
+		return ItemLevels.speedMul[itemData.level] or 1
+	end
+	return 1
+end
+
+local function getBestToolSlot(blockName)
+	local blockData = BlockInfo[blockName]
+	if not blockData then return nil end
+
+	local bestSlot, maxSpeed = nil, 0
+	local reqType, betterTool = blockData.toolRequire, blockData.betterTool
+
+	for i = 0, 8 do
+		local slotVal = Inventory:FindFirstChild("Slot" .. i)
+		if slotVal then
+			local data = decodeSlot(slotVal)
+			if data then
+				local speed = getItemSpeed(data.name, reqType, betterTool)
+				if speed > maxSpeed then
+					maxSpeed = speed
+					bestSlot = i
+				end
+			end
+		end
+	end
+
+	return bestSlot
+end
+
+local function getSelectedSlot()
+	local charModel = workspace:FindFirstChild(player.Name)
+	return charModel and charModel:FindFirstChild("SelectedSlot")
+end
   
 function conv(txt)
     local str = ""
@@ -356,11 +439,10 @@ local ChestESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/scre
 local LavaESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/lava-esp.lua"))()
 local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/player-esp.lua"))()
   
-
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v4.5.18",
+    Title = "Minecraft (Byte Hub) " .. version,
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 300),
@@ -385,7 +467,7 @@ local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/d
   
 Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\npre-release v4.5.18\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
+    Content = "UI Library: Fluent\n" .. version .. "\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
 })
 
 Tabs.Credits:AddButton({
@@ -597,6 +679,30 @@ local Toggle = Tabs.lp:AddToggle("ArmorToggle", {
 	end
 })
 
+local Toggle = Tabs.lp:AddToggle("ToolToggle", {
+    Title = "Auto Tool",
+    Description = "Automatically finds the best tool for mining\nCredits to 1derby1.",
+    Default = false,
+    Callback = function(atool)
+		at = atool
+		while at do
+			local selectedSlotObj = getSelectedSlot()
+			if not selectedSlotObj then return end
+
+			local targetPos = CGlobals.TargetBlockCoordinate
+			local targetBlock = CGlobals.BlockUnderMouse
+
+			if targetPos and targetBlock and BlockHighlights.IsBreaking(targetPos) then
+				local bestSlot = getBestToolSlot(targetBlock.Name)
+				if bestSlot and selectedSlotObj.Value ~= bestSlot then
+					setSlot(bestSlot)
+				end
+			end
+			task.wait()
+		end
+	end
+})
+			
 local Input = Tabs.lp:AddInput("Input", {
     Title = "Walkspeed",
     Description = "Sets your walkspeed amount (Default: 12)",
