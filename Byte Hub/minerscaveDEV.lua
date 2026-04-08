@@ -12,7 +12,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "pre-release v4.5.20"
+local version = "pre-release v4.5.21"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -59,9 +59,9 @@ end
 
 -- Placeholders --
 local selectedPlayerName = nil
-local clockTimeConnection = nil
 local autoToolConn = nil
 local savedName = player.Name
+local platformY = 0
 
 -- Configs --
 local whitelist = {
@@ -81,6 +81,15 @@ local CrosshairSettings = {
     HorizontalLine = Drawing.new("Line"),
     VerticalLine = Drawing.new("Line")
 }
+
+if not platform then
+	local platform = Instance.new("Part")
+	platform.Anchored = true
+	platform.Size = Vector3.new(5, 1, 5)
+	platform.Transparency = 1
+	platform.CanCollide = false
+	platform.Parent = workspace
+end
 
 local TB = false
 local usetables = false
@@ -388,7 +397,15 @@ local function getSelectedSlot()
 	local charModel = workspace:FindFirstChild(player.Name)
 	return charModel and charModel:FindFirstChild("SelectedSlot")
 end
-  
+
+function InfiniteJump()
+  game:GetService("UserInputService").JumpRequest:Connect(function()
+    if infj then
+      game.Players.LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+  end)
+end
+
 function conv(txt)
     local str = ""
     string.gsub(txt,"%d+",function(e)
@@ -737,6 +754,40 @@ local Input = Tabs.lp:AddInput("Jumppower", {
     end
 })
 
+local jumptog = Tabs.lp:AddToggle("Infinite Jump", {
+    Title = "Infinite Jump/Air Jump",
+    Description = "Jump on air infinitely",
+    Default = false,
+    Callback = function(i)
+        infj = i
+		InfiniteJump(i)
+    end
+})
+
+local AirWalkToggle = Tabs.lp:AddToggle("Air Walk", {
+    Title = "Air Walk",
+    Description = "Walk on air",
+    Default = false,
+    Callback = function(aw)
+        awalk = aw
+		if awalk then
+			platformY = Character.humanoidRootPart.Position.Y - 3
+			platform.CanCollide = awalk
+			while awalk do
+				if not awalk then return end
+				platform.Position = Vector3.new(
+					Character.humanoidRootPart.Position.X,
+				    platformY,
+					Character.humanoidRootPart.Position.Z
+				)
+				task.wait()
+			end
+		else
+			platform.CanCollide = not awalk
+		end
+    end
+})
+
 local xinput = Tabs.lp:AddInput("xinput", {
     Title = "X Coordinate:",
     Description = "Input Description",
@@ -825,7 +876,25 @@ Tabs.lp:AddButton({
 		hrp.CFrame = tHRP.CFrame
 	end
 })
-  
+
+local FreezeToggle = Tabs.lp:AddToggle("Freeze", {
+    Title = "Freeze", 
+    Description = "Freeze yourself in position.",
+    Default = false,
+    Callback = function(f)
+        fr = f
+        game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.Anchored = fr and true or false
+    end 
+})
+
+Tabs.lp:AddButton({
+    Title = "Suicide",
+    Description = "KILL YOURSELF!!!!!",
+    Callback = function()
+		game:GetService("Players").LocalPlayer.Character.Humanoid.Health = 0
+    end
+})
+
 local chp = Tabs.vs:AddToggle("CH+", {
     Title = "Crosshair+", 
     Description = "Makes your crosshair look cooler",
