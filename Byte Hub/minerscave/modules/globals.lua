@@ -5,3 +5,4 @@ _G.radius = 10
 _G.speed = 2
 _G.strafeRange = 50
 _G.delay = 0
+_G.tbdelay = 0
