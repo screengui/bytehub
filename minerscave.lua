@@ -52,6 +52,10 @@ if not getgenv().bytehubLoaded then
 	"IwontTHISto",
   }
 
+  if game.Players.LocalPlayer.Name == "facrodko" then
+	game.Players.LocalPlayer:Kick("fuck u stupid ass nigga😂")
+  end
+	
   -- Remotes --
   local gameremotes = ReplicatedStorage.GameRemotes
   local GameRemotes = ReplicatedStorage.GameRemotes
