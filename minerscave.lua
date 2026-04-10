@@ -273,7 +273,7 @@ if not getgenv().bytehubLoaded then
     Title = "Discord",
     Description = "My Discord Server",
     Callback = function()
-      setclipboard("https://discord.gg/9y7JM7Anne")
+      setclipboard("https://discord.gg/9Nzzya6d46")
     end
   })
 
