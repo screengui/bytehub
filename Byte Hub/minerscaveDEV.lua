@@ -12,7 +12,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "pre-release v4.5.21"
+local version = "pre-release v4.5.22"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -406,6 +406,21 @@ function InfiniteJump()
   end)
 end
 
+function ReloadChunk()
+	local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
+      
+    local pos = Vector3.new(
+        math.floor(humanroot2.Position.X),
+        math.floor(humanroot2.Position.Y),
+        math.floor(humanroot2.Position.Z)
+    )
+
+    wait()
+    humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
+    wait()
+    humanroot2.CFrame = CFrame.new(pos)
+end
+	
 function conv(txt)
     local str = ""
     string.gsub(txt,"%d+",function(e)
@@ -476,6 +491,7 @@ local Tabs = {
     wr = Window:AddTab({ Title = "World", Icon = "globe" }),
     dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
     ot = Window:AddTab({ Title = "Others", Icon = "list" }),
+	tp = Window:AddTab({ Title = "Texture Packs", Icon = "list" }),
     st = Window:AddTab({ Title = "Settings", Icon = "settings" }),
 }
 
@@ -1165,18 +1181,7 @@ Tabs.wr:AddButton({
     Title = "Reload Chunks",
     Description = "Reloads Chunks",
     Callback = function()
-        local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-      
-        local pos = Vector3.new(
-            math.floor(humanroot2.Position.X),
-            math.floor(humanroot2.Position.Y),
-            math.floor(humanroot2.Position.Z)
-        )
-
-        wait()
-        humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
-        wait()
-        humanroot2.CFrame = CFrame.new(pos)
+        ReloadChunk()
     end
 })
 
@@ -1845,7 +1850,16 @@ Tabs.ot:AddButton({
         loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
     end
 })
-  
+
+Tabs.tp:AddButton({
+    Title = "Vanilla Texture Pack",
+    Description = "Replaces texture with Minecraft ones",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/realtexturepack.lua"))()
+		ReloadChunk()
+    end
+})
+
 local kadelay = Tabs.st:AddInput("Input", {
     Title = "Kill Aura Delay",
     Description = "Seconds between each hit (Default: 0)",
