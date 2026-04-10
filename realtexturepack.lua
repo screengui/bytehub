@@ -156,7 +156,7 @@ game.ReplicatedFirst.Blocks.CraftingTable.TextureID = "rbxassetid://791768812421
 game.ReplicatedFirst.Blocks.Cactus.TextureID = "rbxassetid://105791029617543"
 
 
---=====TOOLS=====--
+--[[=====TOOLS=====--
 game:GetService("StarterPlayer").StarterPlayerScripts.MainLocalScript.ItemTextures.woodensword.ImageLabel = "rbxassetid://15941608817"
 game:GetService("StarterPlayer").StarterPlayerScripts.MainLocalScript.ItemTextures.woodenaxe.ImageLabel = "rbxassetid://15682969050"
-game:GetService("StarterPlayer").StarterPlayerScripts.MainLocalScript.ItemTextures.woodenpickaxe.ImageLabel = "rbxassetid://130644035273341"
+game:GetService("StarterPlayer").StarterPlayerScripts.MainLocalScript.ItemTextures.woodenpickaxe.ImageLabel = "rbxassetid://130644035273341"]]--
