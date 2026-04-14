@@ -1,75 +1,79 @@
 local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))(); -- Notif Library
-if not getgenv().bytehubLoaded then
-  getgenv().bytehubLoaded = true
+if getgenv().bytehubLoaded then
+	local Notify = AkaliNotif.Notify;
+
+    Notify({
+        Description = "Byte Hub is already loaded!";
+        Title = "Error!";
+        Duration = 3;
+    });
+    wait(1)
+	return
+end
+
+getgenv().bytehubLoaded = true
+local version = "v4.5"
+-- Services --
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local Camera = game.Workspace.CurrentCamera
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+-- Game Scripts --
+local MainScript = game:GetService("Players").LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("MainLocalScript")
+local CGlobals = require(MainScript:WaitForChild("CGlobals"))
+local BlockInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("BlockInfo"))
+local ItemInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemInfo"))
+local ItemLevels = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemLevels"))
+local BlockHighlights = require(MainScript:WaitForChild("BlockHighlights"))
+
+-- Variables --
+local player = game:GetService("Players").LocalPlayer
+local mouse = player:GetMouse()
+local LP = game.Players.LocalPlayer
+local Character = player.Character
   
-  -- Services --
-  local TweenService = game:GetService("TweenService")
-  local UserInputService = game:GetService("UserInputService")
-  local RunService = game:GetService("RunService")
-  local ReplicatedStorage = game:GetService("ReplicatedStorage")
-  local Workspace = game:GetService("Workspace")
-  local Lighting = game:GetService("Lighting")
-  local Camera = game.Workspace.CurrentCamera
-  local Players = game:GetService("Players")
-  
-  -- Variables --
-  
-  local player = game:GetService("Players").LocalPlayer
-  local LP = game.Players.LocalPlayer
-  local Character = player.Character
-  
-  local Gamemode = Instance.new("IntValue")
-  Gamemode.Name = "Gamemode"
-  Gamemode.Parent = game.Players.LocalPlayer.Character
-  
-  local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
-  local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
-  local blocks = workspace.Blocks
-  local strafeEnabled = false
-  local features = {}
-  local usetables = false
-  local isMobile
-  local isPC
-  local hasGiveExploit
-  local delay = 0
-  local useTaskSpawn = false
-  local clockTimeConnection = nil
-  local strafeEnabled = false
-  local radius = 10
-  local speed = 2
-  local strafeRange = 50 -- how close they must be to strafe
-  local wasEnabled = false
-  local selectedTargeting = "nearest"
-  local RANGE_SQ = 16*16
-	
-  local whitelist = {
+local ESP = loadstring(game:HttpGet("https://kiriot22.com/releases/ESP.lua"))()
+local metaBlocks = game.ReplicatedFirst:FindFirstChild("MetaBlocks")
+local ItemInfo = require(ReplicatedStorage:WaitForChild("AssetsMod"):WaitForChild("ItemInfo"))
+local blocks = workspace.Blocks
+local features = {}
+local Inventory = Character:WaitForChild("Inventory")
+
+-- Checks --
+local isMobile
+local isPC
+local currentTarget
+local hasGiveExploit
+
+if not game.Players.LocalPlayer.Character:FindFirstChild("Gamemode") then
+	local Gamemode = Instance.new("IntValue")
+	Gamemode.Name = "Gamemode"
+	Gamemode.Parent = game.Players.LocalPlayer.Character
+end
+
+-- Placeholders --
+local selectedPlayerName = nil
+local autoToolConn = nil
+local savedName = player.Name
+local platform
+local platformY = 0
+
+-- Configs --
+local whitelist = {
     "sbjmp",
     "CraftBloxPro9999",
     "CraftTopiaIsAwesome",
 	"MinersCraftPro9999",
-    "Epicguy_616161",
-	"ZDR_IwontTHISto",
-	"IwontTHISto",
-  }
+    "Epicguy_616161"
+}
 
-  if game.Players.LocalPlayer.Name == "facrodko" then
-	game.Players.LocalPlayer:Kick("fuck u stupid ass nigga😂")
-  end
-	
-  -- Remotes --
-  local gameremotes = ReplicatedStorage.GameRemotes
-  local GameRemotes = ReplicatedStorage.GameRemotes
-  local Demo = gameremotes:FindFirstChild("Demo") or Workspace:FindFirstChild("Demo")
-  local abb = gameremotes.AcceptBreakBlock
-  local bb = gameremotes.BreakBlock
-  local Attack = gameremotes:WaitForChild("Attack")
-  local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
-  local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
-  local useblock = gameremotes.UseBlock
-  local hbConn
-  local timeAcc = 0
-  
-  local CrosshairSettings = {
+local CrosshairSettings = {
     Visible = false,
     Size = 35,
     Thickness = 2.5,
@@ -77,30 +81,57 @@ if not getgenv().bytehubLoaded then
     Transparency = 1,
     HorizontalLine = Drawing.new("Line"),
     VerticalLine = Drawing.new("Line")
-  }
+}
+
+if not platform then
+	platform = Instance.new("Part")
+	platform.Anchored = true
+	platform.Size = Vector3.new(5, 1, 5)
+	platform.Transparency = 1
+	platform.CanCollide = false
+	platform.Parent = workspace
+end
+
+local TB = false
+local usetables = false
+
+local TIERS = {Diamond = 4, Ruby = 3, Iron = 2, Gold = 2, Steel = 2, Stone = 1}
+local ARMOR = {Helmet = 103, Chestplate = 102, Leggings = 101, Boots = 100}
+
+-- Remotes --
+local gameremotes = ReplicatedStorage.GameRemotes
+local GameRemotes = ReplicatedStorage.GameRemotes
+local Demo = gameremotes:FindFirstChild("Demo") or Workspace:FindFirstChild("Demo")
+local abb = gameremotes.AcceptBreakBlock
+local bb = gameremotes.BreakBlock
+local Attack = gameremotes:WaitForChild("Attack")
+local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
+local MoveItem = ReplicatedStorage:WaitForChild("GameRemotes"):WaitForChild("MoveItem")
+local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirstChild("SortItems")
+local useblock = gameremotes.UseBlock
+
+-- Adonis Bypass --
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
+
+-- Anti Kick --
   
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
-  wait()
-  -- Anti Kick --
-  
-  local oldhmmi
-  local oldhmmnc
-  oldhmmi = hookmetamethod(game, "__index", function(self, method)
+local oldhmmi
+local oldhmmnc
+oldhmmi = hookmetamethod(game, "__index", function(self, method)
     if self == player and method:lower() == "kick" then
-      return error("Expected ':' not '.' calling member function Kick", 2)
+        return error("Expected ':' not '.' calling member function Kick", 2)
     end
     return oldhmmi(self, method)
-  end)
-  oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
+end)
+oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
     if self == player and getnamecallmethod():lower() == "kick" then
-      return
+        return
     end
     return oldhmmnc(self, ...)
-  end)
+end)
   
-  -- Functions --
-
-  if game.ReplicatedStorage:FindFirstChild("admingui") then
+-- Functions --
+if game.ReplicatedStorage:FindFirstChild("admingui") then
     hasGiveExploit = true
     local Notify = AkaliNotif.Notify;
 
@@ -109,140 +140,351 @@ if not getgenv().bytehubLoaded then
       Title = "Give Exploit Detected!";
       Duration = 3;
     });
-  else
+else
     hasGiveExploit = false
-  end
+end
   
-  if not table.find(whitelist, player.Name) then
+if not table.find(whitelist, player.Name) then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdmin",true))()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/BSAdminHelper",true))()  
-  end
+end
 
-  --[[_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
-      if child:IsA("UnionOperation") then
-          task.wait()
-          child:Destroy()
-      end
-  end)]]--
-  
-  local function getLowestHealthNearbyPlayer()
-    local lowestHealth = math.huge
-    local targetPlayer = nil
-    
-    local localHRP = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not localHRP then return nil end
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-      if player ~= LP and player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        local targetHRP = player.Character:FindFirstChild("HumanoidRootPart")
-        if humanoid and targetHRP and humanoid.Health > 0 then
-          local distance = (targetHRP.Position - localHRP.Position).Magnitude
-          if distance <= strafeRange and humanoid.Health < lowestHealth then
-            lowestHealth = humanoid.Health
-            targetPlayer = player
-          end
-        end
-      end
+_G.ArmorAntiLag = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Mirror.VPFrame[""].ChildAdded:Connect(function(child)
+    if child:IsA("UnionOperation") then
+        task.wait()
+        child:Destroy()
     end
-    
-    return targetPlayer
-  end
+end)
+  
+local function getPlayerNames()
+	local t = {}
+	for _, p in ipairs(Players:GetPlayers()) do
+		table.insert(t, p.Name)
+	end
+	return t
+end
+  
+function chestdupe(mode)
+    if mode == 1 then
+        sortitems:InvokeServer(36)
+    elseif mode == 2 then
+        for i = 36, 62 do
+            task.spawn(function()
+                sortitems:InvokeServer(i)
+            end)
+        end
+    end
+end
 
-  local function getClosestPlayer()
-    local closest = nil
-    local shortest = math.huge
-    local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nil end
+function TriggerBot()
+    if not TB then 
+        currentTarget = nil
+        return 
+    end
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local dist = (hrp.Position - player.Character.HumanoidRootPart.Position).Magnitude
-            if dist < shortest then
-                shortest = dist
-                closest = player
+    local char = LP.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local viewport = Camera.ViewportSize
+    local ray = Camera:ViewportPointToRay(viewport.X/2, viewport.Y/2)
+
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {char}
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+
+    local result = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+
+    local newTarget = nil
+
+    if result then
+        local character = result.Instance:FindFirstAncestorOfClass("Model")
+
+        if character and character ~= char and character:FindFirstChildOfClass("Humanoid") then
+            newTarget = character
+        end
+    end
+
+    currentTarget = newTarget
+
+    if currentTarget then
+        local tHRP = currentTarget:FindFirstChild("HumanoidRootPart")
+        local hum = currentTarget:FindFirstChildOfClass("Humanoid")
+
+        if hum and hum.Health > 0 and tHRP then
+            local d = hrp.Position - tHRP.Position
+            if (d.X*d.X + d.Z*d.Z) <= _G.RANGE_SQ then
+                Attack:InvokeServer(currentTarget)
             end
         end
     end
-    return closest
-  end
+end
 
-  local function changeTorsoSize(player, size, Massless, transparency)
-    local character = player.Character or player.CharacterAdded:Wait()
-    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
-    if torso then
-      torso.Size = size  
-      torso.Massless = Massless  
-      torso.Transparency = transparency
+local function decode(slot)
+	local ok, data = pcall(HttpService.JSONDecode, HttpService, slot.Value)
+	return ok and data or nil
+end
+
+local function getTier(name)
+    for prefix, tier in pairs(TIERS) do
+        if string.find(name, "^" .. prefix) then 
+            local afterPrefix = string.sub(name, #prefix + 1, #prefix + 1)
+            if afterPrefix == "" or afterPrefix == " " or string.match(afterPrefix, "%u") then
+                return tier 
+            end
+        end
     end
-  end
-		
-  local function getPlayerNames()
-	  local t = {}
-	  for _, p in ipairs(Players:GetPlayers()) do
-		  table.insert(t, p.Name)
-	  end
-	  return t
-  end
-  
-  function chestdupe(mode)
-    if mode == 1 then
-      sortitems:InvokeServer(36)
-    elseif mode == 2 then
-      for i = 36, 62 do
-        task.spawn(function()
-          sortitems:InvokeServer(i)
-        end)
-      end
+    
+    local info = ItemInfo[name]
+    return info and (info.tier or info.Tier) or 0
+end
+
+local function getArmorType(name)
+    for aType, id in pairs(ARMOR) do
+        if string.find(name, aType) then 
+            return id 
+        end
     end
-  end
-  
-  local originalSettings = {}
-  
-  function conv(txt)
+    return nil
+end
+
+local function isBetter(new, old)
+    local newTier = getTier(new.name)
+    local oldTier = getTier(old.name)
+    
+    local newDur = new.durability or 0
+    local oldDur = old.durability or 0
+
+    local newInfo = ItemInfo[new.name]
+    local oldInfo = ItemInfo[old.name]
+    local newMax = newInfo and newInfo.durability or 100
+    local oldMax = oldInfo and oldInfo.durability or 100
+
+    if oldDur <= (oldMax * 0.1) and newDur > (newMax * 0.1) then
+        if newTier >= (oldTier - 1) then
+            return true
+        end
+    end
+
+    if newTier > oldTier then
+        if newDur > (newMax * 0.1) or oldDur <= (oldMax * 0.05) then
+            return true
+        end
+    elseif newTier == oldTier then
+        if newDur > oldDur then
+            return true
+        end
+    end
+
+    if newTier == oldTier and newDur == oldDur then
+        return newMax > oldMax
+    end
+
+    return false
+end
+
+local function autoEquipArmor()
+	local inv = player.Character:FindFirstChild("Inventory")
+	if not inv then return end
+
+	local best = {
+		[103] = {tier = -1, dur = -1, idx = nil},
+		[102] = {tier = -1, dur = -1, idx = nil},
+		[101] = {tier = -1, dur = -1, idx = nil},
+		[100] = {tier = -1, dur = -1, idx = nil}
+	}
+
+	for i = 0, 35 do
+		local slot = inv:FindFirstChild("Slot" .. i)
+		local data = slot and decode(slot)
+
+		if data and data.count >= 1 and data.name then
+			local armorSlot = getArmorType(data.name)
+			if armorSlot then
+				local tier = getTier(data.name)
+				local dur = data.durability or 0
+
+				if tier > best[armorSlot].tier or (tier == best[armorSlot].tier and dur > best[armorSlot].dur) then
+					best[armorSlot] = {tier = tier, dur = dur, idx = i, name = data.name}
+				end
+			end
+		end
+	end
+
+	for slot, item in pairs(best) do
+		if item.idx then
+			local equipped = decode(inv:FindFirstChild("Slot" .. slot))
+			
+			if not equipped or equipped.count <= 0 then
+				MoveItem:InvokeServer(item.idx, slot, true)
+			elseif isBetter(item, equipped) then
+				MoveItem:InvokeServer(item.idx, slot, true)
+			end
+		end
+	end
+end
+
+player.CharacterAdded:Connect(function(newChar)
+	Character = newChar
+	Inventory = newChar:WaitForChild("Inventory")
+end)
+
+local function getHotbar()
+	return player.PlayerGui:FindFirstChild("HUDGui") and player.PlayerGui.HUDGui:FindFirstChild("Hotbar")
+end
+
+local function getSlotButton(index)
+	local Hotbar = getHotbar()
+	if not Hotbar then return nil end
+	
+	local targetX = index * 40 + 6
+	for _, btn in ipairs(Hotbar:GetChildren()) do
+		if btn:IsA("TextButton") and btn.Position.X.Offset == targetX then
+			return btn
+		end
+	end
+	return nil
+end
+
+local function setSlot(index)
+	local slot = getSlotButton(index)
+	if slot then
+		for _, conn in ipairs(getconnections(slot.MouseButton1Click)) do
+			conn:Fire()
+		end
+	end
+end
+
+local function decodeSlot(slotVal)
+	local success, data = pcall(HttpService.JSONDecode, HttpService, slotVal.Value)
+	return success and data and data.count > 0 and data or nil
+end
+
+local function getItemSpeed(itemName, reqType, betterTool)
+	local itemData = ItemInfo[itemName]
+	if itemData and (itemData.tooltype == reqType or itemData.tooltype == betterTool) then
+		return ItemLevels.speedMul[itemData.level] or 1
+	end
+	return 1
+end
+
+local function getBestToolSlot(blockName)
+	local blockData = BlockInfo[blockName]
+	if not blockData then return nil end
+
+	local bestSlot, maxSpeed = nil, 0
+	local reqType, betterTool = blockData.toolRequire, blockData.betterTool
+
+	for i = 0, 8 do
+		local slotVal = Inventory:FindFirstChild("Slot" .. i)
+		if slotVal then
+			local data = decodeSlot(slotVal)
+			if data then
+				local speed = getItemSpeed(data.name, reqType, betterTool)
+				if speed > maxSpeed then
+					maxSpeed = speed
+					bestSlot = i
+				end
+			end
+		end
+	end
+
+	return bestSlot
+end
+
+local function getSelectedSlot()
+	local charModel = workspace:FindFirstChild(player.Name)
+	return charModel and charModel:FindFirstChild("SelectedSlot")
+end
+
+function InfiniteJump()
+  game:GetService("UserInputService").JumpRequest:Connect(function()
+    if infj then
+      game.Players.LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+  end)
+end
+
+function ReloadChunk()
+	local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
+      
+    local pos = Vector3.new(
+        math.floor(humanroot2.Position.X),
+        math.floor(humanroot2.Position.Y),
+        math.floor(humanroot2.Position.Z)
+    )
+
+    wait()
+    humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
+    wait()
+    humanroot2.CFrame = CFrame.new(pos)
+end
+	
+function conv(txt)
     local str = ""
     string.gsub(txt,"%d+",function(e)
-      str = str .. e
+        str = str .. e
     end)
     return str;
-	end
+end
 	
-  if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
+if UserInputService.KeyboardEnabled and UserInputService.MouseEnabled then
     isPC = true
     local Notify = AkaliNotif.Notify;
     Notify({
-      Description = "PC Detected, Infinite Health might not work...";
-      Title = "PC Detected!";
-      Duration = 3;
+        Description = "PC Detected, Infinite Health might not work...";
+        Title = "PC Detected!";
+        Duration = 3;
     });
-  elseif UserInputService.TouchEnabled then
+elseif UserInputService.TouchEnabled then
     isMobile = true
     local Notify = AkaliNotif.Notify;
     Notify({
-      Description = "Mobile Device Detected, executing button...";
-      Title = "Mobile Device Detected!";
-      Duration = 3;
+        Description = "Mobile Device Detected, executing button...";
+        Title = "Mobile Device Detected!";
+        Duration = 3;
     });
     loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/sidescripts/refs/heads/main/open%20button%20for%20mobile.lua",true))()
-  end
+end
 
-  loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/inv-viewerV2.lua",true))()
-  game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = false
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/inv-viewerV2.lua",true))()
+game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = false
+
+--===MODULES===--
+local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
+local KillAura = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/kill-aura.lua"))()
+local TargetStrafe = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/target-strafe.lua"))()
+local Hitbox = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
+local CombatLog = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
+local AutoSafeZone = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
+local NoFall = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
+local Sprint = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/sprint.lua"))()
+local AutoEat = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-eat.lua"))()
+local Jesus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/jesus.lua"))()
+local InfiniteHealth = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/infinite-health.lua"))()
+local CrosshairPlus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/crosshair-plus.lua"))()
+local RainbowCrosshair = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/rainbow-crosshair.lua"))()
+local Fullbright = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/fullbright.lua"))()
+local XRay = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/xray.lua"))()
+local ChestESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/chest-esp.lua"))()
+local LavaESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/lava-esp.lua"))()
+local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/player-esp.lua"))()
   
-  loadstring(game:HttpGet("https://rawscripts.net/raw/Baseplate-adonis-and-newindex-bypass-source-12378",true))()
-  local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-  local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-  local Window = Fluent:CreateWindow({
-    Title = "Minecraft (Byte Hub) v4.4",
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+local Window = Fluent:CreateWindow({
+    Title = "Minecraft (Byte Hub) " .. version,
     SubTitle = "by PurpleApple",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 300),
     Acrylic = false,
     Theme = "Rose",
     MinimizeKey = Enum.KeyCode.LeftShift -- Used when theres no MinimizeKeybind
-  })
+})
 
-  local Tabs = {
+local Tabs = {
     Credits = Window:AddTab({ Title = "Credits", Icon = "info" }),
     cs = Window:AddTab({ Title = "Combat", Icon = "swords" }),
     lp = Window:AddTab({ Title = "Player", Icon = "user" }),
@@ -250,374 +492,274 @@ if not getgenv().bytehubLoaded then
     wr = Window:AddTab({ Title = "World", Icon = "globe" }),
     dt = Window:AddTab({ Title = "Dupe", Icon = "copy" }),
     ot = Window:AddTab({ Title = "Others", Icon = "list" }),
+	tp = Window:AddTab({ Title = "Texture Packs", Icon = "list" }),
     st = Window:AddTab({ Title = "Settings", Icon = "settings" }),
-  }
+}
 
-  local Options = Fluent.Options
-  local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local Options = Fluent.Options
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
   
-  Tabs.Credits:AddParagraph({
+Tabs.Credits:AddParagraph({
     Title = "Made by PurpleApple",
-    Content = "UI Library: Fluent\nv4.4\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
-  })
+    Content = "UI Library: Fluent\n" .. version .. "\nDupe Gui: Argentum\nScaffold: Obos\nOpen-Sourced\nSocials:"
+})
 
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "YouTube",
     Description = "My YouTube Channel",
     Callback = function()
-      setclipboard("https://youtube.com/@inconsistenttutorialuploader")
+        setclipboard("https://youtube.com/@inconsistenttutorialuploader")
     end
-  })
+})
   
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "Discord",
     Description = "My Discord Server",
     Callback = function()
-      setclipboard("https://discord.gg/9Nzzya6d46")
+		setclipboard("https://discord.gg/9Nzzya6d46")
     end
-  })
+})
 
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "GitHub",
     Description = "My GitHub Page",
     Callback = function()
-      setclipboard("https://github.com/screengui")
+		setclipboard("https://github.com/screengui")
     end
-  })
+})
 
-  Tabs.Credits:AddButton({
+Tabs.Credits:AddButton({
     Title = "ScriptBlox",
     Description = "My ScriptBlox Account",
     Callback = function()
-      setclipboard("https://scriptblox.com/u/tycoonman95")
+		setclipboard("https://scriptblox.com/u/tycoonman95")
     end
-  })
-
-  local katog = Tabs.cs:AddToggle("Kill Aura",
-  {
-    Title = "Kill Aura", 
-    Description = "Attacks people within your reach",
-    Default = false,
-    Callback = function(k)
-      ka = k
-      local function attackLoop()
-		while ka do
-		  local lpChar = game.Players.LocalPlayer.Character
-          local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
-
-          if lpHRP then
-            local target =
-            selectedTargeting == "lowest" and getLowestHealthNearbyPlayer()
-            or getClosestPlayer()
-
-            if target and target.Character then
-                local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
-                if tHRP then
-                    local d = lpHRP.Position - tHRP.Position
-                    if (d.X*d.X + d.Z*d.Z) <= RANGE_SQ then
-                        Attack:InvokeServer(target.Character)
-                    end
-                end
-            end
-           end
-		   task.wait(delay)
-		end
-	  end
-
-	  if ka then
-		task.spawn(attackLoop)
-	  end
-    end 
-  })
-  
-local Toggle = Tabs.cs:AddToggle("Toggle", {
-  Title = "Target Strafe",
-  Description = "Circles around your target",
-  Default = false,
-  Callback = function(t)
-    ts = t
-
-    if not ts then
-      if hbConn then
-        hbConn:Disconnect()
-        hbConn = nil
-      end
-      return
-    end
-
-    hbConn = RunService.Heartbeat:Connect(function(dt)
-      if not ts then return end
-
-      local lpChar = LP.Character
-      local lpHRP = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
-      if not lpHRP then return end
-
-      local target =
-        selectedTargeting == "lowest" and getLowestHealthNearbyPlayer()
-        or getClosestPlayer()
-
-      local tChar = target and target.Character
-      local tHRP = tChar and tChar:FindFirstChild("HumanoidRootPart")
-      if not tHRP then return end
-
-      timeAcc += dt * speed
-
-      local offset = Vector3.new(
-        math.cos(timeAcc) * radius,
-        0,
-        math.sin(timeAcc) * radius
-      )
-
-      local targetPos = tHRP.Position
-      lpHRP.CFrame = CFrame.new(targetPos + offset, targetPos)
-    end)
-  end
 })
 
-  local hboxtog = Tabs.cs:AddToggle("HitboxToggle",
-  {
+Tabs.cs:AddToggle("Kill Aura", {
+	Title = "Kill Aura",
+    Description = "Attacks people within your reach",
+    Default = false,
+    Callback = function(state)
+		if state then
+			KillAura.start()
+		else
+			KillAura.stop()
+		end
+	end
+})
+  
+local Toggle = Tabs.cs:AddToggle("Toggle", {
+	Title = "Target Strafe (BLATANT)",
+    Description = "Circles around your target",
+    Default = false,
+    Callback = function(state)
+        if state then
+            TargetStrafe.start()
+        else
+            TargetStrafe.stop()
+  	    end
+    end
+})
+
+local Toggle = Tabs.cs:AddToggle("Toggle", {
+    Title = "Triggerbot",
+    Description = "Automatically attacks your target when you point at them.",
+    Default = false,
+    Callback = function(state)
+        TB = state
+
+        if state then
+            task.spawn(function()
+                while TB do
+                    TriggerBot()
+                    task.wait()
+                end
+            end)
+		end
+    end
+})
+
+local hboxtog = Tabs.cs:AddToggle("HitboxToggle", {
     Title = "Hitbox Expander", 
     Description = "Expands other player's hitboxes\nCredits to Ket Hub",
     Default = false,
-    Callback = function(h)
-      he = h
-      if he then
-        connection = RunService.Heartbeat:Connect(function()
-          for _, player in ipairs(game.Players:GetPlayers()) do
-            if player ~= game.Players.LocalPlayer then
-              changeTorsoSize(player, Vector3.new(10, 10, 10), true, 0.999)
-            end
-          end
-        end)
-      else
-        if connection then connection:Disconnect() end
-          for _, player in ipairs(game.Players:GetPlayers()) do
-            if player ~= game.Players.LocalPlayer then
-              changeTorsoSize(player, Vector3.new(2, 2, 1), true, 0)
-            end
-          end
-        end
-      end 
-  })
+    Callback = function(state)
+        if state then
+		    Hitbox.start()
+	    else
+		    Hitbox.stop()
+	    end
+    end 
+})
 
-  local acltog = Tabs.cs:AddToggle("Auto Combat Log",
-  {
+local acltog = Tabs.cs:AddToggle("Auto Combat Log", {
     Title = "Auto Combat Log", 
     Description = "Automatically leaves when you have less than 30% hp",
     Default = false,
-    Callback = function(c)
-      cl = c
-      
-      local function checkHealth()
-        local character = player.Character
-        if not character then return end
-        
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return end
-        
-        local healthThreshold = humanoid.MaxHealth * 0.4
-        if humanoid.Health <= healthThreshold then
-          game:Shutdown()
-        end
-      end
-      
-      local function healthLoop()
-        while cl do
-          checkHealth()
-          task.wait()
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(healthLoop) -- Runs the loop asynchronously
-      else
-        healthLoop() -- Runs normally (blocking)
-      end
+    Callback = function(state)
+        if state then
+		    CombatLog.start()
+	    else
+		    CombatLog.stop()
+	    end
     end 
-  }) 
+}) 
 
-  local acttog = Tabs.cs:AddToggle("Auto Combat TP",
-  {
+local acttog = Tabs.cs:AddToggle("Auto Combat TP", {
     Title = "Auto Safe Zone", 
     Description = "Auto Combat Log, but it teleports you to a safe zone.",
     Default = false,
-    Callback = function(c2)
-      ctp = c2
-      local function checkHealth2()
-      local character = player.Character
-        if not character then return end
-        local humanoid = character:FindFirstChild("Humanoid")
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not humanoidRootPart then return end
-        local healthThreshold = humanoid.MaxHealth * 0.4
-        if humanoid.Health <= healthThreshold then
-          local teleportPosition = CFrame.new(1000 * 3, 60 * 3, 1000 * 3)
-          humanoidRootPart.CFrame = teleportPosition
-        end
-      end
-      
-      local function tpLoop()
-        while ctp do
-          checkHealth2()
-          task.wait(0.25)
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(tpLoop)
-      else
-        tpLoop()
-      end
+    Callback = function(state)
+        if state then
+		    AutoSafeZone.start()
+	    else
+		    AutoSafeZone.stop()
+		end
     end 
-  }) 
+}) 
 
-  Tabs.cs:AddButton({
-    Title = "Arcade Recode Client",
-    Description = "Executes Arcade Recode Client",
+Tabs.cs:AddButton({
+    Title = "Vape V4",
+    Description = "Executes Vape V4",
     Callback = function()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
+	    loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/NewMainScript.lua", true))()
     end
-  })
+})
 
-  local nftog = Tabs.lp:AddToggle("No Fall",
-  {
+local nftog = Tabs.lp:AddToggle("No Fall", {
     Title = "No Fall", 
     Description = "Removes Fall Damage",
     Default = false,
-    Callback = function(n)
-      nf = n
-      if nf then
-        if Demo.Parent == GameRemotes then
-          Demo.Parent = Workspace
-        end
-      else
-        if Demo.Parent == Workspace then
-          Demo.Parent = GameRemotes
-        end
-      end
+    Callback = function(state)
+        if state then
+	        NoFall.start()
+        else
+            NoFall.stop()
+	    end
     end 
-  }) 
+}) 
 
-  local sptog = Tabs.lp:AddToggle("Sprint",
-  {
+local sptog = Tabs.lp:AddToggle("Sprint", {
     Title = "Sprint", 
     Description = "Makes you a tiny bit faster",
     Default = false,
-    Callback = function(s)
-      sp = s
-      if not sp then
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 12
-      else
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 20
-      end
+    Callback = function(state)
+        if state then
+	        Sprint.start()
+        else
+            Sprint.stop()
+	    end
     end 
-  }) 
+}) 
   
-  Tabs.lp:AddButton({
+Tabs.lp:AddButton({
     Title = "Immortality",
     Description = "Put an item in\nthe first inventory slot",
     Callback = function()
-      game.ReplicatedStorage.GameRemotes.MoveItem:InvokeServer(101, 9, true)
+        game.ReplicatedStorage.GameRemotes.MoveItem:InvokeServer(101, 9, true)
     end
-  })
+})
 
-  local eattog = Tabs.lp:AddToggle("EatToggle",
-  {
+local eattog = Tabs.lp:AddToggle("EatToggle", {
     Title = "Auto Eat",
     Description = "Automatically eats for you",
     Default = false,
-    Callback = function(aeat)
-      ae = aeat
-      while ae do
-          game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("ConsumeItem"):InvokeServer(game:GetService("Players").LocalPlayer.Character:WaitForChild("Inventory"), game.Players.LocalPlayer.Character.SelectedSlot.Value)
-      end
+    Callback = function(state)
+        if state then
+	        AutoEat.start()
+        else
+            AutoEat.stop()
+	    end
 	end
-  })
-	
-  local jetog = Tabs.lp:AddToggle("Jesus",
-  {
-  Title = "Jesus",
-  Description = "Walk On Water",
-  Default = false,
-  Callback = function(j)
-    je = j
-
-    local fluidFolder = Workspace:FindFirstChild("Fluid")
-    if not fluidFolder then return end
-
-    local function isWater(part)
-      return part:IsA("BasePart")
-        and (part.Name == "Water" or part.Name == "Lava")
-    end
-
-    if je then
-      -- ENABLE: set collide ON (scan once)
-      for _, obj in ipairs(fluidFolder:GetDescendants()) do
-        if isWater(obj) then
-          obj.CanCollide = true
-        end
-      end
-
-      -- handle newly added water
-      _G.jesusConn = fluidFolder.DescendantAdded:Connect(function(obj)
-        if isWater(obj) then
-          obj.CanCollide = true
-        end
-      end)
-
-    else
-      -- DISABLE: disconnect listener
-      if _G.jesusConn then
-        _G.jesusConn:Disconnect()
-        _G.jesusConn = nil
-      end
-
-      -- FORCE reset existing parts (scan once)
-      for _, obj in ipairs(fluidFolder:GetDescendants()) do
-        if isWater(obj) then
-          obj.CanCollide = false
-        end
-      end
-    end
-  end
 })
 	
-  local Toggle = Tabs.lp:AddToggle("Toggle",
-  {
+local jetog = Tabs.lp:AddToggle("Jesus", {
+    Title = "Jesus",
+    Description = "Walk On Water",
+    Default = false,
+    Callback = function(state)
+        if state then
+    	    Jesus.start()
+        else
+            Jesus.stop()
+	    end
+    end
+})
+	
+local Toggle = Tabs.lp:AddToggle("Toggle", {
     Title = "Infinite Health",
     Description = "Increases your hp (only works with emerald leggings)",
     Default = false,
-    Callback = function(infihp)
-      infh = infihp
-      local function healthLoop()
-        while infh do
-          moveitems:InvokeServer(101, 9, true)
-          moveitems:InvokeServer(9, 101, true)
-          task.wait()
-        end
-      end
-
-      if useTaskSpawn then
-        task.spawn(healthLoop)
-      else
-        healthLoop()
-      end
+    Callback = function(t)
+        if t then
+	    	InfiniteHealth.start(moveitems, _G.useTaskSpawn)
+	    else
+		    InfiniteHealth.stop()
+	    end
     end 
-  })
-  
-  local Input = Tabs.lp:AddInput("Input", {
+})
+
+local Toggle = Tabs.lp:AddToggle("ArmorToggle", {
+    Title = "Auto Armor",
+    Description = "Automatically equips the best armor",
+    Default = false,
+    Callback = function(aarmor)
+		aa = aarmor
+        while aa do
+			autoEquipArmor()
+			task.wait()
+		end
+	end
+})
+
+local Toggle = Tabs.lp:AddToggle("ToolToggle", {
+    Title = "Auto Tool",
+    Description = "Automatically finds the best tool for mining\nCredits to 1derby1.",
+    Default = false,
+    Callback = function(atool)
+		at = atool
+		while at do
+			local selectedSlotObj = getSelectedSlot()
+			if not selectedSlotObj then return end
+
+			local targetPos = CGlobals.TargetBlockCoordinate
+			local targetBlock = CGlobals.BlockUnderMouse
+
+			if targetPos and targetBlock and BlockHighlights.IsBreaking(targetPos) then
+				local bestSlot = getBestToolSlot(targetBlock.Name)
+				if bestSlot and selectedSlotObj.Value ~= bestSlot then
+					setSlot(bestSlot)
+				end
+			end
+			task.wait()
+		end
+	end
+})
+
+local ReachToggle = Tabs.lp:AddToggle("Reach", {
+    Title = "Reach", 
+    Description = "Increases BLOCK INTERACTION range\nNOT ATTACK RANGE",
+    Default = false,
+    Callback = function(r)
+        re = r
+        CGlobals["PLAYER_REACH"] = r and 9e9 or 19.5
+    end 
+})
+
+local Input = Tabs.lp:AddInput("Input", {
     Title = "Walkspeed",
     Description = "Sets your walkspeed amount (Default: 12)",
     Default = "12",
     Placeholder = "Enter a number",
-    Numeric = false, -- Ensure input is numeric
+    Numeric = false,
     Finished = false,
     Callback = function(ws)
-      game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(ws)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = tonumber(ws)
     end
-  })
+})
   
-  local Input = Tabs.lp:AddInput("Jumppower", {
+local Input = Tabs.lp:AddInput("Jumppower", {
     Title = "Jumppower",
     Description = "Sets your jumppower amount (Default: 25)",
     Default = "25",
@@ -625,11 +767,45 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Numeric = false,
     Finished = false,
     Callback = function(jp)
-      game.Players.LocalPlayer.Character.Humanoid.JumpPower = tonumber(jp)
+        game.Players.LocalPlayer.Character.Humanoid.JumpPower = tonumber(jp)
     end
-  })
+})
 
-  local xinput = Tabs.lp:AddInput("xinput", {
+local jumptog = Tabs.lp:AddToggle("Infinite Jump", {
+    Title = "Infinite Jump/Air Jump",
+    Description = "Jump on air infinitely",
+    Default = false,
+    Callback = function(i)
+        infj = i
+		InfiniteJump(i)
+    end
+})
+
+local AirWalkToggle = Tabs.lp:AddToggle("Air Walk", {
+    Title = "Air Walk",
+    Description = "Walk on air",
+    Default = false,
+    Callback = function(aw)
+        awalk = aw
+		if awalk then
+			platformY = Character.HumanoidRootPart.Position.Y - 3
+			platform.CanCollide = awalk
+			while awalk do
+				if not awalk then return end
+				platform.Position = Vector3.new(
+					Character.HumanoidRootPart.Position.X,
+				    platformY,
+					Character.HumanoidRootPart.Position.Z
+				)
+				task.wait()
+			end
+		else
+			platform.CanCollide = not awalk
+		end
+    end
+})
+
+local xinput = Tabs.lp:AddInput("xinput", {
     Title = "X Coordinate:",
     Description = "Input Description",
     Default = "",
@@ -637,11 +813,11 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Numeric = false,
     Finished = false,
     Callback = function(xi)
-      xip = xi
+        xip = xi
     end
-  })
+})
 
-  local yinput = Tabs.lp:AddInput("yinput", {
+local yinput = Tabs.lp:AddInput("yinput", {
     Title = "Y Coordinate:",
     Description = "Input Description",
     Default = "",
@@ -649,11 +825,11 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Numeric = false,
     Finished = false,
     Callback = function(yi)
-      yip = yi
+        yip = yi
     end
-  })
+})
 
-  local zinput = Tabs.lp:AddInput("zinput", {
+local zinput = Tabs.lp:AddInput("zinput", {
     Title = "Z Coordinate:",
     Description = "Input Description",
     Default = "",
@@ -661,1202 +837,1251 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Numeric = false,
     Finished = false,
     Callback = function(zi)
-      zip = zi
+        zip = zi
     end
-  })
+})
 
-  Tabs.lp:AddButton({
+Tabs.lp:AddButton({
     Title = "Teleport to Coordinates",
     Description = "Teleports to the given coordinates",
     Callback = function()
-      local xtppos = math.floor(xip * 3)
-      local ytppos = math.floor(yip * 3)
-      local ztppos = math.floor(zip * 3)
-      local humanroot = game.Players.LocalPlayer.Character.HumanoidRootPart
+        local xtppos = math.floor(xip * 3)
+        local ytppos = math.floor(yip * 3)
+        local ztppos = math.floor(zip * 3)
+        local humanroot = game.Players.LocalPlayer.Character.HumanoidRootPart
     
-      humanroot.CFrame = CFrame.new(xtppos, ytppos, ztppos)
+        humanroot.CFrame = CFrame.new(xtppos, ytppos, ztppos)
     end
-  })
+})
 
-  Tabs.lp:AddDropdown("PlayerTP", {
-    Title = "Teleport to Player",
-    Description = "Teleports to selected player",
-    Values = getPlayerNames(),
-    Default = getPlayerNames()[1],
-    Callback = function(Value)
-        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(game.Players[Value].Character.HumanoidRootPart.Position)
+local playerDropdown = Tabs.lp:AddDropdown("PlayerTP", {
+	Title = "Select Player",
+	Description = "Choose a player to teleport to",
+	Values = getPlayerNames(),
+	Default = nil,
+	Callback = function(value)
+		selectedPlayerName = value
+	end
+})
+
+Tabs.lp:AddButton({
+	Title = "Refresh Player List",
+	Description = "Updates the dropdown player list",
+	Callback = function()
+		playerDropdown:SetValues(getPlayerNames())
+		selectedPlayerName = nil
+	end
+})
+
+Tabs.lp:AddButton({
+	Title = "Teleport to Player",
+	Description = "Teleport to selected player",
+	Callback = function()
+		if not selectedPlayerName then return end
+
+		local target = Players:FindFirstChild(selectedPlayerName)
+		if not target then return end
+
+		local char = LP.Character
+		local tChar = target.Character
+		if not (char and tChar) then return end
+
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		local tHRP = tChar:FindFirstChild("HumanoidRootPart")
+		if not (hrp and tHRP) then return end
+
+		hrp.CFrame = tHRP.CFrame
+	end
+})
+
+local FreezeToggle = Tabs.lp:AddToggle("Freeze", {
+    Title = "Freeze", 
+    Description = "Freeze yourself in position.",
+    Default = false,
+    Callback = function(f)
+        fr = f
+        game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.Anchored = fr and true or false
+    end 
+})
+
+Tabs.lp:AddButton({
+    Title = "Suicide",
+    Description = "KILL YOURSELF!!!!!",
+    Callback = function()
+		game:GetService("Players").LocalPlayer.Character.Humanoid.Health = 0
     end
-  })
-  
-  local chp = Tabs.vs:AddToggle("CH+",
-  {
+})
+
+local chp = Tabs.vs:AddToggle("CH+", {
     Title = "Crosshair+", 
     Description = "Makes your crosshair look cooler",
     Default = false,
-    Callback = function(ch)
-      chplus = ch
-      if not chplus then
-        CrosshairSettings.HorizontalLine.Visible = false
-        CrosshairSettings.VerticalLine.Visible = false
-        for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-          if v.Name == "Crosshair" then
-            v.Visible = true
-          end
-        end
-        return
-      end
-        
-      local ViewportSize = Camera.ViewportSize / 2
-      local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
-      local Real_Size = CrosshairSettings.Size / 2
-	
-      for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-        if v.Name == "Crosshair" then
-          v.Visible = false
-        end
-      end
-        
-      CrosshairSettings.HorizontalLine.Color = CrosshairSettings.Color
-      CrosshairSettings.HorizontalLine.Thickness = CrosshairSettings.Thickness
-      CrosshairSettings.HorizontalLine.Visible = true
-      CrosshairSettings.HorizontalLine.Transparency = CrosshairSettings.Transparency
-      CrosshairSettings.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
-      CrosshairSettings.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
-      CrosshairSettings.VerticalLine.Color = CrosshairSettings.Color
-      CrosshairSettings.VerticalLine.Thickness = CrosshairSettings.Thickness
-      CrosshairSettings.VerticalLine.Visible = true
-      CrosshairSettings.VerticalLine.Transparency = CrosshairSettings.Transparency
-      CrosshairSettings.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
-      CrosshairSettings.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
+    Callback = function(state)
+        if state then
+		    CrosshairPlus.start(CrosshairSettings, Camera)
+	    else
+		    CrosshairPlus.stop(CrosshairSettings)
+	    end
     end 
-  }) 
+}) 
   
-  local rbchtog = Tabs.vs:AddToggle("Toggle", {
+local rbchtog = Tabs.vs:AddToggle("Toggle", {
     Title = "Rainbow Crosshair", 
     Description = "Makes Crosshair Rainbow\n(Must have Crosshair+ disabled)",
     Default = false,
-    Callback = function(chpr)
-        chr = chpr
+    Callback = function(state)
         local CrosshairSettings2 = {
-          Visible = false,
-          Size = 35,
-          Thickness = 2.5,
-          Color = Color3.fromRGB(188, 50, 252),
-          Transparency = 1,
-          HorizontalLine = Drawing.new("Line"),
-          VerticalLine = Drawing.new("Line")
+            Visible = false,
+            Size = 35,
+            Thickness = 2.5,
+            Color = Color3.fromRGB(188, 50, 252),
+            Transparency = 1,
+            HorizontalLine = Drawing.new("Line"),
+            VerticalLine = Drawing.new("Line")
         }
 
-        local function RainbowCrosshair()
-          if not chr then
-            CrosshairSettings2.HorizontalLine.Visible = false
-            CrosshairSettings2.VerticalLine.Visible = false
-            for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-              if v.Name == "Crosshair" then
-                v.Visible = true
-              end
-            end
-            return
-          end
-
-          local ViewportSize = Camera.ViewportSize / 2
-          local Axis_X, Axis_Y = ViewportSize.X, ViewportSize.Y
-          local Real_Size = CrosshairSettings.Size / 2
-
-          for i, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui.HUDGui:GetChildren()) do
-            if v.Name == "Crosshair" then
-              v.Visible = false
-            end
-          end
-
-          local hue = (tick() * 0.2) % 1
-          local rainbowColor = Color3.fromHSV(hue, 1, 1)
-
-          CrosshairSettings2.HorizontalLine.Color = rainbowColor
-          CrosshairSettings2.HorizontalLine.Thickness = CrosshairSettings.Thickness
-          CrosshairSettings2.HorizontalLine.Visible = true
-          CrosshairSettings2.HorizontalLine.Transparency = CrosshairSettings.Transparency
-          CrosshairSettings2.HorizontalLine.From = Vector2.new(Axis_X - Real_Size, Axis_Y)
-          CrosshairSettings2.HorizontalLine.To = Vector2.new(Axis_X + Real_Size, Axis_Y)
-
-          CrosshairSettings2.VerticalLine.Color = rainbowColor
-          CrosshairSettings2.VerticalLine.Thickness = CrosshairSettings.Thickness
-          CrosshairSettings2.VerticalLine.Visible = true
-          CrosshairSettings2.VerticalLine.Transparency = CrosshairSettings.Transparency
-          CrosshairSettings2.VerticalLine.From = Vector2.new(Axis_X, Axis_Y - Real_Size)
-          CrosshairSettings2.VerticalLine.To = Vector2.new(Axis_X, Axis_Y + Real_Size)
-        end
-        RunService.RenderStepped:Connect(RainbowCrosshair)
+        if state then
+			RainbowCrosshair.start(CrosshairSettings2, Camera)
+		else
+			RainbowCrosshair.stop(CrosshairSettings2)
+		end
     end 
-  })
+})
   
-  local fbtog = Tabs.vs:AddToggle("Fullbright",
-  {
+local fbtog = Tabs.vs:AddToggle("Fullbright", {
     Title = "Fullbright", 
     Description = "Makes it very bright",
     Default = false,
-    Callback = function(f)
-      fb = f
-      local function Enable()
-        if not originalSettings.Brightness then
-          originalSettings.Brightness = Lighting.Brightness
-          originalSettings.ClockTime = Lighting.ClockTime
-          originalSettings.FogEnd = Lighting.FogEnd
-          originalSettings.GlobalShadows = Lighting.GlobalShadows
-          originalSettings.OutdoorAmbient = Lighting.OutdoorAmbient
-        end
-        
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-        
-        clockTimeConnection = Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
-          if Lighting.ClockTime < 6 or Lighting.ClockTime > 15 then
-            Lighting.ClockTime = 14
-          end
-        end)
-      end
-      
-      local function Disable()
-        if clockTimeConnection then
-          clockTimeConnection:Disconnect()
-          clockTimeConnection = nil
-        end
-        
-        if originalSettings.Brightness then
-          Lighting.Brightness = originalSettings.Brightness
-          Lighting.ClockTime = originalSettings.ClockTime
-          Lighting.FogEnd = originalSettings.FogEnd
-          Lighting.GlobalShadows = originalSettings.GlobalShadows
-          Lighting.OutdoorAmbient = originalSettings.OutdoorAmbient
-        end
-      end
-      
-      if fb then
-        Enable()
-      else
-        Disable()
-      end
+    Callback = function(state)
+        if state then
+			Fullbright.start()
+		else
+			Fullbright.stop()
+		end
     end 
   }) 
   
-  local Toggle = Tabs.vs:AddToggle("Toggle",
-  {
+local Toggle = Tabs.vs:AddToggle("Toggle", {
     Title = "X-Ray", 
     Description = "Makes you see ores through blocks",
     Default = false,
-    Callback = function(x)
-      xr = x
-      
-      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-      
-      if xr then
-        wasEnabled = true
-        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            for _, texture in pairs(v:GetChildren()) do
-              texture.Transparency = 1
-            end
-          end
-        end
-        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            v.Transparency = 1
-          end
-        end
-        
-        local pos = humanroot2.Position
-        task.wait()
-        humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-        task.wait()
-        humanroot2.CFrame = CFrame.new(pos)
-      elseif not xr then
-        for _, v in pairs(game.ReplicatedFirst.MetaBlocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            for _, texture in pairs(v:GetChildren()) do
-              texture.Transparency = 0
-            end
-          end
-        end
-        for _, v in pairs(game.ReplicatedFirst.Blocks:GetChildren()) do
-          if v.Name == "Stone" or v.Name == "Dirt" then
-            v.Transparency = 0
-          end
-        end
-        
-        if wasEnabled then
-          local pos = humanroot2.Position
-          task.wait()
-          humanroot2.CFrame = CFrame.new(30000, 180, 30000)
-          task.wait()
-          humanroot2.CFrame = CFrame.new(pos)
-          wasEnabled = false
-        end
-      end
+    Callback = function(state)
+        if state then
+			XRay.start()
+		else
+			XRay.stop()
+		end
     end 
-  }) 
+}) 
   
-  local cesptog = Tabs.vs:AddToggle("Chest ESP",
-  {
+  
+local cesptog = Tabs.vs:AddToggle("Chest ESP", {
     Title = "Chest ESP", 
     Description = "Makes you see chests through blocks",
     Default = false,
-    Callback = function(c)
-      cesp = c
-      if not cesp then return end
-      
-      local function findChestParts()
-        local childParts = {}
-        for _, folder in pairs(workspace.Blocks:GetChildren()) do
-          if folder:IsA("Folder") then
-            for _, item in pairs(folder:GetChildren()) do
-              if item.Name == "Chest" then
-                table.insert(childParts, item)
-              end
-            end
-          end
-        end
-        return childParts
-      end
-      
-      local function outlinePart(part)
-        if not part:FindFirstChild("BoxHandleAdornment") then
-          local a = Instance.new("BoxHandleAdornment")
-          a.Adornee = part
-          a.AlwaysOnTop = true
-          a.ZIndex = 0
-          a.Size = part.Size
-          a.Transparency = 0.5
-          a.Color = BrickColor.new("Bright orange")
-          a.Parent = part
-        end
-      end
-      
-      local function chestLoop()
-        while cesp do
-          local chestParts = findChestParts()
-          for _, part in ipairs(chestParts) do
-            outlinePart(part)
-          end
-          task.wait(1)
-        end
-
-        for _, descendant in ipairs(workspace:GetDescendants()) do
-          local highlight = descendant:FindFirstChild("BoxHandleAdornment")
-          if highlight then
-            highlight:Destroy()
-          end
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(chestLoop)
-      else
-        chestLoop()
-      end
+    Callback = function(state)
+        if state then
+			ChestESP.start()
+		else
+			ChestESP.stop()
+		end
     end 
-  }) 
+}) 
 
-  local lesptog = Tabs.vs:AddToggle("Lava ESP",
-  {
+local lesptog = Tabs.vs:AddToggle("Lava ESP", {
     Title = "Lava ESP", 
     Description = "Makes you see lava through blocks",
     Default = false,
-    Callback = function(l)
-      lesp = l
-      if not lesp then return end
-      
-      local function findLava()
-        local lavaBlocks = {}
-        for _, folder in pairs(workspace.Fluid:GetChildren()) do
-          if folder:IsA("Folder") then
-            for _, item in pairs(folder:GetChildren()) do
-              if item.Name == "Lava" then
-                table.insert(lavaBlocks, item)
-              end
-            end
-          end
-        end
-        return lavaBlocks
-      end
-      
-      local function createOutline(target)
-        if not target:FindFirstChild("BoxHandleAdornment") then
-          local b = Instance.new("BoxHandleAdornment")
-          b.Adornee = target
-          b.AlwaysOnTop = true
-          b.ZIndex = 0
-          b.Size = target.Size
-          b.Transparency = 0.5
-          b.Color = BrickColor.new("Deep orange")
-          b.Parent = target
-        end
-      end
-      
-      local function lavaLoop()
-        while lesp do
-          local lavaParts = findLava()
-          for _, part in ipairs(lavaParts) do
-            createOutline(part)
-          end
-          task.wait()
-        end
-        
-        for _, descendant in ipairs(workspace:GetDescendants()) do
-          local bha = descendant:FindFirstChild("BoxHandleAdornment")
-          if bha then
-            bha:Destroy()
-          end
-        end
-      end
-      
-      if useTaskSpawn then
-        task.spawn(lavaLoop)
-      else
-        lavaLoop()
-      end
+    Callback = function(state)
+        if state then
+			LavaESP.start()
+		else
+			LavaESP.stop()
+		end
     end 
-  }) 
+}) 
 
-  local pesptog = Tabs.vs:AddToggle("Player ESP",
-  {
+local pesptog = Tabs.vs:AddToggle("Player ESP", {
     Title = "Player ESP", 
     Description = "Makes you see players through blocks",
     Default = false,
-    Callback = function(p)
-      pesp = p
-      while pesp do
-        for _, players in pairs(game.Players:GetPlayers()) do
-          if players ~= LP and not players.Character:FindFirstChild("Highlight") then
-            Instance.new("Highlight", players.Character)
-          end
-        end
-        task.wait()
-      end
-      for _, players in pairs(game.Players:GetPlayers()) do
-        local highlight = players.Character:FindFirstChild("Highlight")
-        if highlight then
-          highlight:Destroy()
-        end
-      end
+    Callback = function(state)
+        if state then
+			PlayerESP.start()
+		else
+			PlayerESP.stop()
+		end
     end 
-  })
+})
 
-  local Toggle = Tabs.vs:AddToggle("Chest ESP",
-  {
+local Toggle = Tabs.vs:AddToggle("Chest ESP", {
     Title = "Inventory Viewer", 
     Description = "Makes you see other player's inventories",
     Default = false,
     Callback = function(inv)
-      invv = inv
-      game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = inv
+        invv = inv
+        game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = inv
     end 
-  }) 
+}) 
 
-  local ectog = Tabs.vs:AddToggle("Enderchest",
-  {
+local ectog = Tabs.vs:AddToggle("Enderchest", {
     Title = "More Slots", 
     Description = "Gives you more inventory space",
     Default = false,
     Callback = function(echest)
-      ec = echest
-      while ec do
-      local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-      local inventory = playerGui.HUDGui.Inventory
+        ec = echest
+        while ec do
+            local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+            local inventory = playerGui.HUDGui.Inventory
       
-      inventory.Chest.Visible = true
-      inventory.Crafting.Visible = false
-      inventory.Mirror.Visible = false
-      inventory.ResultSlot.Visible = false
+            inventory.Chest.Visible = true
+            inventory.Crafting.Visible = false
+            inventory.Mirror.Visible = false
+            inventory.ResultSlot.Visible = false
       
-      local slots = {
-        "Slot100", "Slot101", "Slot102", "Slot103",
-        "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", 
-        "Slot85", "Slot86", "Slot87", "Slot88"
-      }
+            local slots = {
+                "Slot100", "Slot101", "Slot102", "Slot103",
+                "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", 
+                "Slot85", "Slot86", "Slot87", "Slot88"
+            }
 
-      for _, slotName in ipairs(slots) do
-        local slot = inventory.Slots:FindFirstChild(slotName)
-        if slot then
-          slot.Visible = false
-        end
-      end
+            for _, slotName in ipairs(slots) do
+                local slot = inventory.Slots:FindFirstChild(slotName)
+                if slot then
+                    slot.Visible = false
+                end
+            end
 
-      task.wait()
-    end
+            task.wait()
+		end
     end 
-  })
+})
+
+local NPtog = Tabs.vs:AddToggle("Name Protect", {
+    Title = "Name Protect",
+    Description = "Protects your name",
+    Default = false,
+    Callback = function(state)
+        if state then
+			getgenv().name = "Protected"
+
+			local Plr = game.Players.LocalPlayer
+			for Index, Value in next, game:GetDescendants() do 
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name) 
+				    if has then 
+					    local str = Value.Text:gsub(Plr.Name,name)
+					    Value.Text = str 
+					end
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+				end
+			end
+
+			game.DescendantAdded:Connect(function(Value)
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name)
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+					if has then 
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end
+				end
+			end)
+        else
+            getgenv().name = savedName
+
+			local Plr = game.Players.LocalPlayer
+			for Index, Value in next, game:GetDescendants() do 
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name) 
+				    if has then 
+					    local str = Value.Text:gsub(Plr.Name,name)
+					    Value.Text = str 
+					end
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+				end
+			end
+
+			game.DescendantAdded:Connect(function(Value)
+				if Value.ClassName == "TextLabel" then 
+					local has = string.find(Value.Text,Plr.Name)
+					Value:GetPropertyChangedSignal("Text"):Connect(function()
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end)
+					if has then 
+						local str = Value.Text:gsub(Plr.Name,name)
+						Value.Text = str 
+					end
+				end
+			end)
+        end
+    end
+})
   
-  Tabs.vs:AddButton({
+Tabs.vs:AddButton({
     Title = "XRay GUI",
     Description = "Loads the XRay GUI by creepypro123",
     Callback = function()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/ORE%20ESP%20creepypro123",true))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/ORE%20ESP%20creepypro123",true))()
     end
-  })
+})
 
-  local imtog = Tabs.wr:AddToggle("Instamine",
-  {
+local imtog = Tabs.wr:AddToggle("Instamine", {
     Title = "Instamine", 
     Description = "Instantly Mines, but client-sided",
     Default = false,
     Callback = function(i)
-      im = i
-      player.Character.Gamemode.Value = im and 1 or 0
+        im = i
+        player.Character.Gamemode.Value = im and 1 or 0
     end 
-  })
+})
 
-  local fbtog = Tabs.wr:AddToggle("Fast Break",
-  {
+local fbtog = Tabs.wr:AddToggle("Fast Break", {
     Title = "Fast Break", 
     Description = "Breaks blocks fast (with the correct tools)",
     Default = false,
     Callback = function(f)
-      fb = f
-      while fb do
-        abb:InvokeServer()
-        task.wait()
-      end
+        fb = f
+        while fb do
+            abb:InvokeServer()
+            task.wait()
+        end
     end 
-  })
+})
 
-  local adstog = Tabs.wr:AddToggle("Toggle",
-  {
+local adstog = Tabs.wr:AddToggle("Toggle", {
     Title = "Auto Drop Selected Item", 
     Description = "Automatically Drops Selected Item",
     Default = false,
     Callback = function(adsi)
-      ad = adsi
-      local function AutoDrop()
-        while ad do
-          local args = {
-	    true
-          }
-          game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("DropItem"):InvokeServer(unpack(args))
-        end 
-      end
-      if useTaskSpawn then
-        task.spawn(AutoDrop)
-      else
-        AutoDrop(ad)
-      end
+        ad = adsi
+        local function AutoDrop()
+            while ad do
+                game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("DropItem"):InvokeServer(true)
+            end 
+        end
+        if useTaskSpawn then
+            task.spawn(AutoDrop)
+        else
+            AutoDrop(ad)
+        end
     end
-  })
+})
   
-  Tabs.wr:AddButton({
+Tabs.wr:AddButton({
     Title = "Reload Chunks",
     Description = "Reloads Chunks",
     Callback = function()
-      local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-      
-      local pos = Vector3.new(
-        math.floor(humanroot2.Position.X),
-        math.floor(humanroot2.Position.Y),
-        math.floor(humanroot2.Position.Z)
-      )
-
-      wait()
-      humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
-      wait()
-      humanroot2.CFrame = CFrame.new(pos)
+        ReloadChunk()
     end
-  })
+})
 
-  Tabs.wr:AddButton({
+Tabs.wr:AddButton({
     Title = "Chest Stealer / Dumper",
     Description = "Steals/Dumps everything from/into a chest",
     Callback = function()
-      for i = 36, 62 do
-        task.spawn(function()
-          game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
-        end)
-      end
+        for i = 36, 62 do
+            task.spawn(function()
+                game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
+            end)
+        end
     end
-  })
+})
   
-  Tabs.wr:AddButton({
+Tabs.wr:AddButton({
     Title = "Get Lava",
     Description = "Gets Lava 2 blocks below you\n(must have bucket in first slot)",
     Callback = function()
-      local coordText = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+        local coordText = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
 
-    local xStr, yStr, zStr = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+        local xStr, yStr, zStr = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
 
-    local xlp = tonumber(xStr)
-    local ylp = tonumber(yStr) - 2
-    local zlp = tonumber(zStr)
+        local xlp = tonumber(xStr)
+        local ylp = tonumber(yStr) - 2
+        local zlp = tonumber(zStr)
     
-    local args = {
-      [1] = xlp,
-      [2] = ylp,
-      [3] = zlp,
-      [4] = 0
-    }
+        local args = {
+            [1] = xlp,
+            [2] = ylp,
+            [3] = zlp,
+            [4] = 0
+        }
     
-    useblock:InvokeServer(unpack(args))
+        useblock:InvokeServer(unpack(args))
     end
-  })
+})
 
-  local nktog = Tabs.wr:AddToggle("Nuker",
-  {
+local nktog = Tabs.wr:AddToggle("Nuker", {
     Title = "Nuker", 
     Description = "Breaks blocks below you",
     Default = false,
     Callback = function(n)
-      nk = n
-      local function nukerLoop()
-      while nk do
-        local coordText2 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-        local roundedX, roundedY, roundedZ = coordText2:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+        nk = n
+        local function nukerLoop()
+            while nk do
+                local coordText2 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+                local roundedX, roundedY, roundedZ = coordText2:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
         
-        bb:FireServer(roundedX, roundedY - 1, roundedZ)
-        abb:InvokeServer()
+                bb:FireServer(roundedX, roundedY - 1, roundedZ)
+                abb:InvokeServer()
         
-        task.wait()
-      end
-    end
+                task.wait()
+            end
+        end
     
-    if useTaskSpawn then
-      task.spawn(nukerLoop)
-    else
-      nukerLoop()
-    end
+        if useTaskSpawn then
+            task.spawn(nukerLoop)
+        else
+            nukerLoop()
+        end
     end 
-  })
+})
   
-  local nk3tog = Tabs.wr:AddToggle("Nuker3",
-  {
+local nk3tog = Tabs.wr:AddToggle("Nuker3", {
     Title = "Nuker 3x3", 
     Description = "Breaks blocks around you in a 3³ area",
     Default = false,
     Callback = function(n3)
-      nk3 = n3
-      if nk3 then
-          _G.putanynamehere = task.spawn(function()
-              while nk3 do
-                  local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.coordinates.Text
-				          local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
-				          local baseX = tonumber(playerPosX)
-				          local baseY = tonumber(playerPosY) - 1
-				          local baseZ = tonumber(playerPosZ)
+        nk3 = n3
+        if nk3 then
+            _G.putanynamehere = task.spawn(function()
+                while nk3 do
+                    local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.coordinates.Text
+				    local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+				    local baseX = tonumber(playerPosX)
+				    local baseY = tonumber(playerPosY) - 1
+				    local baseZ = tonumber(playerPosZ)
 
-				          local positions = {}
+				    local positions = {}
 			  
-				          for offsetX = -1, 1 do
-					            for offsetY = -1, 1 do
-						              for offsetZ = -1, 1 do
-							                table.insert(positions, {
-								                  baseX + offsetX,
-								                  baseY + offsetY,
-								                  baseZ + offsetZ
-							                })
-						              end
-					            end
-				          end
+				    for offsetX = -1, 1 do
+					    for offsetY = -1, 1 do
+					        for offsetZ = -1, 1 do
+							    table.insert(positions, {
+								    baseX + offsetX,
+								    baseY + offsetY,
+								    baseZ + offsetZ
+							    })
+						    end
+					    end
+				    end
 			  
-				          task.spawn(function()
-					            for i = 1, #positions do
-						              if not nk3 then break end
+				    task.spawn(function()
+					    for i = 1, #positions do
+						    if not nk3 then break end
 
-						              task.spawn(function()
-							                local pos = positions[i]
-							                bb:FireServer(pos[1], pos[2], pos[3])
-							                abb:InvokeServer()
-						              end)
-					            end
-				          end)
+						    task.spawn(function()
+							    local pos = positions[i]
+							    bb:FireServer(pos[1], pos[2], pos[3])
+							    abb:InvokeServer()
+						    end)
+					    end
+				    end)
 
-				          task.wait()
-			        end
-		      end)
+				    task.wait()
+			    end
+		    end)
 	    else
-		      if _G.putanynamehere then
-		    	    task.cancel(_G.putanynamehere)
-			        _G.putanynamehere = nil
-		      end
-	     end
+		    if _G.putanynamehere then
+		    	task.cancel(_G.putanynamehere)
+			    _G.putanynamehere = nil
+		    end
+	    end
     end
-  })
+})
 
-  local nk5tog = Tabs.wr:AddToggle("Nuker5",
-  {
+local nk5tog = Tabs.wr:AddToggle("Nuker5", {
     Title = "Nuker 5x5", 
     Description = "Breaks blocks below you",
     Default = false,
     Callback = function(n5)
-      nk5 = n5
-      if nk5 then
-		_G.putanynamehere = task.spawn(function()
-			while nk5 do
+        nk5 = n5
+        if nk5 then
+	  	    _G.putanynamehere = task.spawn(function()
+			    while nk5 do
+					local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+					local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+				    local baseX = tonumber(playerPosX)
+				    local baseY = tonumber(playerPosY) - 1
+			    	local baseZ = tonumber(playerPosZ)
 
-				local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-				local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
-				local baseX = tonumber(playerPosX)
-				local baseY = tonumber(playerPosY) - 1
-				local baseZ = tonumber(playerPosZ)
-
-				local positions = {}
+			    	local positions = {}
 			  
-				for offsetX = -2, 2 do
-					for offsetY = -2, 2 do
-						for offsetZ = -2, 2 do
-							table.insert(positions, {
-								baseX + offsetX,
-								baseY + offsetY,
-								baseZ + offsetZ
-							})
-						end
-					end
-				end
+				    for offsetX = -2, 2 do
+					    for offsetY = -2, 2 do
+						    for offsetZ = -2, 2 do
+							    table.insert(positions, {
+								    baseX + offsetX,
+								    baseY + offsetY,
+								    baseZ + offsetZ
+							    })
+						    end
+					    end
+				    end
 			  
-				task.spawn(function()
-					for i = 1, #positions do
-						if not nk5 then break end
+				    task.spawn(function()
+					    for i = 1, #positions do
+						    if not nk5 then break end
 
-						task.spawn(function()
-							local pos = positions[i]
-							bb:FireServer(pos[1], pos[2], pos[3])
-							abb:InvokeServer()
-						end)
-					end
-				end)
+						    task.spawn(function()
+							    local pos = positions[i]
+							    bb:FireServer(pos[1], pos[2], pos[3])
+							    abb:InvokeServer()
+						    end)
+					    end
+				    end)
 
-				task.wait()
-			end
-		end)
-	else
-		if _G.putanynamehere then
-			task.cancel(_G.putanynamehere)
-			_G.putanynamehere = nil
-		end
-	end 
-			end
-  })
+				    task.wait()
+			    end
+		    end)
+	    else
+		    if _G.putanynamehere then
+			    task.cancel(_G.putanynamehere)
+			    _G.putanynamehere = nil
+		    end
+	    end 
+	end
+})
   
-  local ScaffoldToggle = Tabs.wr:AddToggle("Scaffold",
-  {
+local ScaffoldToggle = Tabs.wr:AddToggle("Scaffold", {
     Title = "Scaffold", 
     Description = "Place block below you",
     Default = false,
     Callback = function(S)
-      So = S
-      if So then
-        local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
-        local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
-        local BlocksByName = M_IDs.ByName.Blocks
+        So = S
+        if So then
+            local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
+            local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
+            local BlocksByName = M_IDs.ByName.Blocks
 
-        local dir = 1 
-        _G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord:GetPropertyChangedSignal("Text"):Connect(function()
-	        if game.Players.LocalPlayer.Character ~= nil and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and game.Players.LocalPlayer.Character.Humanoid.Health > 0 then
-		        local placeSlot = game.Players.LocalPlayer.Character.SelectedSlot.Value
-		        local Coords = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-		        local strDev = string.split(Coords, " ")
-		        local pl_x = tonumber(strDev[2]:sub(0, -2))
-		        local pl_y = tonumber(strDev[3]:sub(0, -2))
-		        local pl_z = tonumber(strDev[4])
-		        local realBlock
-		        if game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot].Slot.Display:FindFirstChild("SlotB") then
-			        for i, v in pairs(game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot].Slot.Display.SlotB:GetChildren()) do
-				        realBlock = v.Name
-				        local canPlaceBlock = false
-				        local block, chunk = M_World.getBlock(pl_x, pl_y-1, pl_z)
-				        if block == nil then
-					        canPlaceBlock = true
-				        else
-					        for i, v in pairs(block) do
-						        if v == 0 then
-							        canPlaceBlock = true
-							        break
-						        end
-					        end
-				        end
-				        if canPlaceBlock == true and realBlock ~= nil then
-				        	local itemblock_info = BlocksByName[realBlock]
-				        	local did_place = M_World.placeBlock(pl_x, pl_y-1, pl_z, chunk, dir, itemblock_info.id)
-					        local Call, Name = game.ReplicatedStorage.GameRemotes.PlaceBlock:InvokeServer(pl_x, pl_y-1, pl_z, placeSlot, dir)
-					        if not Call then
-					        	chunk:change(pl_x%16,pl_y-1,pl_z%16,Name)
-				        	end
-			        	end
-			        	break
-			        end
-		        end
-	        end
-        end)
-    else
-        _G.CoordsChannel:Disconnect()
-    end
+            local dir = 1 
+            _G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord:GetPropertyChangedSignal("Text"):Connect(function()
+	            if game.Players.LocalPlayer.Character ~= nil and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and game.Players.LocalPlayer.Character.Humanoid.Health > 0 then
+		            local placeSlot = game.Players.LocalPlayer.Character.SelectedSlot.Value
+		            local Coords = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
+		            local strDev = string.split(Coords, " ")
+		            local pl_x = tonumber(strDev[2]:sub(0, -2))
+		            local pl_y = tonumber(strDev[3]:sub(0, -2))
+		            local pl_z = tonumber(strDev[4])
+		            local realBlock
+		            if game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot].Slot.Display:FindFirstChild("SlotB") then
+			            for i, v in pairs(game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot].Slot.Display.SlotB:GetChildren()) do
+				            realBlock = v.Name
+				            local canPlaceBlock = false
+				            local block, chunk = M_World.getBlock(pl_x, pl_y-1, pl_z)
+				            if block == nil then
+					            canPlaceBlock = true
+				            else
+					            for i, v in pairs(block) do
+						            if v == 0 then
+							            canPlaceBlock = true
+							            break
+						            end
+					            end
+				            end
+				            if canPlaceBlock == true and realBlock ~= nil then
+				            	local itemblock_info = BlocksByName[realBlock]
+				        	    local did_place = M_World.placeBlock(pl_x, pl_y-1, pl_z, chunk, dir, itemblock_info.id)
+					            local Call, Name = game.ReplicatedStorage.GameRemotes.PlaceBlock:InvokeServer(pl_x, pl_y-1, pl_z, placeSlot, dir)
+					            if not Call then
+					        	    chunk:change(pl_x%16,pl_y-1,pl_z%16,Name)
+				        	    end
+			        	    end
+			        	    break
+			            end
+		            end
+	            end
+            end)
+        else
+            _G.CoordsChannel:Disconnect()
+        end
     end 
-  })
+})
 
-  local Scaffold3Toggle = Tabs.wr:AddToggle("Scaffold3",
-  {
+local Scaffold3Toggle = Tabs.wr:AddToggle("Scaffold3", {
     Title = "Scaffold 3x3", 
     Description = "Place blocks in a 3x3 area below you",
     Default = false,
     Callback = function(S3)
-      So3 = S3
-      if So3 then
-        local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
-local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
-local BlocksByName = M_IDs.ByName.Blocks
+        So3 = S3
+        if So3 then
+            local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
+            local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
+            local BlocksByName = M_IDs.ByName.Blocks
 
-local dir = 1
+            local dir = 1
+			_G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord:GetPropertyChangedSignal("Text"):Connect(function()
+                local lp = game.Players.LocalPlayer
+                local char = lp.Character
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+                if not hum or hum.Health <= 0 then return end
 
-_G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord
-:GetPropertyChangedSignal("Text"):Connect(function()
+                local placeSlot = char.SelectedSlot.Value
+                local slotGui = lp.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot]
+                if not slotGui or not slotGui.Slot.Display:FindFirstChild("SlotB") then return end
 
-    local lp = game.Players.LocalPlayer
-    local char = lp.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hum or hum.Health <= 0 then return end
-
-    local placeSlot = char.SelectedSlot.Value
-    local slotGui = lp.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot]
-    if not slotGui or not slotGui.Slot.Display:FindFirstChild("SlotB") then return end
-
-    local realBlock
-    for _, v in pairs(slotGui.Slot.Display.SlotB:GetChildren()) do
-        realBlock = v.Name
-        break
-    end
-    if not realBlock then return end
-
-    local itemblock_info = BlocksByName[realBlock]
-    if not itemblock_info then return end
-
-    local coordText = lp.PlayerGui.HUDGui.DataFrame.Coord.Text
-    local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
-    if not x then return end
-
-    x = tonumber(x)
-    y = tonumber(y) - 1
-    z = tonumber(z)
-
-    -- build 3x3 positions
-    local positions = {}
-    for ox = -1, 1 do
-        for oz = -1, 1 do
-            positions[#positions + 1] = {x + ox, y, z + oz}
-        end
-    end
-
-    -- instant placement burst
-    for i = 1, #positions do
-    task.spawn(function()
-        local px, py, pz = unpack(positions[i])
-
-        local block, chunk = M_World.getBlock(px, py, pz)
-        local canPlace = false
-
-        if not block then
-            canPlace = true
-        else
-            for _, v in pairs(block) do
-                if v == 0 then
-                    canPlace = true
+                local realBlock
+                for _, v in pairs(slotGui.Slot.Display.SlotB:GetChildren()) do
+                    realBlock = v.Name
                     break
                 end
-            end
-        end
+                if not realBlock then return end
 
-        if not canPlace then return end
+                local itemblock_info = BlocksByName[realBlock]
+                if not itemblock_info then return end
 
-        -- client-side prediction
-        M_World.placeBlock(px, py, pz, chunk, dir, itemblock_info.id)
+                local coordText = lp.PlayerGui.HUDGui.DataFrame.Coord.Text
+                local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+                if not x then return end
 
-        -- server call (this yields, but now isolated)
-        local ok, name = game.ReplicatedStorage.GameRemotes.PlaceBlock
-            :InvokeServer(px, py, pz, placeSlot, dir)
+                x = tonumber(x)
+	  	        y = tonumber(y) - 1
+		    	z = tonumber(z)
 
-        if not ok then
-            chunk:change(px % 16, py, pz % 16, name)
-        end
-    end)
+                local positions = {}
+                for ox = -1, 1 do
+                    for oz = -1, 1 do
+                        positions[#positions + 1] = {x + ox, y, z + oz}
+                    end
+                end
+
+                for i = 1, #positions do
+                    task.spawn(function()
+                        local px, py, pz = unpack(positions[i])
+
+                        local block, chunk = M_World.getBlock(px, py, pz)
+                        local canPlace = false
+
+                        if not block then
+                            canPlace = true
+                        else
+                            for _, v in pairs(block) do
+                                if v == 0 then
+                                    canPlace = true
+                                    break
+                                end
+                            end
+                        end
+
+                        if not canPlace then return end
+						
+					    M_World.placeBlock(px, py, pz, chunk, dir, itemblock_info.id)
+									
+					    local ok, name = game.ReplicatedStorage.GameRemotes.PlaceBlock:InvokeServer(px, py, pz, placeSlot, dir)
+									
+					    if not ok then
+                            chunk:change(px % 16, py, pz % 16, name)
+					    end
+					end)
+				end
+			end)
+	    else
+			_G.CoordsChannel:Disconnect()
+		end
+	end 
+})
+
+local HighwayToggleX = Tabs.wr:AddToggle("HighwayBuilder", {
+    Title = "Highway Builder X", 
+    Description = "Builds a highway below you",
+    Default = false,
+    Callback = function(H)
+        HB = H
+        if HB then
+            local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
+            local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
+            local BlocksByName = M_IDs.ByName.Blocks
+
+            local dir = 1
+
+            _G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord:GetPropertyChangedSignal("Text"):Connect(function()
+				local lp = game.Players.LocalPlayer
+				local char = lp.Character
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+			    if not hum or hum.Health <= 0 then return end
+
+			    local placeSlot = char.SelectedSlot.Value
+				local slotGui = lp.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot]
+				if not slotGui or not slotGui.Slot.Display:FindFirstChild("SlotB") then return end
+
+				local realBlock
+				for _, v in pairs(slotGui.Slot.Display.SlotB:GetChildren()) do
+				    realBlock = v.Name
+                    break
+                end
+				if not realBlock then return end
+
+				local itemblock_info = BlocksByName[realBlock]
+				if not itemblock_info then return end
+				
+				local coordText = lp.PlayerGui.HUDGui.DataFrame.Coord.Text
+				local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+				if not x then return end
+
+				x = tonumber(x)
+				y = tonumber(y) - 1
+				z = tonumber(z)
+
+				local positions = {}
+				for ox = -2, 2 do
+					positions[#positions + 1] = {x + ox, y, z}
+					if ox == -2 or ox == 2 then
+						positions[#positions + 1] = {x + ox, y + 1, z}
+					end
+				end
+
+				for i = 1, #positions do
+					task.spawn(function()
+						local px, py, pz = unpack(positions[i])
+									
+						local block, chunk = M_World.getBlock(px, py, pz)
+						local canPlace = false
+									
+						if not block then
+							canPlace = true
+						else
+							for _, v in pairs(block) do
+							    if v == 0 then
+									canPlace = true
+								    break
+							    end
 							end
-end)
-    else
-        _G.CoordsChannel:Disconnect()
-    end
-    end 
-  })
+						end
+										
+					    if not canPlace then return end
+					
+				        M_World.placeBlock(px, py, pz, chunk, dir, itemblock_info.id)
+									
+					    local ok, name = game.ReplicatedStorage.GameRemotes.PlaceBlock:InvokeServer(px, py, pz, placeSlot, dir)
+									
+				     	if not ok then
+						    chunk:change(px % 16, py, pz % 16, name)
+					    end
+				    end)
+				end
+			end)
+		else
+			_G.CoordsChannel:Disconnect()
+		end
+	end 
+})
 
-  Tabs.dt:AddButton({
+local HighwayToggleZ = Tabs.wr:AddToggle("HighwayBuilder", {
+    Title = "Highway Builder Z", 
+    Description = "Builds a highway below you",
+    Default = false,
+    Callback = function(H)
+        HB = H
+        if HB then
+            local M_World = require(game.Players.LocalPlayer.PlayerScripts.MainLocalScript.CWorld)
+			local M_IDs = require(game.ReplicatedStorage.AssetsMod.IDs)
+			local BlocksByName = M_IDs.ByName.Blocks
+
+			local dir = 1
+				
+			_G.CoordsChannel = game.Players.LocalPlayer.PlayerGui.HUDGui.DataFrame.Coords:GetPropertyChangedSignal("Text"):Connect(function()
+				local lp = game.Players.LocalPlayer
+				local char = lp.Character
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+				if not hum or hum.Health <= 0 then return end
+				local placeSlot = char.SelectedSlot.Value
+				local slotGui = lp.PlayerGui.HUDGui.Inventory.Slots["Slot"..placeSlot]
+				if not slotGui or not slotGui.Slot.Display:FindFirstChild("SlotB") then return end
+				local realBlock
+    
+				for _, v in pairs(slotGui.Slot.Display.SlotB:GetChildren()) do
+					realBlock = v.Name
+					break
+				end
+				if not realBlock then return end
+				local itemblock_info = BlocksByName[realBlock]
+				if not itemblock_info then return end
+
+				local coordText = lp.PlayerGui.HUDGui.DataFrame.Coords.Text
+				local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+				if not z then return end
+
+				x = tonumber(x)
+				y = tonumber(y) - 1
+				z = tonumber(z)
+						
+				local positions = {}
+				for oz = -2, 2 do
+					positions[#positions + 1] = {x, y, z + oz}
+					if oz == -2 or oz == 2 then
+						positions[#positions + 1] = {x, y + 1, z + oz}
+					end
+				end
+				
+				for i = 1, #positions do
+					task.spawn(function()
+					    local px, py, pz = unpack(positions[i])
+						local block, chunk = M_World.getBlock(px, py, pz)
+					    local canPlace = false
+									
+						if not block then
+							canPlace = true
+						else
+						    for _, v in pairs(block) do
+							    if v == 0 then
+								    canPlace = true
+									break
+								end
+							end
+						end
+
+					    if not canPlace then return end
+										
+						M_World.placeBlock(px, py, pz, chunk, dir, itemblock_info.id)
+							
+						local ok, name = game.ReplicatedStorage.GameRemotes.PlaceBlock:InvokeServer(px, py, pz, placeSlot, dir)
+									
+						if not ok then
+							chunk:change(px % 16, py, pz % 16, name)
+						end
+					end)
+				end
+			end)
+		else
+			_G.CoordsChannel:Disconnect()
+		end
+    end 
+})
+
+
+Tabs.dt:AddButton({
     Title = "Dupe GUI",
     Description = "Loads the Dupe GUI by Argentum Exploitz",
     Callback = function()
 		loadstring(game:HttpGet("https://gist.githubusercontent.com/raw/b8d379c1e296ade8305c2fe4df652537"))()
     end
-  })
+})
   
-  Tabs.dt:AddButton({
+Tabs.dt:AddButton({
     Title = "Dupe Selected Item",
     Description = "Dupes the selected item",
     Callback = function()
-	  local slot = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots:FindFirstChild("Slot-1")
-      local b = slot.SlotNA.Count
-      local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
-      local bCount = tonumber(b.Text)
-      if not bCount then
-        return
-      end
-      
-      if bCount == 64 then
-        return
-      end
-
-      local howmuch = 64 - bCount
-      local usetables = false
-      
-      local success, err = pcall(function()
-        if usetables then
-          moveitems:InvokeServer({[1] = -1, [2] = 82, [3] = true, [4] = -howmuch})
-        else
-          moveitems:InvokeServer(-1, 82, true, -howmuch)
+	    local slot = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots:FindFirstChild("Slot-1")
+        local b = slot.SlotNA.Count
+        local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
+        local bCount = tonumber(b.Text)
+        if not bCount then
+            return
         end
-      end)
+      
+        if bCount == 64 then
+            return
+        end
+
+        local howmuch = 64 - bCount
+        local usetables = false
+      
+        local success, err = pcall(function()
+            if usetables then
+                moveitems:InvokeServer({[1] = -1, [2] = 82, [3] = true, [4] = -howmuch})
+            else
+                moveitems:InvokeServer(-1, 82, true, -howmuch)
+            end
+        end)
     end
-  })
+})
   
-  Tabs.dt:AddButton({
+Tabs.dt:AddButton({
     Title = "Dupe First Chest Slot",
     Description = "Dupes the first chest slot",
     Callback = function()
-      chestdupe(1)
+        chestdupe(1)
     end
-  })
+})
   
-  Tabs.dt:AddButton({
+Tabs.dt:AddButton({
     Title = "Dupe Entire Chest",
     Description = "Dupes the entire chest slot",
     Callback = function()
-      chestdupe(2)
+        chestdupe(2)
     end
-  })
+})
 
-  local Toggle = Tabs.dt:AddToggle("Toggle",
-  {
+local Toggle = Tabs.dt:AddToggle("Toggle", {
     Title = "Auto Dupe Entire Chest", 
     Description = "Automatically dupes entire chest",
     Default = false,
     Callback = function(a2)
-      ad = a2
-      while ad do
-        chestdupe(2)
-        task.wait()
-      end
+        ad = a2
+        while ad do
+            chestdupe(2)
+            task.wait()
+        end
     end 
-  })
+})
   
-  Tabs.dt:AddButton({
+Tabs.dt:AddButton({
     Title = "Dump + Dupe Entire Chest",
     Description = "Dumps your inv to a chest, then dupes it",
     Callback = function()
-      for i = 36, 62 do
-        task.spawn(function()
-          game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
-        end)
-      end
-      chestdupe(2)
+        for i = 36, 62 do
+            task.spawn(function()
+                game:GetService("ReplicatedStorage").GameRemotes.MoveItem:InvokeServer(i, i - 27, true)
+            end)
+        end
+        chestdupe(2)
     end
-  })
+})
 
-  Tabs.dt:AddButton({
+Tabs.dt:AddButton({
     Title = "Get Infinite Items",
     Description = "Select the item first then execute this",
     Callback = function()
-      local args = {
-        [1] = -1,
-        [2] = 0,
-        [3] = true,
-        [4] = -9.99999999919999999919999919999919199191919999199191919991999199e100
-      }
-      local args2 = {[1] = {}}
-      if usetables then
-        args2[1][1] = args[1]
-        args2[1][2] = args[2]
-        args2[1][3] = args[3]
-        args2[1][4] = args[4]
-        moveitems:InvokeServer(unpack(args2))
-      else
-        moveitems:InvokeServer(unpack(args))
-      end
-    end
-  })
-
-  if hasGiveExploit then
-    local ginput = Tabs.dt:AddInput("Input", {
-      Title = "Item Name",
-      Description = "Enter Item Name",
-      Default = "",
-      Placeholder = "Enter an Item Name",
-      Numeric = false, -- Ensure input is numeric
-      Finished = false,
-      Callback = function(gi)
-        gip = gi
-      end
-    })
-    local ainput = Tabs.dt:AddInput("Input", {
-      Title = "Amount",
-      Description = "Enter Item Amount",
-      Default = "",
-      Placeholder = "Enter Amount of Items",
-      Numeric = true,
-      Finished = false,
-      Callback = function(ai)
-        aip = ai
-      end
-    })
-    Tabs.dt:AddButton({
-      Title = "Give Item",
-      Description = "Gives selected amount of selected item",
-      Callback = function()
         local args = {
-          [1] = gip,
-          [2] = aip
+            [1] = -1,
+            [2] = 0,
+            [3] = true,
+            [4] = -9.99999999919999999919999919999919199191919999199191919991999199e100
         }
+        local args2 = {[1] = {}}
+        if usetables then
+            args2[1][1] = args[1]
+            args2[1][2] = args[2]
+            args2[1][3] = args[3]
+            args2[1][4] = args[4]
+            moveitems:InvokeServer(unpack(args2))
+        else
+            moveitems:InvokeServer(unpack(args))
+        end
+    end
+})
 
-        game:GetService("ReplicatedStorage").admingui:FireServer(unpack(args))
-      end
+if hasGiveExploit then
+    local ginput = Tabs.dt:AddInput("Input", {
+        Title = "Item Name",
+        Description = "Enter Item Name",
+        Default = "",
+        Placeholder = "Enter an Item Name",
+        Numeric = false,
+        Finished = false,
+        Callback = function(gi)
+            gip = gi
+        end
+	})
+	
+    local ainput = Tabs.dt:AddInput("Input", {
+        Title = "Amount",
+        Description = "Enter Item Amount",
+        Default = "",
+        Placeholder = "Enter Amount of Items",
+        Numeric = true,
+        Finished = false,
+        Callback = function(ai)
+            aip = ai
+        end
     })
-  end
+    
+	Tabs.dt:AddButton({
+        Title = "Give Item",
+        Description = "Gives selected amount of selected item",
+        Callback = function()
+            local args = {
+                [1] = gip,
+                [2] = aip
+            }
+
+            game:GetService("ReplicatedStorage").admingui:FireServer(unpack(args))
+        end
+    })
+end
   
-  Tabs.ot:AddButton({
+Tabs.ot:AddButton({
     Title = "Load WolfMoons",
     Description = "Loads ByteHub for WolfMoons",
     Callback = function()
-      Fluent:Destroy()
-      getgenv().bytehubLoaded = false
-      if isMobile then
-        game.CoreGui.Toggleui:Destroy()
-      end
-	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Wolfmoons.lua",true))()
+        Fluent:Destroy()
+        getgenv().bytehubLoaded = false
+        if isMobile then
+            game.CoreGui.Toggleui:Destroy()
+        end
+	    game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Wolfmoons.lua",true))()
     end
-  })
+})
 
-  Tabs.ot:AddButton({
-    Title = "Load Minerscraft",
-    Description = "Loads ByteHub for Minerscraft",
+Tabs.ot:AddButton({
+    Title = "Load Minerscraft (DISCONTINUED)",
+    Description = "Loads ByteHub for Minerscraft\nTHIS SCRIPT HAS BEEN DISCONTINUED AND WILL NO LONGER\nBE UPDATED",
     Callback = function()
-      Fluent:Destroy()
-      getgenv().bytehubLoaded = false
-      if isMobile then
-        game.CoreGui.Toggleui:Destroy()
-      end
-	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Minerscraft.lua",true))()
+        Fluent:Destroy()
+        getgenv().bytehubLoaded = false
+        if isMobile then
+            game.CoreGui.Toggleui:Destroy()
+        end
+        game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Minerscraft.lua",true))()
     end
-  })
+})
 	
-  Tabs.ot:AddButton({
+Tabs.ot:AddButton({
     Title = "Infinite Yield",
     Description = "Loads Infinite Yield admin commands",
     Callback = function()
-      loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
     end
-  })
+})
 
-  Tabs.ot:AddButton({
+Tabs.ot:AddButton({
     Title = "Mobile Keyboard",
     Description = "Loads a mobile OSK",
     Callback = function()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", true))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/advxzivhsjjdhxhsidifvsh/mobkeyboard/main/main.txt", true))()
     end
-  })
+})
 
-  Tabs.ot:AddButton({
+Tabs.ot:AddButton({
     Title = "Remote Spy (Mobile & PC)",
     Description = "Loads a Mobile & PC RemoteSpy",
     Callback = function()
-      loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/REDzHUB/RS/main/SimpleSpyMobile"))()
     end
-  })
-  
-  local kadelay = Tabs.st:AddInput("Input", {
+})
+
+Tabs.tp:AddButton({
+    Title = "Vanilla Texture Pack",
+    Description = "Replaces texture with Minecraft ones",
+    Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/realtexturepack.lua"))()
+		ReloadChunk()
+    end
+})
+
+local kadelay = Tabs.st:AddInput("Input", {
     Title = "Kill Aura Delay",
     Description = "Seconds between each hit (Default: 0)",
     Default = "0",
     Placeholder = "Enter a number",
-    Numeric = false, -- Ensure input is numeric
+    Numeric = false,
     Finished = false,
     Callback = function(zi)
-      local newDelay = tonumber(zi)
-      if newDelay then
-        delay = newDelay -- Update the delay value dynamically
-        Fluent:Notify({
-          Title = "Success!",
-          Content = "Successfully edited delay",
-          SubContent = "Delay: " .. newDelay,
-          Duration = 3
-        })
-      else
-        Fluent:Notify({
-          Title = "Error",
-          Content = "Invalid Delay:" .. zi,
-          SubContent = "Please enter a number",
-          Duration = 3
-        })
-      end
+        local newDelay = tonumber(zi)
+        if newDelay then
+            _G.delay = newDelay 
+            Fluent:Notify({
+                Title = "Success!",
+                Content = "Successfully edited delay",
+                SubContent = "Delay: " .. newDelay,
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Delay:" .. zi,
+                SubContent = "Please enter a number",
+                Duration = 3
+            })
+        end
     end
-  })
+})
   
-  local Input = Tabs.st:AddInput("Input", {
+local Input = Tabs.st:AddInput("Input", {
     Title = "Target Strafe Distance",
     Description = "Distance between the target (Default: 10)",
     Default = "10",
     Placeholder = "Enter a number",
-    Numeric = false, -- Ensure input is numeric
+    Numeric = false,
     Finished = false,
     Callback = function(tad)
-      local newRadius = tonumber(tad)
-      if newRadius then
-        radius = newRadius -- Update the delay value dynamically
-        Fluent:Notify({
-          Title = "Success!",
-          Content = "Successfully edited radius",
-          SubContent = "Radius: " .. newRadius,
-          Duration = 3
-        })
-      elseif newRadius > 16 then
-        Fluent:Notify({
-          Title = "Error",
-          Content = "Over Limit:" .. tad,
-          SubContent = "Please enter a number below 16",
-          Duration = 3
-        })
-      else
-        Fluent:Notify({
-          Title = "Error",
-          Content = "Invalid Number:" .. tad,
-          SubContent = "Please enter a number",
-          Duration = 3
-        })
-      end
+        local newRadius = tonumber(tad)
+        if newRadius then
+            _G.radius = newRadius
+            Fluent:Notify({
+                Title = "Success!",
+                Content = "Successfully edited radius",
+                SubContent = "Radius: " .. newRadius,
+                Duration = 3
+            })
+        elseif newRadius > 16 then
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Over Limit:" .. tad,
+                SubContent = "Please enter a number below 16",
+                Duration = 3
+            })
+		else
+			Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Number:" .. tad,
+                SubContent = "Please enter a number",
+                Duration = 3
+			})
+		end
     end
-  })
+})
   
-  local Input = Tabs.st:AddInput("Input", {
+local Input = Tabs.st:AddInput("Input", {
     Title = "Target Strafe Speed",
     Description = "Speed of rotation (Default: 5)",
     Default = "5",
     Placeholder = "Enter a number",
-    Numeric = false, -- Ensure input is numeric
+    Numeric = false,
     Finished = false,
     Callback = function(tas)
-      local newSpeed = tonumber(tas)
-      if newSpeed then
-        speed = newSpeed -- Update the delay value dynamically
-        Fluent:Notify({
-          Title = "Success!",
-          Content = "Successfully edited speed",
-          SubContent = "Speed: " .. newSpeed,
-          Duration = 3
-        })
-      else
-        Fluent:Notify({
-          Title = "Error",
-          Content = "Invalid Speed:" .. tas,
-          SubContent = "Please enter a number",
-          Duration = 3
-        })
-      end
+        local newSpeed = tonumber(tas)
+        if newSpeed then
+            _G.speed = newSpeed
+            Fluent:Notify({
+                Title = "Success!",
+                Content = "Successfully edited speed",
+                SubContent = "Speed: " .. newSpeed,
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Speed:" .. tas,
+                SubContent = "Please enter a number",
+                Duration = 3
+            })
+        end
     end
-  })
+})
+
+local tbdelay = Tabs.st:AddInput("Input", {
+    Title = "Triggerbot Delay",
+    Description = "Seconds between each hit (Default: 0)",
+    Default = "0",
+    Placeholder = "Enter a number",
+    Numeric = false,
+    Finished = false,
+    Callback = function(zi)
+        local newDelay2 = tonumber(zi)
+        if newDelay2 then
+            _G.tbdelay = newDelay2 
+            Fluent:Notify({
+                Title = "Success!",
+                Content = "Successfully edited delay",
+                SubContent = "Delay: " .. newDelay2,
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Delay:" .. zi,
+                SubContent = "Please enter a number",
+                Duration = 3
+            })
+        end
+    end
+})
   
-  local Input = Tabs.st:AddInput("Input", {
+local Input = Tabs.st:AddInput("Input", {
     Title = "Crosshair+ Color",
     Description = "Color of Crosshair+ (Default: 188, 50, 252)",
     Default = "",
     Placeholder = "Enter a number",
-    Numeric = false, -- Ensure input is numeric
+    Numeric = false,
     Finished = false,
     Callback = function(ci)
-      local newColor = tonumber(ci)
-      local r, g, b = string.match(ci, "(%d+),%s*(%d+),%s*(%d+)")
-      if r and g and b then
-        local newColor = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
-        CrosshairSettings.VerticalLine.Color = newColor
-        CrosshairSettings.HorizontalLine.Color = newColor
-      else
-        Fluent:Notify({
-          Title = "Error",
-          Content = "Invalid Color",
-          SubContent = "Please enter an RGB3 Value",
-          Duration = 3
-        })
-      end
+        local newColor = tonumber(ci)
+        local r, g, b = string.match(ci, "(%d+),%s*(%d+),%s*(%d+)")
+        if r and g and b then
+            local newColor = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+            CrosshairSettings.VerticalLine.Color = newColor
+            CrosshairSettings.HorizontalLine.Color = newColor
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Color",
+                SubContent = "Please enter an RGB3 Value",
+                Duration = 3
+            })
+        end
     end
-  })
+})
   
-  local Dropdown = Tabs.st:AddDropdown("Dropdown", {
+local Dropdown = Tabs.st:AddDropdown("Dropdown", {
     Title = "Select Targeting Method",
     Description = "Selects targeting method for\nKill Aura and Target Strafe",
     Values = {"lowest", "nearest"},
     Multi = false,
     Default = "nearest",
     Callback = function(Value)
-      selectedTargeting = Value
+        _G.selectedTargeting = Value
     end
-  })
+})
   
-  local utstog = Tabs.st:AddToggle("Toggle", {
+local utstog = Tabs.st:AddToggle("Toggle", {
     Title = "Use task.spawn()", 
     Description = "Makes some features run asynchronously\nto prevent blocking.",
     Default = false,
     Callback = function(uts)
         ut = uts
-        useTaskSpawn = uts
+        _G.useTaskSpawn = uts
     end 
-  })
+})
+
+local afktog = Tabs.st:AddToggle("Toggle", {
+    Title = "Anti AFK", 
+    Description = "Disables disconnection due to idling.",
+    Default = false,
+    Callback = function(aafk)
+        afk = aafk
+		if afk then
+			for i,v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+			    v:Disable()
+			end
+		else
+			for i,v in pairs(getconnections(game:GetService("Players").LocalPlayer.Idled)) do
+			    v:Enable()
+			end
+		end
+    end 
+})
   
-  Tabs.st:AddDropdown("InterfaceTheme", {
+Tabs.st:AddDropdown("InterfaceTheme", {
     Title = "Theme",
     Description = "Changes the interface theme.",
     Values = Fluent.Themes,
     Default = Fluent.Theme,
     Callback = function(Value)
-      Fluent:SetTheme(Value)
+        Fluent:SetTheme(Value)
     end
-  })
+})
 
-  Tabs.st:AddToggle("TransparentToggle", {
+Tabs.st:AddToggle("TransparentToggle", {
     Title = "Transparency",
     Description = "Makes the interface transparent.",
     Default = Fluent.Transparency,
     Callback = function(Value)
-      Fluent:ToggleTransparency(Value)
+        Fluent:ToggleTransparency(Value)
     end
-  })
+})
   
-  Tabs.st:AddButton({
+Tabs.st:AddButton({
     Title = "Destroy UI",
     Description = "Destroys Fluent UI",
     Callback = function()
-      Fluent:Destroy()
-      getgenv().bytehubLoaded = false
-      if isMobile then
-        game.CoreGui.Toggleui:Destroy()
-      end
-	  game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
+        Fluent:Destroy()
+        getgenv().bytehubLoaded = false
+        if isMobile then
+            game.CoreGui.Toggleui:Destroy()
+        end
+	    game.Players.LocalPlayer.PlayerGui.invviewer:Destroy()
     end
-  })
+})
   
-  Window:SelectTab(1)
-  SaveManager:SetLibrary(Fluent)
-  SaveManager:SetFolder("ByteHub/MC")
-  SaveManager:BuildConfigSection(Tabs.st)
-  SaveManager:LoadAutoloadConfig()
-  
-else
-  local Notify = AkaliNotif.Notify;
+Window:SelectTab(1)
+SaveManager:SetLibrary(Fluent)
+SaveManager:SetFolder("ByteHub/MC")
+SaveManager:BuildConfigSection(Tabs.st)
+SaveManager:LoadAutoloadConfig()
 
-  Notify({
-    Description = "Byte Hub is already loaded!";
-    Title = "Error!";
-    Duration = 3;
-  });
-  wait(1)
-end
+_G.Fluent = Fluent
+_G.Window = Window
+_G.Tabs = Tabs
