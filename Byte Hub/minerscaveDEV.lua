@@ -12,7 +12,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "pre-release v4.5.22"
+local version = "pre-release v4.5 FINAL"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -619,10 +619,10 @@ local acttog = Tabs.cs:AddToggle("Auto Combat TP", {
 }) 
 
 Tabs.cs:AddButton({
-    Title = "Arcade Recode Client",
-    Description = "Executes Arcade Recode Client",
+    Title = "Vape V4",
+    Description = "Executes Vape V4",
     Callback = function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/Arcade%20Recode%20Client",true))()
+	    loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/NewMainScript.lua", true))()
     end
 })
 
