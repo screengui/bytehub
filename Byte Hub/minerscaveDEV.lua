@@ -12,7 +12,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "pre-release v4.5 FINAL"
+local version = "v4.5"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -61,6 +61,7 @@ end
 local selectedPlayerName = nil
 local autoToolConn = nil
 local savedName = player.Name
+local platform
 local platformY = 0
 
 -- Configs --
@@ -83,7 +84,7 @@ local CrosshairSettings = {
 }
 
 if not platform then
-	local platform = Instance.new("Part")
+	platform = Instance.new("Part")
 	platform.Anchored = true
 	platform.Size = Vector3.new(5, 1, 5)
 	platform.Transparency = 1
@@ -110,7 +111,7 @@ local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirs
 local useblock = gameremotes.UseBlock
 
 -- Adonis Bypass --
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
+--loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
 
 -- Anti Kick --
   
@@ -787,14 +788,14 @@ local AirWalkToggle = Tabs.lp:AddToggle("Air Walk", {
     Callback = function(aw)
         awalk = aw
 		if awalk then
-			platformY = Character.humanoidRootPart.Position.Y - 3
+			platformY = Character.HumanoidRootPart.Position.Y - 3
 			platform.CanCollide = awalk
 			while awalk do
 				if not awalk then return end
 				platform.Position = Vector3.new(
-					Character.humanoidRootPart.Position.X,
+					Character.HumanoidRootPart.Position.X,
 				    platformY,
-					Character.humanoidRootPart.Position.Z
+					Character.HumanoidRootPart.Position.Z
 				)
 				task.wait()
 			end
@@ -1814,8 +1815,8 @@ Tabs.ot:AddButton({
 })
 
 Tabs.ot:AddButton({
-    Title = "Load Minerscraft",
-    Description = "Loads ByteHub for Minerscraft",
+    Title = "Load Minerscraft (DISCONTINUED)",
+    Description = "Loads ByteHub for Minerscraft\nTHIS SCRIPT HAS BEEN DISCONTINUED AND WILL NO LONGER\nBE UPDATED",
     Callback = function()
         Fluent:Destroy()
         getgenv().bytehubLoaded = false
