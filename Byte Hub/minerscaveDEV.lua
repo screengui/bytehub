@@ -98,6 +98,8 @@ local usetables = false
 local TIERS = {Diamond = 4, Ruby = 3, Iron = 2, Gold = 2, Steel = 2, Stone = 1}
 local ARMOR = {Helmet = 103, Chestplate = 102, Leggings = 101, Boots = 100}
 
+local nameProtDefVal = "Protected"
+
 -- Remotes --
 local gameremotes = ReplicatedStorage.GameRemotes
 local GameRemotes = ReplicatedStorage.GameRemotes
@@ -112,6 +114,7 @@ local useblock = gameremotes.UseBlock
 
 -- Adonis Bypass --
 --loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/SUUUUUS00000/MEGGD-Anti-kick/refs/heads/main/MEGGD%20Best%20Anti-kick.lua'))()
 
 -- Anti Kick --
   
@@ -1063,7 +1066,7 @@ local NPtog = Tabs.vs:AddToggle("Name Protect", {
     Default = false,
     Callback = function(state)
         if state then
-			getgenv().name = "Protected"
+			getgenv().name = nameProtDefVal
 
 			local Plr = game.Players.LocalPlayer
 			for Index, Value in next, game:GetDescendants() do 
@@ -1979,6 +1982,34 @@ local tbdelay = Tabs.st:AddInput("Input", {
         end
     end
 })
+
+local npval = Tabs.st:AddInput("Input", {
+    Title = "Name Protect Name",
+    Description = "Replaces the name u get when you enable Name Protect (Default: Protected)",
+    Default = "0",
+    Placeholder = "Enter a name",
+    Numeric = false,
+    Finished = false,
+    Callback = function(ni)
+        local newName = ni
+        if newName then
+            nameProtDefVal = newName 
+            Fluent:Notify({
+                Title = "Success!",
+                Content = "Successfully edited name",
+                SubContent = "Delay: " .. newName,
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Name:" .. zi,
+                SubContent = "Please enter a valid name.",
+                Duration = 3
+            })
+        end
+    end
+})
   
 local Input = Tabs.st:AddInput("Input", {
     Title = "Crosshair+ Color",
@@ -2016,16 +2047,6 @@ local Dropdown = Tabs.st:AddDropdown("Dropdown", {
     end
 })
   
-local utstog = Tabs.st:AddToggle("Toggle", {
-    Title = "Use task.spawn()", 
-    Description = "Makes some features run asynchronously\nto prevent blocking.",
-    Default = false,
-    Callback = function(uts)
-        ut = uts
-        _G.useTaskSpawn = uts
-    end 
-})
-
 local afktog = Tabs.st:AddToggle("Toggle", {
     Title = "Anti AFK", 
     Description = "Disables disconnection due to idling.",
