@@ -12,7 +12,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "v4.5"
+local version = "v4.5.1"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -111,7 +111,7 @@ local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirs
 local useblock = gameremotes.UseBlock
 
 -- Adonis Bypass --
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/MEGGD-Anti-kick.lua",true))()
 
 -- Anti Kick --
   
