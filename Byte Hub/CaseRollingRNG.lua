@@ -1018,7 +1018,7 @@ Set your interval and enable to start farming.]]
 obbyIntervalInput = AutoFarmTab:Input({
     Title = "Farm Interval (ms)",
     Desc = "Time between obby completions (recommended: 3000ms+)",
-    Value = tostring(obbyInterval)
+    Value = tostring(obbyInterval),
     Callback = function(value)
         if autoApplyObbyInterval then
             if not autoApplyObbyInterval then return end
