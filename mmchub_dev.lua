@@ -218,6 +218,7 @@ function GunESP()
             end
         end
     end
+	task.wait()
 end
 
 
