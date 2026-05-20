@@ -1,4 +1,4 @@
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
+local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/RQ-Feng/Orion/refs/heads/main/main.lua'))()
 local Window = OrionLib:MakeWindow({Name = "MMC Hub", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionTest", IntroText = "MMC Hub"})
 
 --def
@@ -287,7 +287,7 @@ local vs = Window:MakeTab({
     PremiumOnly = false
 })
 
-cr:AddParagraph("MMC Hub","Version: 1.4\nMade by: screengui")
+cr:AddParagraph("MMC Hub","Version: 1.5\nMade by: screengui")
 
 ct:AddToggle({
   Name = "Toggle Shoot Murderer Button",
@@ -323,18 +323,6 @@ ft:AddTextbox({
     Callback = function(trc)
         trcip = trc
     end	  
-})
-
-ft:AddToggle({
-  Name = "Auto Claim Timed Rewards",
-  Default = false,
-  Callback = function(ac)
-      actr = ac
-      while actr do
-          game:GetService("ReplicatedStorage").Game.Remotes.Misc.ClaimTimedReward:FireServer(tonumber(trcip))
-          task.wait()
-      end
-  end
 })
 
 ft:AddTextbox({
