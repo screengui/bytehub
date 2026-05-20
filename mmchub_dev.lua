@@ -341,7 +341,7 @@ ft:AddToggle({
     Callback = function(au)
         aut = au
         while au do
-            game.ReplicatedStorage.Game.Remotes.Shop.OpenCrate:InvokeServer(aubip, "Weapons", "Credits")
+            game.ReplicatedStorage.Remotes.Shop.OpenCrate:InvokeServer(aubip, "Weapons", "Credits")
             task.wait()
         end
     end
