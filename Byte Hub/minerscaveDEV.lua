@@ -1,8 +1,7 @@
 local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))(); -- Notif Library
+local Notify = AkaliNotif.Notify;
 if getgenv().bytehubLoaded then
-	local Notify = AkaliNotif.Notify;
-
-    Notify({
+	Notify({
         Description = "Byte Hub is already loaded!";
         Title = "Error!";
         Duration = 3;
@@ -12,7 +11,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "pre-release v4.6.0"
+local version = "pre-release v4.6.1"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -411,18 +410,58 @@ function InfiniteJump()
 end
 
 function ReloadChunk()
-	local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-      
-    local pos = Vector3.new(
-        math.floor(humanroot2.Position.X),
-        math.floor(humanroot2.Position.Y),
-        math.floor(humanroot2.Position.Z)
-    )
+	if not require then
+		Notify({
+        	Description = "Your Executor doesn't support require()!";
+        	Title = "Error!";
+        	Duration = 3;
+    	});
+		return 
+	end
 
-    wait()
-    humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
-    wait()
-    humanroot2.CFrame = CFrame.new(pos)
+	local player = game:GetService("Players").LocalPlayer
+	local PlayerScripts = player:WaitForChild("PlayerScripts")
+	local MainLocalScript = PlayerScripts:WaitForChild("MainLocalScript")
+	local _CWorld = MainLocalScript:WaitForChild("CWorld")
+
+	local CWorld = require(_CWorld)
+
+	local world = CWorld.World
+	local loadingChunks = CWorld.LoadingChunks
+	local renderingChunks = CWorld.RenderingChunks
+	local loadingReqQueue = CWorld.LoadingReqQueue
+	local processingBlocks = CWorld.ProcessingBlocks
+
+	for cx, yrow in pairs(renderingChunks) do
+    	for cy, chunk in pairs(yrow) do
+        	if chunk.BlockerPart then
+            	pcall(function() chunk.BlockerPart:Destroy() end)
+        	end
+        	if chunk.vfold then
+            	pcall(function() chunk.vfold:Destroy() end)
+        	end
+        	if chunk.vlfold then
+            	pcall(function() chunk.vlfold:Destroy() end)
+        	end
+    	end
+	end
+
+	table.clear(world)
+	table.clear(loadingChunks)
+	table.clear(renderingChunks)
+	table.clear(loadingReqQueue)
+
+	if processingBlocks and typeof(processingBlocks) == "table" then
+    	if processingBlocks.clear then
+     	    pcall(function() processingBlocks:clear() end)
+    	elseif processingBlocks.Contents then
+        	table.clear(processingBlocks.Contents)
+    	else
+        	table.clear(processingBlocks)
+    	end
+	else
+    	warn("processingBlocks missing - continuing anyway")
+	end
 end
 	
 function conv(txt)
