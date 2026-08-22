@@ -1,3 +1,4 @@
+game.Players.LocalPlayer:Kick("Script is temporarily under maintenance\nJoin the discord for more updates:\ndiscord.gg/9Nzzya6d46")
 local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))(); -- Notif Library
 if getgenv().bytehubLoaded then
 	local Notify = AkaliNotif.Notify;
