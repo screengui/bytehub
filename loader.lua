@@ -12,6 +12,8 @@ elseif game.PlaceId == 128886701132186 then
   loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/CaseRollingRNG.lua",true))()
 elseif game.PlaceId == 119789365111500 then
   loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/Tank_Game.lua",true))()
+elseif game.PlaceId == 11379739543 then
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/zor-purple-vixapple/cool/refs/heads/main/bytehub.lua"))()
 else
   print("Not Supported")
   game.Players.LocalPlayer:Kick("Game is not supported")
