@@ -1,8 +1,7 @@
 local AkaliNotif = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))(); -- Notif Library
+local Notify = AkaliNotif.Notify;
 if getgenv().bytehubLoaded then
-	local Notify = AkaliNotif.Notify;
-
-    Notify({
+	Notify({
         Description = "Byte Hub is already loaded!";
         Title = "Error!";
         Duration = 3;
@@ -12,7 +11,7 @@ if getgenv().bytehubLoaded then
 end
 
 getgenv().bytehubLoaded = true
-local version = "v4.5.1"
+local version = "v4.6.1"
 -- Services --
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -98,6 +97,8 @@ local usetables = false
 local TIERS = {Diamond = 4, Ruby = 3, Iron = 2, Gold = 2, Steel = 2, Stone = 1}
 local ARMOR = {Helmet = 103, Chestplate = 102, Leggings = 101, Boots = 100}
 
+local nameProtDefVal = "Protected"
+
 -- Remotes --
 local gameremotes = ReplicatedStorage.GameRemotes
 local GameRemotes = ReplicatedStorage.GameRemotes
@@ -111,7 +112,8 @@ local sortitems = gameremotes:FindFirstChild("SortItem") or gameremotes:FindFirs
 local useblock = gameremotes.UseBlock
 
 -- Adonis Bypass --
-loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/refs/heads/main/MEGGD-Anti-kick.lua",true))()
+--loadstring(game:HttpGet("https://raw.githubusercontent.com/Pixeluted/adoniscries/refs/heads/main/Source.lua",true))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/SUUUUUS00000/MEGGD-Anti-kick/refs/heads/main/MEGGD%20Best%20Anti-kick.lua'))()
 
 -- Anti Kick --
   
@@ -408,18 +410,58 @@ function InfiniteJump()
 end
 
 function ReloadChunk()
-	local humanroot2 = game.Players.LocalPlayer.Character.HumanoidRootPart
-      
-    local pos = Vector3.new(
-        math.floor(humanroot2.Position.X),
-        math.floor(humanroot2.Position.Y),
-        math.floor(humanroot2.Position.Z)
-    )
+	if not require then
+		Notify({
+        	Description = "Your Executor doesn't support require()!";
+        	Title = "Error!";
+        	Duration = 3;
+    	});
+		return 
+	end
 
-    wait()
-    humanroot2.CFrame = CFrame.new(math.floor(10000 * 3), math.floor(60 * 3), math.floor(10000 * 3))
-    wait()
-    humanroot2.CFrame = CFrame.new(pos)
+	local player = game:GetService("Players").LocalPlayer
+	local PlayerScripts = player:WaitForChild("PlayerScripts")
+	local MainLocalScript = PlayerScripts:WaitForChild("MainLocalScript")
+	local _CWorld = MainLocalScript:WaitForChild("CWorld")
+
+	local CWorld = require(_CWorld)
+
+	local world = CWorld.World
+	local loadingChunks = CWorld.LoadingChunks
+	local renderingChunks = CWorld.RenderingChunks
+	local loadingReqQueue = CWorld.LoadingReqQueue
+	local processingBlocks = CWorld.ProcessingBlocks
+
+	for cx, yrow in pairs(renderingChunks) do
+    	for cy, chunk in pairs(yrow) do
+        	if chunk.BlockerPart then
+            	pcall(function() chunk.BlockerPart:Destroy() end)
+        	end
+        	if chunk.vfold then
+            	pcall(function() chunk.vfold:Destroy() end)
+        	end
+        	if chunk.vlfold then
+            	pcall(function() chunk.vlfold:Destroy() end)
+        	end
+    	end
+	end
+
+	table.clear(world)
+	table.clear(loadingChunks)
+	table.clear(renderingChunks)
+	table.clear(loadingReqQueue)
+
+	if processingBlocks and typeof(processingBlocks) == "table" then
+    	if processingBlocks.clear then
+     	    pcall(function() processingBlocks:clear() end)
+    	elseif processingBlocks.Contents then
+        	table.clear(processingBlocks.Contents)
+    	else
+        	table.clear(processingBlocks)
+    	end
+	else
+    	warn("processingBlocks missing - continuing anyway")
+	end
 end
 	
 function conv(txt)
@@ -1063,7 +1105,7 @@ local NPtog = Tabs.vs:AddToggle("Name Protect", {
     Default = false,
     Callback = function(state)
         if state then
-			getgenv().name = "Protected"
+			getgenv().name = nameProtDefVal
 
 			local Plr = game.Players.LocalPlayer
 			for Index, Value in next, game:GetDescendants() do 
@@ -1979,6 +2021,34 @@ local tbdelay = Tabs.st:AddInput("Input", {
         end
     end
 })
+
+local npval = Tabs.st:AddInput("Input", {
+    Title = "Name Protect Name",
+    Description = "Replaces the name u get when you enable Name Protect (Default: Protected)",
+    Default = "0",
+    Placeholder = "Enter a name",
+    Numeric = false,
+    Finished = false,
+    Callback = function(ni)
+        local newName = ni
+        if newName then
+            nameProtDefVal = newName 
+            Fluent:Notify({
+                Title = "Success!",
+                Content = "Successfully edited name",
+                SubContent = "Delay: " .. newName,
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Invalid Name:" .. zi,
+                SubContent = "Please enter a valid name.",
+                Duration = 3
+            })
+        end
+    end
+})
   
 local Input = Tabs.st:AddInput("Input", {
     Title = "Crosshair+ Color",
@@ -2016,16 +2086,6 @@ local Dropdown = Tabs.st:AddDropdown("Dropdown", {
     end
 })
   
-local utstog = Tabs.st:AddToggle("Toggle", {
-    Title = "Use task.spawn()", 
-    Description = "Makes some features run asynchronously\nto prevent blocking.",
-    Default = false,
-    Callback = function(uts)
-        ut = uts
-        _G.useTaskSpawn = uts
-    end 
-})
-
 local afktog = Tabs.st:AddToggle("Toggle", {
     Title = "Anti AFK", 
     Description = "Disables disconnection due to idling.",
