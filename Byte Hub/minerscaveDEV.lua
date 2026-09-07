@@ -402,11 +402,6 @@ local function getSelectedSlot()
 end
 
 function InfiniteJump()
-  game:GetService("UserInputService").JumpRequest:Connect(function()
-    if infj then
-      game.Players.LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-  end)
 end
 
 function ReloadChunk()
@@ -513,6 +508,21 @@ local xrayEnabled = false
 local chestESPEnabled = false
 local lavaESPEnabled = false
 local playerESPEnabled = false
+local autoDropEnabled = false
+local autoDupeEnabled = false
+local armorEnabled = false
+local autoToolEnabled = false
+local airWalkEnabled = false
+local enderChestEnabled = false
+local fastBreakEnabled = false
+local nukerEnabled = false
+local nuker3Enabled = false
+local nuker5Enabled = false
+local scaffoldEnabled = false
+local scaffold3Enabled = false
+local highwayXEnabled = false
+local highwayZEnabled = false
+local targetStrafeTime = 0
 
 local function getLowestHealthNearbyPlayer()
     local lowestHealth = math.huge
@@ -563,23 +573,7 @@ local function getCombatTarget()
 end
 
 local function startKillAura()
-    if killAuraEnabled then return end
     killAuraEnabled = true
-    task.spawn(function()
-        while killAuraEnabled do
-            local localCharacter = LP.Character
-            local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
-            local target = getCombatTarget()
-            local targetRoot = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
-            if localRoot and targetRoot then
-                local distance = localRoot.Position - targetRoot.Position
-                if distance.X * distance.X + distance.Z * distance.Z <= (_G.RANGE_SQ or 256) then
-                    Attack:InvokeServer(target.Character)
-                end
-            end
-            task.wait(_G.delay or 0)
-        end
-    end)
 end
 
 local function stopKillAura()
@@ -587,20 +581,7 @@ local function stopKillAura()
 end
 
 local function startTargetStrafe()
-    if targetStrafeEnabled then return end
     targetStrafeEnabled = true
-    local timeAccumulator = 0
-    targetStrafeConnection = RunService.Heartbeat:Connect(function(deltaTime)
-        local localCharacter = LP.Character
-        local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
-        local target = getCombatTarget()
-        local targetRoot = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
-        if not localRoot or not targetRoot then return end
-        timeAccumulator += deltaTime * (_G.speed or 2)
-        local targetPosition = targetRoot.Position
-        local offset = Vector3.new(math.cos(timeAccumulator) * (_G.radius or 10), 0, math.sin(timeAccumulator) * (_G.radius or 10))
-        localRoot.CFrame = CFrame.new(targetPosition + offset, targetPosition)
-    end)
 end
 
 local function stopTargetStrafe()
@@ -622,47 +603,24 @@ local function changeTorsoSize(targetPlayer, size, transparency)
 end
 
 local function startHitbox()
-    if hitboxConnection then return end
-    hitboxConnection = RunService.Heartbeat:Connect(function()
-        for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            if targetPlayer ~= LP then changeTorsoSize(targetPlayer, Vector3.new(10, 10, 10), 0.999) end
-        end
-    end)
+    hitboxConnection = true
 end
 
 local function stopHitbox()
-    if hitboxConnection then hitboxConnection:Disconnect() hitboxConnection = nil end
+    hitboxConnection = nil
     for _, targetPlayer in ipairs(Players:GetPlayers()) do
         if targetPlayer ~= LP then changeTorsoSize(targetPlayer, Vector3.new(2, 2, 1), 0) end
     end
 end
 
 local function startCombatLog()
-    if combatLogEnabled then return end
     combatLogEnabled = true
-    task.spawn(function()
-        while combatLogEnabled do
-            local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Health <= humanoid.MaxHealth * 0.4 then game:Shutdown() end
-            task.wait()
-        end
-    end)
 end
 
 local function stopCombatLog() combatLogEnabled = false end
 
 local function startSafeZone()
-    if safeZoneEnabled then return end
     safeZoneEnabled = true
-    task.spawn(function()
-        while safeZoneEnabled do
-            local character = LP.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if humanoid and root and humanoid.Health <= humanoid.MaxHealth * 0.4 then root.CFrame = CFrame.new(3000, 180, 3000) end
-            task.wait(0.25)
-        end
-    end)
 end
 
 local function stopSafeZone() safeZoneEnabled = false end
@@ -690,15 +648,7 @@ local function stopSprint()
 end
 
 local function startAutoEat()
-    if autoEatEnabled then return end
     autoEatEnabled = true
-    task.spawn(function()
-        local consumeRemote = GameRemotes:WaitForChild("ConsumeItem")
-        while autoEatEnabled do
-            pcall(function() consumeRemote:InvokeServer(Inventory, Character.SelectedSlot.Value) end)
-            task.wait()
-        end
-    end)
 end
 
 local function stopAutoEat() autoEatEnabled = false end
@@ -724,15 +674,7 @@ local function stopJesus()
 end
 
 local function startInfiniteHealth()
-    if infiniteHealthEnabled then return end
     infiniteHealthEnabled = true
-    task.spawn(function()
-        while infiniteHealthEnabled do
-            moveitems:InvokeServer(101, 9, true)
-            moveitems:InvokeServer(9, 101, true)
-            task.wait()
-        end
-    end)
 end
 
 local function stopInfiniteHealth() infiniteHealthEnabled = false end
@@ -838,58 +780,173 @@ end
 
 local function startChestESP()
     chestESPEnabled = true
-    task.spawn(function()
-        while chestESPEnabled do
-            for _, object in ipairs(Workspace:GetDescendants()) do
-                if object:IsA("BasePart") and string.find(object.Name:lower(), "chest") then addAdornment(object, "ChestESP_Adornment", "Bright blue") end
-            end
-            task.wait()
-        end
-        clearAdornment("ChestESP_Adornment")
-    end)
 end
 
 local function stopChestESP() chestESPEnabled = false end
 
 local function startLavaESP()
     lavaESPEnabled = true
-    task.spawn(function()
-        while lavaESPEnabled do
-            for _, object in ipairs(Workspace:GetDescendants()) do
-                if object:IsA("BasePart") and object.Name == "Lava" then addAdornment(object, "LavaESP_Adornment", "Deep orange") end
-            end
-            task.wait()
-        end
-        clearAdornment("LavaESP_Adornment")
-    end)
 end
 
 local function stopLavaESP() lavaESPEnabled = false end
 
 local function startPlayerESP()
     playerESPEnabled = true
-    task.spawn(function()
-        while playerESPEnabled do
-            for _, targetPlayer in ipairs(Players:GetPlayers()) do
-                local targetCharacter = targetPlayer.Character
-                if targetPlayer ~= LP and targetCharacter and not targetCharacter:FindFirstChild("PlayerESP_Highlight") then
-                    local highlight = Instance.new("Highlight")
-                    highlight.Name = "PlayerESP_Highlight"
-                    highlight.FillTransparency = 0.5
-                    highlight.Parent = targetCharacter
-                end
-            end
-            task.wait()
-        end
-        for _, targetPlayer in ipairs(Players:GetPlayers()) do
-            local targetCharacter = targetPlayer.Character
-            local highlight = targetCharacter and targetCharacter:FindFirstChild("PlayerESP_Highlight")
-            if highlight then highlight:Destroy() end
-        end
-    end)
 end
 
 local function stopPlayerESP() playerESPEnabled = false end
+
+local function runNuker(size)
+    local coordText = LP.PlayerGui.HUDGui.DataFrame.Coord.Text
+    local x, y, z = coordText:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
+    x, y, z = tonumber(x), tonumber(y), tonumber(z)
+    if not (x and y and z) then return end
+
+    local radius = math.floor(size / 2)
+    for offsetX = -radius, radius do
+        for offsetY = -radius, radius do
+            for offsetZ = -radius, radius do
+                bb:FireServer(x + offsetX, y - 1 + offsetY, z + offsetZ)
+                abb:InvokeServer()
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    local safeZoneAccumulator = 0
+    local espAccumulator = 0
+    while true do
+        local deltaTime = task.wait()
+        safeZoneAccumulator += deltaTime
+        espAccumulator += deltaTime
+
+        pcall(function()
+            if TB then TriggerBot() end
+            if infj then
+                local jumpHumanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+                if jumpHumanoid then jumpHumanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+            end
+
+            if killAuraEnabled then
+                local localCharacter = LP.Character
+                local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+                local target = getCombatTarget()
+                local targetRoot = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+                if localRoot and targetRoot then
+                    local distance = localRoot.Position - targetRoot.Position
+                    if distance.X * distance.X + distance.Z * distance.Z <= (_G.RANGE_SQ or 256) then
+                        Attack:InvokeServer(target.Character)
+                    end
+                end
+            end
+
+            if targetStrafeEnabled then
+                local localCharacter = LP.Character
+                local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+                local target = getCombatTarget()
+                local targetRoot = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+                if localRoot and targetRoot then
+                    targetStrafeTime += deltaTime * (_G.speed or 2)
+                    local targetPosition = targetRoot.Position
+                    local offset = Vector3.new(math.cos(targetStrafeTime) * (_G.radius or 10), 0, math.sin(targetStrafeTime) * (_G.radius or 10))
+                    localRoot.CFrame = CFrame.new(targetPosition + offset, targetPosition)
+                end
+            end
+
+            if hitboxConnection then
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= LP then changeTorsoSize(targetPlayer, Vector3.new(10, 10, 10), 0.999) end
+                end
+            end
+
+            local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if combatLogEnabled and humanoid and humanoid.Health <= humanoid.MaxHealth * 0.4 then game:Shutdown() end
+            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if safeZoneEnabled and root and humanoid and humanoid.Health <= humanoid.MaxHealth * 0.4 and safeZoneAccumulator >= 0.25 then
+                root.CFrame = CFrame.new(3000, 180, 3000)
+            end
+
+            if autoEatEnabled and Character and Character:FindFirstChild("SelectedSlot") then
+                local consumeRemote = GameRemotes:FindFirstChild("ConsumeItem")
+                if consumeRemote then pcall(function() consumeRemote:InvokeServer(Inventory, Character.SelectedSlot.Value) end) end
+            end
+            if infiniteHealthEnabled then
+                moveitems:InvokeServer(101, 9, true)
+                moveitems:InvokeServer(9, 101, true)
+            end
+            if armorEnabled then autoEquipArmor() end
+
+            if autoToolEnabled then
+                local selectedSlotObj = getSelectedSlot()
+                local targetPos = CGlobals.TargetBlockCoordinate
+                local targetBlock = CGlobals.BlockUnderMouse
+                if selectedSlotObj and targetPos and targetBlock and BlockHighlights.IsBreaking(targetPos) then
+                    local bestSlot = getBestToolSlot(targetBlock.Name)
+                    if bestSlot and selectedSlotObj.Value ~= bestSlot then setSlot(bestSlot) end
+                end
+            end
+
+            if airWalkEnabled and Character and Character:FindFirstChild("HumanoidRootPart") then
+                platform.Position = Vector3.new(Character.HumanoidRootPart.Position.X, platformY, Character.HumanoidRootPart.Position.Z)
+            end
+            if enderChestEnabled then
+                local inventory = LP.PlayerGui.HUDGui.Inventory
+                inventory.Chest.Visible = true
+                inventory.Crafting.Visible = false
+                inventory.Mirror.Visible = false
+                inventory.ResultSlot.Visible = false
+                for _, slotName in ipairs({"Slot100", "Slot101", "Slot102", "Slot103", "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", "Slot85", "Slot86", "Slot87", "Slot88"}) do
+                    local slot = inventory.Slots:FindFirstChild(slotName)
+                    if slot then slot.Visible = false end
+                end
+            end
+
+            if fastBreakEnabled then abb:InvokeServer() end
+            if autoDropEnabled then GameRemotes.DropItem:InvokeServer(true) end
+            if nukerEnabled then runNuker(1) end
+            if nuker3Enabled then runNuker(3) end
+            if nuker5Enabled then runNuker(5) end
+            if autoDupeEnabled then chestdupe(2) end
+
+            if espAccumulator >= 0.1 then
+                espAccumulator = 0
+                if chestESPEnabled then
+                    for _, object in ipairs(Workspace:GetDescendants()) do
+                        if object:IsA("BasePart") and string.find(object.Name:lower(), "chest") then addAdornment(object, "ChestESP_Adornment", "Bright blue") end
+                    end
+                end
+                if lavaESPEnabled then
+                    for _, object in ipairs(Workspace:GetDescendants()) do
+                        if object:IsA("BasePart") and object.Name == "Lava" then addAdornment(object, "LavaESP_Adornment", "Deep orange") end
+                    end
+                end
+                if playerESPEnabled then
+                    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                        local targetCharacter = targetPlayer.Character
+                        if targetPlayer ~= LP and targetCharacter and not targetCharacter:FindFirstChild("PlayerESP_Highlight") then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = "PlayerESP_Highlight"
+                            highlight.FillTransparency = 0.5
+                            highlight.Parent = targetCharacter
+                        end
+                    end
+                end
+            end
+        end)
+
+        if not chestESPEnabled then clearAdornment("ChestESP_Adornment") end
+        if not lavaESPEnabled then clearAdornment("LavaESP_Adornment") end
+        if not playerESPEnabled then
+            for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                local targetCharacter = targetPlayer.Character
+                local highlight = targetCharacter and targetCharacter:FindFirstChild("PlayerESP_Highlight")
+                if highlight then highlight:Destroy() end
+            end
+        end
+        if safeZoneAccumulator >= 0.25 then safeZoneAccumulator = 0 end
+    end
+end)
   
 local Fluent = loadstring(game:HttpGet(
     "https://github.com/StyearX/Fluent-Modded/releases/download/Fluent/FluentPro"
@@ -989,15 +1046,6 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Default = false,
     Callback = function(state)
         TB = state
-
-        if state then
-            task.spawn(function()
-                while TB do
-                    TriggerBot()
-                    task.wait()
-                end
-            end)
-		end
     end
 })
 
@@ -1126,11 +1174,7 @@ local Toggle = Tabs.lp:AddToggle("ArmorToggle", {
     Description = "Automatically equips the best armor",
     Default = false,
     Callback = function(aarmor)
-		aa = aarmor
-        while aa do
-			autoEquipArmor()
-			task.wait()
-		end
+        armorEnabled = aarmor
 	end
 })
 
@@ -1139,22 +1183,7 @@ local Toggle = Tabs.lp:AddToggle("ToolToggle", {
     Description = "Automatically finds the best tool for mining\nCredits to 1derby1.",
     Default = false,
     Callback = function(atool)
-		at = atool
-		while at do
-			local selectedSlotObj = getSelectedSlot()
-			if not selectedSlotObj then return end
-
-			local targetPos = CGlobals.TargetBlockCoordinate
-			local targetBlock = CGlobals.BlockUnderMouse
-
-			if targetPos and targetBlock and BlockHighlights.IsBreaking(targetPos) then
-				local bestSlot = getBestToolSlot(targetBlock.Name)
-				if bestSlot and selectedSlotObj.Value ~= bestSlot then
-					setSlot(bestSlot)
-				end
-			end
-			task.wait()
-		end
+        autoToolEnabled = atool
 	end
 })
 
@@ -1198,7 +1227,6 @@ local jumptog = Tabs.lp:AddToggle("Infinite Jump", {
     Default = false,
     Callback = function(i)
         infj = i
-		InfiniteJump(i)
     end
 })
 
@@ -1207,21 +1235,12 @@ local AirWalkToggle = Tabs.lp:AddToggle("Air Walk", {
     Description = "Walk on air",
     Default = false,
     Callback = function(aw)
-        awalk = aw
-		if awalk then
+        airWalkEnabled = aw
+        if airWalkEnabled then
 			platformY = Character.HumanoidRootPart.Position.Y - 3
-			platform.CanCollide = awalk
-			while awalk do
-				if not awalk then return end
-				platform.Position = Vector3.new(
-					Character.HumanoidRootPart.Position.X,
-				    platformY,
-					Character.HumanoidRootPart.Position.Z
-				)
-				task.wait()
-			end
+            platform.CanCollide = true
 		else
-			platform.CanCollide = not awalk
+            platform.CanCollide = false
 		end
     end
 })
@@ -1450,31 +1469,7 @@ local ectog = Tabs.vs:AddToggle("Enderchest", {
     Description = "Gives you more inventory space",
     Default = false,
     Callback = function(echest)
-        ec = echest
-        while ec do
-            local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-            local inventory = playerGui.HUDGui.Inventory
-      
-            inventory.Chest.Visible = true
-            inventory.Crafting.Visible = false
-            inventory.Mirror.Visible = false
-            inventory.ResultSlot.Visible = false
-      
-            local slots = {
-                "Slot100", "Slot101", "Slot102", "Slot103",
-                "Slot80", "Slot81", "Slot82", "Slot83", "Slot84", 
-                "Slot85", "Slot86", "Slot87", "Slot88"
-            }
-
-            for _, slotName in ipairs(slots) do
-                local slot = inventory.Slots:FindFirstChild(slotName)
-                if slot then
-                    slot.Visible = false
-                end
-            end
-
-            task.wait()
-		end
+        enderChestEnabled = echest
     end 
 })
 
@@ -1572,11 +1567,7 @@ local fbtog = Tabs.wr:AddToggle("Fast Break", {
     Description = "Breaks blocks fast (with the correct tools)",
     Default = false,
     Callback = function(f)
-        fb = f
-        while fb do
-            abb:InvokeServer()
-            task.wait()
-        end
+        fastBreakEnabled = f
     end 
 })
 
@@ -1585,17 +1576,7 @@ local adstog = Tabs.wr:AddToggle("Toggle", {
     Description = "Automatically Drops Selected Item",
     Default = false,
     Callback = function(adsi)
-        ad = adsi
-        local function AutoDrop()
-            while ad do
-                game:GetService("ReplicatedStorage"):WaitForChild("GameRemotes"):WaitForChild("DropItem"):InvokeServer(true)
-            end 
-        end
-        if useTaskSpawn then
-            task.spawn(AutoDrop)
-        else
-            AutoDrop(ad)
-        end
+        autoDropEnabled = adsi
     end
 })
   
@@ -1647,24 +1628,7 @@ local nktog = Tabs.wr:AddToggle("Nuker", {
     Description = "Breaks blocks below you",
     Default = false,
     Callback = function(n)
-        nk = n
-        local function nukerLoop()
-            while nk do
-                local coordText2 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-                local roundedX, roundedY, roundedZ = coordText2:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
-        
-                bb:FireServer(roundedX, roundedY - 1, roundedZ)
-                abb:InvokeServer()
-        
-                task.wait()
-            end
-        end
-    
-        if useTaskSpawn then
-            task.spawn(nukerLoop)
-        else
-            nukerLoop()
-        end
+        nukerEnabled = n
     end 
 })
   
@@ -1673,51 +1637,7 @@ local nk3tog = Tabs.wr:AddToggle("Nuker3", {
     Description = "Breaks blocks around you in a 3³ area",
     Default = false,
     Callback = function(n3)
-        nk3 = n3
-        if nk3 then
-            _G.putanynamehere = task.spawn(function()
-                while nk3 do
-                    local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.coordinates.Text
-				    local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
-				    local baseX = tonumber(playerPosX)
-				    local baseY = tonumber(playerPosY) - 1
-				    local baseZ = tonumber(playerPosZ)
-
-				    local positions = {}
-			  
-				    for offsetX = -1, 1 do
-					    for offsetY = -1, 1 do
-					        for offsetZ = -1, 1 do
-							    table.insert(positions, {
-								    baseX + offsetX,
-								    baseY + offsetY,
-								    baseZ + offsetZ
-							    })
-						    end
-					    end
-				    end
-			  
-				    task.spawn(function()
-					    for i = 1, #positions do
-						    if not nk3 then break end
-
-						    task.spawn(function()
-							    local pos = positions[i]
-							    bb:FireServer(pos[1], pos[2], pos[3])
-							    abb:InvokeServer()
-						    end)
-					    end
-				    end)
-
-				    task.wait()
-			    end
-		    end)
-	    else
-		    if _G.putanynamehere then
-		    	task.cancel(_G.putanynamehere)
-			    _G.putanynamehere = nil
-		    end
-	    end
+        nuker3Enabled = n3
     end
 })
 
@@ -1726,51 +1646,7 @@ local nk5tog = Tabs.wr:AddToggle("Nuker5", {
     Description = "Breaks blocks below you",
     Default = false,
     Callback = function(n5)
-        nk5 = n5
-        if nk5 then
-	  	    _G.putanynamehere = task.spawn(function()
-			    while nk5 do
-					local coordText3 = game:GetService("Players").LocalPlayer.PlayerGui.HUDGui.DataFrame.Coord.Text
-					local playerPosX, playerPosY, playerPosZ = coordText3:match("(%-?%d+),%s*(%-?%d+),%s*(%-?%d+)")
-				    local baseX = tonumber(playerPosX)
-				    local baseY = tonumber(playerPosY) - 1
-			    	local baseZ = tonumber(playerPosZ)
-
-			    	local positions = {}
-			  
-				    for offsetX = -2, 2 do
-					    for offsetY = -2, 2 do
-						    for offsetZ = -2, 2 do
-							    table.insert(positions, {
-								    baseX + offsetX,
-								    baseY + offsetY,
-								    baseZ + offsetZ
-							    })
-						    end
-					    end
-				    end
-			  
-				    task.spawn(function()
-					    for i = 1, #positions do
-						    if not nk5 then break end
-
-						    task.spawn(function()
-							    local pos = positions[i]
-							    bb:FireServer(pos[1], pos[2], pos[3])
-							    abb:InvokeServer()
-						    end)
-					    end
-				    end)
-
-				    task.wait()
-			    end
-		    end)
-	    else
-		    if _G.putanynamehere then
-			    task.cancel(_G.putanynamehere)
-			    _G.putanynamehere = nil
-		    end
-	    end 
+        nuker5Enabled = n5
 	end
 })
   
@@ -2138,11 +2014,7 @@ local Toggle = Tabs.dt:AddToggle("Toggle", {
     Description = "Automatically dupes entire chest",
     Default = false,
     Callback = function(a2)
-        ad = a2
-        while ad do
-            chestdupe(2)
-            task.wait()
-        end
+        autoDupeEnabled = a2
     end 
 })
   
