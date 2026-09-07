@@ -494,25 +494,402 @@ end
 loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/archives/main/inv-viewerV2.lua",true))()
 game.Players.LocalPlayer.PlayerGui.invviewer.Enabled = false
 
---===MODULES===--
-local EssentialsModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/Essentials.lua"))()
-local KillAura = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/kill-aura.lua"))()
-local TargetStrafe = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/target-strafe.lua"))()
-local Hitbox = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/hitbox-expander.lua"))()
-local CombatLog = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-combat-log.lua"))()
-local AutoSafeZone = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-safe-zone.lua"))()
-local NoFall = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/no-fall.lua"))()
-local Sprint = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/sprint.lua"))()
-local AutoEat = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/auto-eat.lua"))()
-local Jesus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/jesus.lua"))()
-local InfiniteHealth = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/infinite-health.lua"))()
-local CrosshairPlus = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/crosshair-plus.lua"))()
-local RainbowCrosshair = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/rainbow-crosshair.lua"))()
-local Fullbright = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/fullbright.lua"))()
-local XRay = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/xray.lua"))()
-local ChestESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/chest-esp.lua"))()
-local LavaESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/lava-esp.lua"))()
-local PlayerESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/screengui/bytehub/refs/heads/main/Byte%20Hub/minerscave/modules/player-esp.lua"))()
+--===INLINE FEATURES===--
+local killAuraEnabled = false
+local targetStrafeEnabled = false
+local hitboxConnection
+local targetStrafeConnection
+local combatLogEnabled = false
+local safeZoneEnabled = false
+local noFallEnabled = false
+local sprintEnabled = false
+local autoEatEnabled = false
+local jesusEnabled = false
+local infiniteHealthEnabled = false
+local crosshairConnection
+local rainbowCrosshairConnection
+local fullbrightSettings = {}
+local xrayEnabled = false
+local chestESPEnabled = false
+local lavaESPEnabled = false
+local playerESPEnabled = false
+
+local function getLowestHealthNearbyPlayer()
+    local lowestHealth = math.huge
+    local targetPlayer
+    local localCharacter = LP.Character
+    local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+    if not localRoot then return nil end
+    for _, targetPlayerCandidate in ipairs(Players:GetPlayers()) do
+        local targetCharacter = targetPlayerCandidate.Character
+        local humanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+        local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+        if targetPlayerCandidate ~= LP and humanoid and targetRoot and humanoid.Health > 0 then
+            local distance = (targetRoot.Position - localRoot.Position).Magnitude
+            if distance <= (_G.strafeRange or 50) and humanoid.Health < lowestHealth then
+                lowestHealth = humanoid.Health
+                targetPlayer = targetPlayerCandidate
+            end
+        end
+    end
+    return targetPlayer
+end
+
+local function getClosestPlayer()
+    local closestPlayer
+    local shortestDistance = math.huge
+    local localCharacter = LP.Character
+    local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+    if not localRoot then return nil end
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        local targetCharacter = targetPlayer.Character
+        local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+        if targetPlayer ~= LP and targetRoot then
+            local distance = (localRoot.Position - targetRoot.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = targetPlayer
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function getCombatTarget()
+    if _G.selectedTargeting == "lowest" then
+        return getLowestHealthNearbyPlayer()
+    end
+    return getClosestPlayer()
+end
+
+local function startKillAura()
+    if killAuraEnabled then return end
+    killAuraEnabled = true
+    task.spawn(function()
+        while killAuraEnabled do
+            local localCharacter = LP.Character
+            local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+            local target = getCombatTarget()
+            local targetRoot = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+            if localRoot and targetRoot then
+                local distance = localRoot.Position - targetRoot.Position
+                if distance.X * distance.X + distance.Z * distance.Z <= (_G.RANGE_SQ or 256) then
+                    Attack:InvokeServer(target.Character)
+                end
+            end
+            task.wait(_G.delay or 0)
+        end
+    end)
+end
+
+local function stopKillAura()
+    killAuraEnabled = false
+end
+
+local function startTargetStrafe()
+    if targetStrafeEnabled then return end
+    targetStrafeEnabled = true
+    local timeAccumulator = 0
+    targetStrafeConnection = RunService.Heartbeat:Connect(function(deltaTime)
+        local localCharacter = LP.Character
+        local localRoot = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+        local target = getCombatTarget()
+        local targetRoot = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+        if not localRoot or not targetRoot then return end
+        timeAccumulator += deltaTime * (_G.speed or 2)
+        local targetPosition = targetRoot.Position
+        local offset = Vector3.new(math.cos(timeAccumulator) * (_G.radius or 10), 0, math.sin(timeAccumulator) * (_G.radius or 10))
+        localRoot.CFrame = CFrame.new(targetPosition + offset, targetPosition)
+    end)
+end
+
+local function stopTargetStrafe()
+    targetStrafeEnabled = false
+    if targetStrafeConnection then
+        targetStrafeConnection:Disconnect()
+        targetStrafeConnection = nil
+    end
+end
+
+local function changeTorsoSize(targetPlayer, size, transparency)
+    local targetCharacter = targetPlayer.Character
+    local torso = targetCharacter and (targetCharacter:FindFirstChild("Torso") or targetCharacter:FindFirstChild("UpperTorso"))
+    if torso then
+        torso.Size = size
+        torso.Massless = true
+        torso.Transparency = transparency
+    end
+end
+
+local function startHitbox()
+    if hitboxConnection then return end
+    hitboxConnection = RunService.Heartbeat:Connect(function()
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            if targetPlayer ~= LP then changeTorsoSize(targetPlayer, Vector3.new(10, 10, 10), 0.999) end
+        end
+    end)
+end
+
+local function stopHitbox()
+    if hitboxConnection then hitboxConnection:Disconnect() hitboxConnection = nil end
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= LP then changeTorsoSize(targetPlayer, Vector3.new(2, 2, 1), 0) end
+    end
+end
+
+local function startCombatLog()
+    if combatLogEnabled then return end
+    combatLogEnabled = true
+    task.spawn(function()
+        while combatLogEnabled do
+            local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health <= humanoid.MaxHealth * 0.4 then game:Shutdown() end
+            task.wait()
+        end
+    end)
+end
+
+local function stopCombatLog() combatLogEnabled = false end
+
+local function startSafeZone()
+    if safeZoneEnabled then return end
+    safeZoneEnabled = true
+    task.spawn(function()
+        while safeZoneEnabled do
+            local character = LP.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if humanoid and root and humanoid.Health <= humanoid.MaxHealth * 0.4 then root.CFrame = CFrame.new(3000, 180, 3000) end
+            task.wait(0.25)
+        end
+    end)
+end
+
+local function stopSafeZone() safeZoneEnabled = false end
+
+local function startNoFall()
+    noFallEnabled = true
+    if Demo.Parent == GameRemotes then Demo.Parent = Workspace end
+end
+
+local function stopNoFall()
+    noFallEnabled = false
+    if Demo.Parent == Workspace then Demo.Parent = GameRemotes end
+end
+
+local function startSprint()
+    sprintEnabled = true
+    local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then humanoid.WalkSpeed = 20 end
+end
+
+local function stopSprint()
+    sprintEnabled = false
+    local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then humanoid.WalkSpeed = 12 end
+end
+
+local function startAutoEat()
+    if autoEatEnabled then return end
+    autoEatEnabled = true
+    task.spawn(function()
+        local consumeRemote = GameRemotes:WaitForChild("ConsumeItem")
+        while autoEatEnabled do
+            pcall(function() consumeRemote:InvokeServer(Inventory, Character.SelectedSlot.Value) end)
+            task.wait()
+        end
+    end)
+end
+
+local function stopAutoEat() autoEatEnabled = false end
+
+local function startJesus()
+    jesusEnabled = true
+    local fluidFolder = Workspace:FindFirstChild("Fluid")
+    if fluidFolder then
+        for _, object in ipairs(fluidFolder:GetDescendants()) do
+            if object:IsA("BasePart") and (object.Name == "Water" or object.Name == "Lava") then object.CanCollide = true end
+        end
+    end
+end
+
+local function stopJesus()
+    jesusEnabled = false
+    local fluidFolder = Workspace:FindFirstChild("Fluid")
+    if fluidFolder then
+        for _, object in ipairs(fluidFolder:GetDescendants()) do
+            if object:IsA("BasePart") and (object.Name == "Water" or object.Name == "Lava") then object.CanCollide = false end
+        end
+    end
+end
+
+local function startInfiniteHealth()
+    if infiniteHealthEnabled then return end
+    infiniteHealthEnabled = true
+    task.spawn(function()
+        while infiniteHealthEnabled do
+            moveitems:InvokeServer(101, 9, true)
+            moveitems:InvokeServer(9, 101, true)
+            task.wait()
+        end
+    end)
+end
+
+local function stopInfiniteHealth() infiniteHealthEnabled = false end
+
+local function showDefaultCrosshair(show)
+    for _, object in ipairs(LP.PlayerGui.HUDGui:GetChildren()) do
+        if object.Name == "Crosshair" then object.Visible = show end
+    end
+end
+
+local function startCrosshair(settings)
+    showDefaultCrosshair(false)
+    local viewport = Camera.ViewportSize / 2
+    local size = settings.Size / 2
+    settings.HorizontalLine.Color = settings.Color
+    settings.HorizontalLine.Thickness = settings.Thickness
+    settings.HorizontalLine.Transparency = settings.Transparency
+    settings.HorizontalLine.Visible = true
+    settings.HorizontalLine.From = Vector2.new(viewport.X - size, viewport.Y)
+    settings.HorizontalLine.To = Vector2.new(viewport.X + size, viewport.Y)
+    settings.VerticalLine.Color = settings.Color
+    settings.VerticalLine.Thickness = settings.Thickness
+    settings.VerticalLine.Transparency = settings.Transparency
+    settings.VerticalLine.Visible = true
+    settings.VerticalLine.From = Vector2.new(viewport.X, viewport.Y - size)
+    settings.VerticalLine.To = Vector2.new(viewport.X, viewport.Y + size)
+end
+
+local function stopCrosshair(settings)
+    settings.HorizontalLine.Visible = false
+    settings.VerticalLine.Visible = false
+    showDefaultCrosshair(true)
+end
+
+local function startRainbowCrosshair(settings)
+    showDefaultCrosshair(false)
+    rainbowCrosshairConnection = RunService.RenderStepped:Connect(function()
+        local viewport = Camera.ViewportSize / 2
+        local size = settings.Size / 2
+        local color = Color3.fromHSV((tick() * 0.2) % 1, 1, 1)
+        settings.HorizontalLine.Color = color
+        settings.HorizontalLine.Visible = true
+        settings.HorizontalLine.From = Vector2.new(viewport.X - size, viewport.Y)
+        settings.HorizontalLine.To = Vector2.new(viewport.X + size, viewport.Y)
+        settings.VerticalLine.Color = color
+        settings.VerticalLine.Visible = true
+        settings.VerticalLine.From = Vector2.new(viewport.X, viewport.Y - size)
+        settings.VerticalLine.To = Vector2.new(viewport.X, viewport.Y + size)
+    end)
+end
+
+local function stopRainbowCrosshair(settings)
+    if rainbowCrosshairConnection then rainbowCrosshairConnection:Disconnect() rainbowCrosshairConnection = nil end
+    stopCrosshair(settings)
+end
+
+local function startFullbright()
+    fullbrightSettings = {Brightness = Lighting.Brightness, ClockTime = Lighting.ClockTime, FogEnd = Lighting.FogEnd, GlobalShadows = Lighting.GlobalShadows, OutdoorAmbient = Lighting.OutdoorAmbient}
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 14
+    Lighting.FogEnd = 100000
+    Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+end
+
+local function stopFullbright()
+    for property, value in pairs(fullbrightSettings) do Lighting[property] = value end
+    fullbrightSettings = {}
+end
+
+local function startXRay()
+    xrayEnabled = true
+    for _, block in ipairs(blocks:GetChildren()) do
+        if block:IsA("BasePart") then block.LocalTransparencyModifier = 0.5 end
+    end
+end
+
+local function stopXRay()
+    xrayEnabled = false
+    for _, block in ipairs(blocks:GetChildren()) do
+        if block:IsA("BasePart") then block.LocalTransparencyModifier = 0 end
+    end
+end
+
+local function addAdornment(part, name, color)
+    if part:FindFirstChild(name) then return end
+    local adornment = Instance.new("BoxHandleAdornment")
+    adornment.Name = name
+    adornment.Adornee = part
+    adornment.AlwaysOnTop = true
+    adornment.Size = part.Size
+    adornment.Transparency = 0.5
+    adornment.Color = BrickColor.new(color)
+    adornment.Parent = part
+end
+
+local function clearAdornment(name)
+    for _, object in ipairs(Workspace:GetDescendants()) do
+        local adornment = object:FindFirstChild(name)
+        if adornment then adornment:Destroy() end
+    end
+end
+
+local function startChestESP()
+    chestESPEnabled = true
+    task.spawn(function()
+        while chestESPEnabled do
+            for _, object in ipairs(Workspace:GetDescendants()) do
+                if object:IsA("BasePart") and string.find(object.Name:lower(), "chest") then addAdornment(object, "ChestESP_Adornment", "Bright blue") end
+            end
+            task.wait()
+        end
+        clearAdornment("ChestESP_Adornment")
+    end)
+end
+
+local function stopChestESP() chestESPEnabled = false end
+
+local function startLavaESP()
+    lavaESPEnabled = true
+    task.spawn(function()
+        while lavaESPEnabled do
+            for _, object in ipairs(Workspace:GetDescendants()) do
+                if object:IsA("BasePart") and object.Name == "Lava" then addAdornment(object, "LavaESP_Adornment", "Deep orange") end
+            end
+            task.wait()
+        end
+        clearAdornment("LavaESP_Adornment")
+    end)
+end
+
+local function stopLavaESP() lavaESPEnabled = false end
+
+local function startPlayerESP()
+    playerESPEnabled = true
+    task.spawn(function()
+        while playerESPEnabled do
+            for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                local targetCharacter = targetPlayer.Character
+                if targetPlayer ~= LP and targetCharacter and not targetCharacter:FindFirstChild("PlayerESP_Highlight") then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Name = "PlayerESP_Highlight"
+                    highlight.FillTransparency = 0.5
+                    highlight.Parent = targetCharacter
+                end
+            end
+            task.wait()
+        end
+        for _, targetPlayer in ipairs(Players:GetPlayers()) do
+            local targetCharacter = targetPlayer.Character
+            local highlight = targetCharacter and targetCharacter:FindFirstChild("PlayerESP_Highlight")
+            if highlight then highlight:Destroy() end
+        end
+    end)
+end
+
+local function stopPlayerESP() playerESPEnabled = false end
   
 local Fluent = loadstring(game:HttpGet(
     "https://github.com/StyearX/Fluent-Modded/releases/download/Fluent/FluentPro"
@@ -586,9 +963,9 @@ Tabs.cs:AddToggle("Kill Aura", {
     Default = false,
     Callback = function(state)
 		if state then
-			KillAura.start()
+            startKillAura()
 		else
-			KillAura.stop()
+            stopKillAura()
 		end
 	end
 })
@@ -599,9 +976,9 @@ local Toggle = Tabs.cs:AddToggle("Toggle", {
     Default = false,
     Callback = function(state)
         if state then
-            TargetStrafe.start()
+            startTargetStrafe()
         else
-            TargetStrafe.stop()
+            stopTargetStrafe()
   	    end
     end
 })
@@ -630,9 +1007,9 @@ local hboxtog = Tabs.cs:AddToggle("HitboxToggle", {
     Default = false,
     Callback = function(state)
         if state then
-		    Hitbox.start()
+            startHitbox()
 	    else
-		    Hitbox.stop()
+            stopHitbox()
 	    end
     end 
 })
@@ -643,9 +1020,9 @@ local acltog = Tabs.cs:AddToggle("Auto Combat Log", {
     Default = false,
     Callback = function(state)
         if state then
-		    CombatLog.start()
+            startCombatLog()
 	    else
-		    CombatLog.stop()
+            stopCombatLog()
 	    end
     end 
 }) 
@@ -656,9 +1033,9 @@ local acttog = Tabs.cs:AddToggle("Auto Combat TP", {
     Default = false,
     Callback = function(state)
         if state then
-		    AutoSafeZone.start()
+            startSafeZone()
 	    else
-		    AutoSafeZone.stop()
+            stopSafeZone()
 		end
     end 
 }) 
@@ -677,9 +1054,9 @@ local nftog = Tabs.lp:AddToggle("No Fall", {
     Default = false,
     Callback = function(state)
         if state then
-	        NoFall.start()
+	        startNoFall()
         else
-            NoFall.stop()
+            stopNoFall()
 	    end
     end 
 }) 
@@ -690,9 +1067,9 @@ local sptog = Tabs.lp:AddToggle("Sprint", {
     Default = false,
     Callback = function(state)
         if state then
-	        Sprint.start()
+	        startSprint()
         else
-            Sprint.stop()
+            stopSprint()
 	    end
     end 
 }) 
@@ -711,9 +1088,9 @@ local eattog = Tabs.lp:AddToggle("EatToggle", {
     Default = false,
     Callback = function(state)
         if state then
-	        AutoEat.start()
+	        startAutoEat()
         else
-            AutoEat.stop()
+            stopAutoEat()
 	    end
 	end
 })
@@ -724,9 +1101,9 @@ local jetog = Tabs.lp:AddToggle("Jesus", {
     Default = false,
     Callback = function(state)
         if state then
-    	    Jesus.start()
+		    startJesus()
         else
-            Jesus.stop()
+            stopJesus()
 	    end
     end
 })
@@ -737,9 +1114,9 @@ local Toggle = Tabs.lp:AddToggle("Toggle", {
     Default = false,
     Callback = function(t)
         if t then
-	    	InfiniteHealth.start(moveitems, _G.useTaskSpawn)
+            startInfiniteHealth()
 	    else
-		    InfiniteHealth.stop()
+            stopInfiniteHealth()
 	    end
     end 
 })
@@ -962,9 +1339,9 @@ local chp = Tabs.vs:AddToggle("CH+", {
     Default = false,
     Callback = function(state)
         if state then
-		    CrosshairPlus.start(CrosshairSettings, Camera)
+            startCrosshair(CrosshairSettings)
 	    else
-		    CrosshairPlus.stop(CrosshairSettings)
+            stopCrosshair(CrosshairSettings)
 	    end
     end 
 }) 
@@ -985,9 +1362,9 @@ local rbchtog = Tabs.vs:AddToggle("Toggle", {
         }
 
         if state then
-			RainbowCrosshair.start(CrosshairSettings2, Camera)
+            startRainbowCrosshair(CrosshairSettings2)
 		else
-			RainbowCrosshair.stop(CrosshairSettings2)
+            stopRainbowCrosshair(CrosshairSettings2)
 		end
     end 
 })
@@ -998,9 +1375,9 @@ local fbtog = Tabs.vs:AddToggle("Fullbright", {
     Default = false,
     Callback = function(state)
         if state then
-			Fullbright.start()
+            startFullbright()
 		else
-			Fullbright.stop()
+            stopFullbright()
 		end
     end 
   }) 
@@ -1011,9 +1388,9 @@ local Toggle = Tabs.vs:AddToggle("Toggle", {
     Default = false,
     Callback = function(state)
         if state then
-			XRay.start()
+            startXRay()
 		else
-			XRay.stop()
+            stopXRay()
 		end
     end 
 }) 
@@ -1025,9 +1402,9 @@ local cesptog = Tabs.vs:AddToggle("Chest ESP", {
     Default = false,
     Callback = function(state)
         if state then
-			ChestESP.start()
+            startChestESP()
 		else
-			ChestESP.stop()
+            stopChestESP()
 		end
     end 
 }) 
@@ -1038,9 +1415,9 @@ local lesptog = Tabs.vs:AddToggle("Lava ESP", {
     Default = false,
     Callback = function(state)
         if state then
-			LavaESP.start()
+            startLavaESP()
 		else
-			LavaESP.stop()
+            stopLavaESP()
 		end
     end 
 }) 
@@ -1051,9 +1428,9 @@ local pesptog = Tabs.vs:AddToggle("Player ESP", {
     Default = false,
     Callback = function(state)
         if state then
-			PlayerESP.start()
+            startPlayerESP()
 		else
-			PlayerESP.stop()
+            stopPlayerESP()
 		end
     end 
 })
