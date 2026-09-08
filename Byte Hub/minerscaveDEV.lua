@@ -1658,12 +1658,7 @@ Tabs.wr:AddButton({
         local ylp = tonumber(yStr) - 2
         local zlp = tonumber(zStr)
     
-        local args = {
-            [1] = xlp,
-            [2] = ylp,
-            [3] = zlp,
-            [4] = 0
-        }
+        local args = {xlp, ylp, zlp, 0}
     
         useblock:InvokeServer(unpack(args))
     end
@@ -2081,13 +2076,8 @@ Tabs.dt:AddButton({
     Title = "Get Infinite Items",
     Description = "Select the item first then execute this",
     Callback = function()
-        local args = {
-            [1] = -1,
-            [2] = 0,
-            [3] = true,
-            [4] = -9.99999999919999999919999919999919199191919999199191919991999199e100
-        }
-        local args2 = {[1] = {}}
+        local args = {-1, 0, true, -9.99999999919999999919999919999919199191919999199191919991999199e100}
+        local args2 = {{}}
         if usetables then
             args2[1][1] = args[1]
             args2[1][2] = args[2]
@@ -2129,10 +2119,7 @@ if hasGiveExploit then
         Title = "Give Item",
         Description = "Gives selected amount of selected item",
         Callback = function()
-            local args = {
-                [1] = gip,
-                [2] = aip
-            }
+            local args = {gip, aip}
 
             game:GetService("ReplicatedStorage").admingui:FireServer(unpack(args))
         end
