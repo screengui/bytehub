@@ -523,6 +523,14 @@ local scaffold3Enabled = false
 local highwayXEnabled = false
 local highwayZEnabled = false
 local targetStrafeTime = 0
+local playerESPWasEnabled = false
+local chestESPDescendantConnection
+local lavaESPDescendantConnection
+local hitboxAccumulator = 0
+local automationAccumulator = 0
+local armorAccumulator = 0
+local toolAccumulator = 0
+local espAccumulator = 0
 
 local function getLowestHealthNearbyPlayer()
     local lowestHealth = math.huge
@@ -780,15 +788,53 @@ end
 
 local function startChestESP()
     chestESPEnabled = true
+    for _, object in ipairs(Workspace:GetDescendants()) do
+        if object:IsA("BasePart") and string.find(object.Name:lower(), "chest") then
+            addAdornment(object, "ChestESP_Adornment", "Bright blue")
+        end
+    end
+    if not chestESPDescendantConnection then
+        chestESPDescendantConnection = Workspace.DescendantAdded:Connect(function(object)
+            if chestESPEnabled and object:IsA("BasePart") and string.find(object.Name:lower(), "chest") then
+                addAdornment(object, "ChestESP_Adornment", "Bright blue")
+            end
+        end)
+    end
 end
 
-local function stopChestESP() chestESPEnabled = false end
+local function stopChestESP()
+    chestESPEnabled = false
+    if chestESPDescendantConnection then
+        chestESPDescendantConnection:Disconnect()
+        chestESPDescendantConnection = nil
+    end
+    clearAdornment("ChestESP_Adornment")
+end
 
 local function startLavaESP()
     lavaESPEnabled = true
+    for _, object in ipairs(Workspace:GetDescendants()) do
+        if object:IsA("BasePart") and object.Name == "Lava" then
+            addAdornment(object, "LavaESP_Adornment", "Deep orange")
+        end
+    end
+    if not lavaESPDescendantConnection then
+        lavaESPDescendantConnection = Workspace.DescendantAdded:Connect(function(object)
+            if lavaESPEnabled and object:IsA("BasePart") and object.Name == "Lava" then
+                addAdornment(object, "LavaESP_Adornment", "Deep orange")
+            end
+        end)
+    end
 end
 
-local function stopLavaESP() lavaESPEnabled = false end
+local function stopLavaESP()
+    lavaESPEnabled = false
+    if lavaESPDescendantConnection then
+        lavaESPDescendantConnection:Disconnect()
+        lavaESPDescendantConnection = nil
+    end
+    clearAdornment("LavaESP_Adornment")
+end
 
 local function startPlayerESP()
     playerESPEnabled = true
@@ -815,10 +861,13 @@ end
 
 task.spawn(function()
     local safeZoneAccumulator = 0
-    local espAccumulator = 0
     while true do
-        local deltaTime = task.wait()
+        local deltaTime = task.wait(0.05)
         safeZoneAccumulator += deltaTime
+        hitboxAccumulator += deltaTime
+        automationAccumulator += deltaTime
+        armorAccumulator += deltaTime
+        toolAccumulator += deltaTime
         espAccumulator += deltaTime
 
         pcall(function()
@@ -854,7 +903,8 @@ task.spawn(function()
                 end
             end
 
-            if hitboxConnection then
+            if hitboxConnection and hitboxAccumulator >= 0.1 then
+                hitboxAccumulator = 0
                 for _, targetPlayer in ipairs(Players:GetPlayers()) do
                     if targetPlayer ~= LP then changeTorsoSize(targetPlayer, Vector3.new(10, 10, 10), 0.999) end
                 end
@@ -867,17 +917,20 @@ task.spawn(function()
                 root.CFrame = CFrame.new(3000, 180, 3000)
             end
 
-            if autoEatEnabled and Character and Character:FindFirstChild("SelectedSlot") then
+            if automationAccumulator >= 0.1 and autoEatEnabled and Character and Character:FindFirstChild("SelectedSlot") then
                 local consumeRemote = GameRemotes:FindFirstChild("ConsumeItem")
                 if consumeRemote then pcall(function() consumeRemote:InvokeServer(Inventory, Character.SelectedSlot.Value) end) end
             end
-            if infiniteHealthEnabled then
+            if automationAccumulator >= 0.1 and infiniteHealthEnabled then
                 moveitems:InvokeServer(101, 9, true)
                 moveitems:InvokeServer(9, 101, true)
             end
-            if armorEnabled then autoEquipArmor() end
+            if armorAccumulator >= 0.25 and armorEnabled then
+                autoEquipArmor()
+                armorAccumulator = 0
+            end
 
-            if autoToolEnabled then
+            if toolAccumulator >= 0.1 and autoToolEnabled then
                 local selectedSlotObj = getSelectedSlot()
                 local targetPos = CGlobals.TargetBlockCoordinate
                 local targetBlock = CGlobals.BlockUnderMouse
@@ -885,6 +938,7 @@ task.spawn(function()
                     local bestSlot = getBestToolSlot(targetBlock.Name)
                     if bestSlot and selectedSlotObj.Value ~= bestSlot then setSlot(bestSlot) end
                 end
+                toolAccumulator = 0
             end
 
             if airWalkEnabled and Character and Character:FindFirstChild("HumanoidRootPart") then
@@ -902,25 +956,18 @@ task.spawn(function()
                 end
             end
 
-            if fastBreakEnabled then abb:InvokeServer() end
-            if autoDropEnabled then GameRemotes.DropItem:InvokeServer(true) end
-            if nukerEnabled then runNuker(1) end
-            if nuker3Enabled then runNuker(3) end
-            if nuker5Enabled then runNuker(5) end
-            if autoDupeEnabled then chestdupe(2) end
+            if automationAccumulator >= 0.1 then
+                if fastBreakEnabled then abb:InvokeServer() end
+                if autoDropEnabled then GameRemotes.DropItem:InvokeServer(true) end
+                if nukerEnabled then runNuker(1) end
+                if nuker3Enabled then runNuker(3) end
+                if nuker5Enabled then runNuker(5) end
+                if autoDupeEnabled then chestdupe(2) end
+                automationAccumulator = 0
+            end
 
-            if espAccumulator >= 0.1 then
+            if espAccumulator >= 0.5 then
                 espAccumulator = 0
-                if chestESPEnabled then
-                    for _, object in ipairs(Workspace:GetDescendants()) do
-                        if object:IsA("BasePart") and string.find(object.Name:lower(), "chest") then addAdornment(object, "ChestESP_Adornment", "Bright blue") end
-                    end
-                end
-                if lavaESPEnabled then
-                    for _, object in ipairs(Workspace:GetDescendants()) do
-                        if object:IsA("BasePart") and object.Name == "Lava" then addAdornment(object, "LavaESP_Adornment", "Deep orange") end
-                    end
-                end
                 if playerESPEnabled then
                     for _, targetPlayer in ipairs(Players:GetPlayers()) do
                         local targetCharacter = targetPlayer.Character
@@ -935,15 +982,14 @@ task.spawn(function()
             end
         end)
 
-        if not chestESPEnabled then clearAdornment("ChestESP_Adornment") end
-        if not lavaESPEnabled then clearAdornment("LavaESP_Adornment") end
-        if not playerESPEnabled then
+        if playerESPWasEnabled and not playerESPEnabled then
             for _, targetPlayer in ipairs(Players:GetPlayers()) do
                 local targetCharacter = targetPlayer.Character
                 local highlight = targetCharacter and targetCharacter:FindFirstChild("PlayerESP_Highlight")
                 if highlight then highlight:Destroy() end
             end
         end
+        playerESPWasEnabled = playerESPEnabled
         if safeZoneAccumulator >= 0.25 then safeZoneAccumulator = 0 end
     end
 end)
