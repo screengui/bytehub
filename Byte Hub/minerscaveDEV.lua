@@ -2014,9 +2014,15 @@ Tabs.dt:AddButton({
     Title = "Dupe Selected Item",
     Description = "Dupes the selected item",
     Callback = function()
-	    local slot = game.Players.LocalPlayer.PlayerGui.HUDGui.Inventory.Slots:FindFirstChild("Slot-1")
-        local b = slot.SlotNA.Count
+        local slots = LP.PlayerGui:FindFirstChild("HUDGui")
+            and LP.PlayerGui.HUDGui:FindFirstChild("Inventory")
+            and LP.PlayerGui.HUDGui.Inventory:FindFirstChild("Slots")
+        local slot = slots and slots:FindFirstChild("Slot-1")
         local moveitems = gameremotes:FindFirstChild("MoveItem") or gameremotes:FindFirstChild("MoveItems")
+        local countLabel = slot and slot:FindFirstChild("SlotNA") and slot.SlotNA:FindFirstChild("Count")
+        if not countLabel or not moveitems then return end
+
+        local b = countLabel
         local bCount = tonumber(b.Text)
         if not bCount then
             return
@@ -2027,14 +2033,8 @@ Tabs.dt:AddButton({
         end
 
         local howmuch = 64 - bCount
-        local usetables = false
-      
-        local success, err = pcall(function()
-            if usetables then
-                moveitems:InvokeServer({[1] = -1, [2] = 82, [3] = true, [4] = -howmuch})
-            else
-                moveitems:InvokeServer(-1, 82, true, -howmuch)
-            end
+        pcall(function()
+            moveitems:InvokeServer(-1, 82, true, -howmuch)
         end)
     end
 })
