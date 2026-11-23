@@ -15,6 +15,10 @@
     centred rows that fill in when hovered/enabled and grow a 2px accent bar,
     and right clicking a module opens its settings screen.
 
+    Search is its own draggable window: typing lists matching modules inside it
+    (left click toggles, right click opens settings) while the category windows
+    stay visible.
+
     API
       GuiLibrary:CreateWindow(name)              -> window
       window:CreateModule{ Name, Description, Function, Array, Default }
@@ -47,6 +51,7 @@ local lplr = Players.LocalPlayer
 
 local GuiLibrary = {}
 GuiLibrary.Windows = {}
+GuiLibrary.WindowOrder = {}
 GuiLibrary.Connections = {}
 GuiLibrary.CapturingKeybind = false
 GuiLibrary.Info = {
@@ -134,6 +139,63 @@ end
 local function viewportSize()
     local camera = Workspace.CurrentCamera
     return camera and camera.ViewportSize or Vector2.new(1280, 720)
+end
+
+-- Drags `frame` by grabbing `handle`. Movement is accumulated from InputObject.Delta
+-- so it never mixes coordinate spaces (GUI inset / scale) and works for Frames as
+-- well as buttons, as long as the handle receives input.
+local function makeDraggable(handle, frame, onEnd)
+    local dragging = false
+    local position
+
+    local function start()
+        if dragging then return end
+
+        frame.AnchorPoint = Vector2.zero
+        local absolute = frame.AbsolutePosition
+        frame.Position = UDim2.fromOffset(absolute.X, absolute.Y)
+        position = Vector2.new(absolute.X, absolute.Y)
+        dragging = true
+    end
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            start()
+        end
+    end)
+
+    if handle:IsA("GuiButton") then
+        handle.MouseButton1Down:Connect(start)
+    end
+
+    connect(UserInputService.InputChanged, function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+            and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+        local delta = input.Delta
+        local nextPosition = Vector2.new(position.X + delta.X, position.Y + delta.Y)
+
+        local viewport = viewportSize()
+        local size = frame.AbsoluteSize
+        nextPosition = Vector2.new(
+            math.clamp(nextPosition.X, 0, math.max(viewport.X - size.X, 0)),
+            math.clamp(nextPosition.Y, 0, math.max(viewport.Y - size.Y, 0))
+        )
+
+        position = nextPosition
+        frame.Position = UDim2.fromOffset(math.round(nextPosition.X), math.round(nextPosition.Y))
+    end)
+
+    connect(UserInputService.InputEnded, function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+            and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+        dragging = false
+        if onEnd then onEnd() end
+    end)
 end
 
 local function inputName(input)
@@ -335,17 +397,74 @@ connect(RunService.RenderStepped, function()
 end)
 
 -- Search -------------------------------------------------------
+-- In Meteor the search field is a window of its own: typing into it lists the
+-- matching modules inside that window instead of hiding the category windows.
 
-local SearchFrame = new("Frame", {
-    Size = UDim2.fromOffset(200, 24),
-    Position = UDim2.new(0.5, 0, 0, 40),
-    AnchorPoint = Vector2.new(0.5, 0),
+local SEARCH_WIDTH = 200
+
+local SavedSearch = windowConfig("Search")
+local searchPosition, searchAnchor
+if type(SavedSearch.Position) == "table" and SavedSearch.Position.X and SavedSearch.Position.Y then
+    searchPosition = UDim2.fromOffset(SavedSearch.Position.X, SavedSearch.Position.Y)
+    searchAnchor = Vector2.zero
+else
+    searchPosition = UDim2.new(0.5, 0, 0, 40)
+    searchAnchor = Vector2.new(0.5, 0)
+end
+
+local SearchWindow = new("Frame", {
+    Name = "Search",
+    Size = UDim2.fromOffset(SEARCH_WIDTH, HEADER_HEIGHT),
+    Position = searchPosition,
+    AnchorPoint = searchAnchor,
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ZIndex = 6,
+}, ScreenGui)
+new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.25 }, SearchWindow)
+
+local SearchHeader = new("TextButton", {
+    Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
+    BackgroundColor3 = Palette.Accent,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "",
+    ZIndex = 7,
+}, SearchWindow)
+
+new("TextLabel", {
+    Size = UDim2.new(1, -8, 1, 0),
+    Position = UDim2.fromOffset(8, 0),
+    BackgroundTransparency = 1,
+    Font = Palette.Font,
+    TextSize = Palette.TextSize,
+    TextColor3 = Palette.Text,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Text = "Search",
+    ZIndex = 8,
+}, SearchHeader)
+
+local SearchBody = new("Frame", {
+    Position = UDim2.fromOffset(0, HEADER_HEIGHT),
+    Size = UDim2.new(1, 0, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
     BackgroundColor3 = Palette.Background,
     BackgroundTransparency = BODY_TRANSPARENCY,
     BorderSizePixel = 0,
-    ZIndex = 5,
-}, ScreenGui)
-new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.3 }, SearchFrame)
+    ClipsDescendants = true,
+    ZIndex = 6,
+}, SearchWindow)
+
+new("UIListLayout", {
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, SearchBody)
+
+local SearchBoxRow = new("Frame", {
+    Size = UDim2.new(1, 0, 0, 24),
+    BackgroundTransparency = 1,
+    LayoutOrder = 0,
+    ZIndex = 7,
+}, SearchBody)
 
 local SearchBox = new("TextBox", {
     Size = UDim2.new(1, -16, 1, 0),
@@ -359,19 +478,139 @@ local SearchBox = new("TextBox", {
     Text = "",
     ClearTextOnFocus = false,
     TextXAlignment = Enum.TextXAlignment.Left,
-    ZIndex = 6,
-}, SearchFrame)
+    ZIndex = 8,
+}, SearchBoxRow)
 
-local function applySearch(query)
-    for _, window in pairs(GuiLibrary.Windows) do
-        if window.ApplyFilter then
-            window:ApplyFilter(query)
+local SearchResults = new("Frame", {
+    Size = UDim2.new(1, 0, 0, 0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    BackgroundTransparency = 1,
+    LayoutOrder = 1,
+    ZIndex = 7,
+}, SearchBody)
+
+new("UIListLayout", {
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 1),
+}, SearchResults)
+
+local SearchRows = {}
+
+GuiLibrary.SearchWindow = SearchWindow
+
+local function updateSearchWindow()
+    SearchWindow.Size = UDim2.fromOffset(SEARCH_WIDTH, HEADER_HEIGHT + SearchBody.AbsoluteSize.Y)
+end
+
+local function clearSearchResults()
+    for _, record in pairs(SearchRows) do
+        record.Row:Destroy()
+    end
+    SearchRows = {}
+end
+
+local function refreshSearchRow(moduleTab)
+    local record = SearchRows[moduleTab]
+    if not record then return end
+
+    record.Fill.BackgroundTransparency = moduleTab.Enabled and 0 or 1
+    record.Label.TextColor3 = moduleTab.Enabled and Palette.Accent or Palette.Text
+end
+
+local function createSearchRow(moduleTab, order)
+    local Row = new("TextButton", {
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Text = "",
+        LayoutOrder = order,
+        ZIndex = 7,
+    }, SearchResults)
+
+    local Fill = new("Frame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Palette.ModuleBackground,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 7,
+    }, Row)
+
+    local Label = new("TextLabel", {
+        Size = UDim2.new(1, -12, 1, 0),
+        Position = UDim2.fromOffset(8, 0),
+        BackgroundTransparency = 1,
+        Font = Palette.Font,
+        TextSize = 14,
+        TextColor3 = Palette.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = moduleTab.Name,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 8,
+    }, Row)
+
+    local record = { Row = Row, Fill = Fill, Label = Label, Module = moduleTab }
+    SearchRows[moduleTab] = record
+
+    Row.MouseButton1Click:Connect(function()
+        moduleTab:Toggle()
+    end)
+    Row.MouseButton2Click:Connect(function()
+        moduleTab:CreateSettings()
+    end)
+    Row.MouseEnter:Connect(function()
+        if not moduleTab.Enabled then
+            Fill.BackgroundTransparency = 0.5
+        end
+    end)
+    Row.MouseLeave:Connect(function()
+        refreshSearchRow(moduleTab)
+    end)
+
+    if moduleTab.Description then
+        bindTooltip(Row, moduleTab.Description)
+    end
+
+    refreshSearchRow(moduleTab)
+    return record
+end
+
+local function refreshSearchList(query)
+    clearSearchResults()
+
+    query = string.lower(tostring(query or ""))
+    if query ~= "" then
+        local order = 0
+        for _, window in ipairs(GuiLibrary.WindowOrder) do
+            for _, entry in ipairs(window.Modules) do
+                local moduleTab = entry.Module
+                if moduleTab and string.find(string.lower(moduleTab.Name), query, 1, true) then
+                    order += 1
+                    createSearchRow(moduleTab, order)
+                end
+            end
         end
     end
+
+    updateSearchWindow()
+end
+
+local function applySearch(query)
+    refreshSearchList(query)
 end
 
 connect(SearchBox:GetPropertyChangedSignal("Text"), function()
     applySearch(SearchBox.Text)
+end)
+
+connect(SearchBody:GetPropertyChangedSignal("AbsoluteSize"), updateSearchWindow)
+
+makeDraggable(SearchHeader, SearchWindow, function()
+    SavedSearch.Position = {
+        X = SearchWindow.AbsolutePosition.X,
+        Y = SearchWindow.AbsolutePosition.Y,
+    }
+    save()
 end)
 
 -- Array list (HUD) ---------------------------------------------
@@ -668,52 +907,6 @@ local ModuleOverlay, ModuleFrame, ModuleTitle, ModuleSubtitle
 local ModuleBody, ModuleScroll, ModuleContent
 local currentModule
 
-local function makeDraggable(handle, frame, onEnd)
-    local dragging = false
-    local dragStart, startOffset
-
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
-            and input.UserInputType ~= Enum.UserInputType.Touch then return end
-
-        if frame.AnchorPoint ~= Vector2.zero then
-            frame.AnchorPoint = Vector2.zero
-            frame.Position = UDim2.fromOffset(frame.AbsolutePosition.X, frame.AbsolutePosition.Y)
-        end
-
-        dragging = true
-        dragStart = input.Position
-        startOffset = Vector2.new(frame.Position.X.Offset, frame.Position.Y.Offset)
-    end)
-
-    connect(UserInputService.InputChanged, function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement
-            and input.UserInputType ~= Enum.UserInputType.Touch then return end
-
-        local delta = input.Position - dragStart
-        local position = startOffset + delta
-
-        local viewport = viewportSize()
-        local size = frame.AbsoluteSize
-        position = Vector2.new(
-            math.clamp(position.X, 0, math.max(viewport.X - size.X, 0)),
-            math.clamp(position.Y, 0, math.max(viewport.Y - size.Y, 0))
-        )
-
-        frame.Position = UDim2.fromOffset(position.X, position.Y)
-    end)
-
-    connect(UserInputService.InputEnded, function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
-            and input.UserInputType ~= Enum.UserInputType.Touch then return end
-
-        dragging = false
-        if onEnd then onEnd() end
-    end)
-end
-
 local function closeModuleScreen()
     if currentModule then
         currentModule.EnabledRow = nil
@@ -758,6 +951,7 @@ local function buildModuleScreen()
         Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
         BackgroundColor3 = Palette.Accent,
         BorderSizePixel = 0,
+        Active = true,
         ZIndex = 92,
     }, ModuleFrame)
 
@@ -1026,7 +1220,7 @@ function GuiLibrary:CreateWindow(name)
 
         Body.Size = UDim2.new(1, 0, 0, bodyHeight)
         Window.Size = UDim2.fromOffset(width, HEADER_HEIGHT + bodyHeight)
-        Window.Visible = wantedVisible and (not filterActive or hasMatch)
+        Window.Visible = wantedVisible
 
         updating = false
     end
@@ -1172,6 +1366,7 @@ function GuiLibrary:CreateWindow(name)
             end
 
             updateVisual()
+            refreshSearchRow(self)
 
             if self.OnToggle then
                 pcall(self.OnToggle, state)
@@ -1663,10 +1858,11 @@ function GuiLibrary:CreateWindow(name)
 
     self.Windows[name] = WindowObject
     GuiLibrary.Windows[name] = WindowObject
+    table.insert(GuiLibrary.WindowOrder, WindowObject)
     WindowCount += 1
 
     if SearchBox.Text ~= "" then
-        WindowObject:ApplyFilter(SearchBox.Text)
+        applySearch(SearchBox.Text)
     end
 
     return WindowObject
