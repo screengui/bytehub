@@ -834,7 +834,7 @@ local function buildModuleScreen()
 
     new("UIListLayout", {
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim2.fromOffset(0, 2),
+        Padding = UDim.new(0, 2),
     }, ModuleContent)
 
     makeDraggable(header, ModuleFrame)
