@@ -294,10 +294,10 @@ local Tooltip = new("Frame", {
 }, ScreenGui)
 new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.3 }, Tooltip)
 new("UIPadding", {
-    PaddingTop = UDim2.fromOffset(4),
-    PaddingBottom = UDim2.fromOffset(4),
-    PaddingLeft = UDim2.fromOffset(6),
-    PaddingRight = UDim2.fromOffset(6),
+    PaddingTop = UDim.new(0, 4),
+    PaddingBottom = UDim.new(0, 4),
+    PaddingLeft = UDim.new(0, 6),
+    PaddingRight = UDim.new(0, 6),
 }, Tooltip)
 
 local TooltipLabel = new("TextLabel", {
@@ -826,10 +826,10 @@ local function buildModuleScreen()
     }, ModuleScroll)
 
     new("UIPadding", {
-        PaddingTop = UDim2.fromOffset(6),
-        PaddingBottom = UDim2.fromOffset(6),
-        PaddingLeft = UDim2.fromOffset(6),
-        PaddingRight = UDim2.fromOffset(6),
+        PaddingTop = UDim.new(0, 6),
+        PaddingBottom = UDim.new(0, 6),
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
     }, ModuleContent)
 
     new("UIListLayout", {
@@ -1625,10 +1625,10 @@ function GuiLibrary:CreateWindow(name)
         }, Content)
 
         new("UIPadding", {
-            PaddingLeft = UDim2.fromOffset(6),
-            PaddingRight = UDim2.fromOffset(6),
-            PaddingTop = UDim2.fromOffset(2),
-            PaddingBottom = UDim2.fromOffset(2),
+            PaddingLeft = UDim.new(0, 6),
+            PaddingRight = UDim.new(0, 6),
+            PaddingTop = UDim.new(0, 2),
+            PaddingBottom = UDim.new(0, 2),
         }, Label)
 
         table.insert(self.Modules, { Name = Table.Name or "Label", Instance = Label })
