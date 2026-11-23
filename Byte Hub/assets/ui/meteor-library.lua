@@ -19,6 +19,11 @@
     (left click toggles, right click opens settings) while the category windows
     stay visible.
 
+    The top of the screen carries Meteor's tab bar (Modules, Config, GUI, HUD,
+    Friends, Macros). Modules is the only tab with content in this library; the
+    other tabs put the module windows and search away. On touch devices a
+    floating button opens and closes the GUI without a keyboard.
+
     API
       GuiLibrary:CreateWindow(name)              -> window
       window:CreateModule{ Name, Description, Function, Array, Default }
@@ -54,6 +59,7 @@ GuiLibrary.Windows = {}
 GuiLibrary.WindowOrder = {}
 GuiLibrary.Connections = {}
 GuiLibrary.CapturingKeybind = false
+GuiLibrary.ActiveTab = "Modules"
 GuiLibrary.Info = {
     Name = "Meteor",
     Version = "2.00",
@@ -706,6 +712,77 @@ function GuiLibrary:SetArraylistVisible(state)
     ArrayFrame.Visible = state and true or false
 end
 
+
+--==============================================================
+-- Mobile toggle
+--==============================================================
+
+local updateMobileIcon
+
+-- Touch devices have no RightShift, so give them a button of their own in a
+-- second ScreenGui (the main one is disabled while the GUI is closed).
+if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+    local MobileGui = new("ScreenGui", {
+        Name = "MeteorMobile",
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        DisplayOrder = 101,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    }, lplr:WaitForChild("PlayerGui"))
+    GuiLibrary.MobileGui = MobileGui
+
+    local MobileButton = new("TextButton", {
+        Name = "MeteorToggle",
+        Size = UDim2.fromOffset(46, 46),
+        Position = UDim2.new(1, -12, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundColor3 = Palette.Accent,
+        BackgroundTransparency = 0.1,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Text = "",
+        ZIndex = 1,
+    }, MobileGui)
+    new("UICorner", { CornerRadius = UDim.new(0, 6) }, MobileButton)
+    new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.4 }, MobileButton)
+    GuiLibrary.MobileButton = MobileButton
+
+    local Icon = new("Frame", {
+        Size = UDim2.fromOffset(18, 14),
+        Position = UDim2.fromScale(0.5, 0.5),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+    }, MobileButton)
+
+    local function bar(y)
+        return new("Frame", {
+            Size = UDim2.fromOffset(18, 2),
+            Position = UDim2.new(0.5, 0, 0, y),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundColor3 = Palette.Text,
+            BorderSizePixel = 0,
+        }, Icon)
+    end
+
+    local Top, Middle, Bottom = bar(1), bar(7), bar(13)
+
+    -- Hamburger when closed, an X when the GUI is open.
+    updateMobileIcon = function()
+        local openState = GuiLibrary.Visible
+        Middle.BackgroundTransparency = openState and 1 or 0
+        Top.Rotation = openState and 45 or 0
+        Bottom.Rotation = openState and -45 or 0
+        Top.Position = UDim2.new(0.5, 0, 0, openState and 7 or 1)
+        Bottom.Position = UDim2.new(0.5, 0, 0, openState and 7 or 13)
+    end
+
+    updateMobileIcon()
+
+    MobileButton.MouseButton1Click:Connect(function()
+        GuiLibrary:Toggle()
+    end)
+end
+
 --==============================================================
 -- Shared widget rows (module screen + settings)
 --==============================================================
@@ -1244,9 +1321,13 @@ function GuiLibrary:CreateWindow(name)
 
         Body.Size = UDim2.new(1, 0, 0, bodyHeight)
         Window.Size = UDim2.fromOffset(width, HEADER_HEIGHT + bodyHeight)
-        Window.Visible = wantedVisible
+        Window.Visible = wantedVisible and GuiLibrary.ActiveTab == "Modules"
 
         updating = false
+    end
+
+    function WindowObject:Refresh()
+        update()
     end
 
     local function ensureWidth(text)
@@ -1898,6 +1979,85 @@ GuiLibrary.GetWindow = function(self, name)
 end
 
 --==============================================================
+-- Tab bar (the tabs at the top centre of Meteor's GUI)
+--==============================================================
+
+local TabNames = { "Modules", "Config", "GUI", "HUD", "Friends", "Macros" }
+local TAB_HEIGHT = 22
+local TAB_PAD = 6
+
+local TabBar = new("Frame", {
+    Name = "TabBar",
+    Position = UDim2.new(0.5, 0, 0, 0),
+    AnchorPoint = Vector2.new(0.5, 0),
+    Size = UDim2.fromOffset(0, TAB_HEIGHT),
+    AutomaticSize = Enum.AutomaticSize.X,
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ZIndex = 30,
+}, ScreenGui)
+
+new("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 0),
+}, TabBar)
+
+local TabButtons = {}
+
+local function setActiveTab(tabName)
+    GuiLibrary.ActiveTab = tabName
+
+    for name, button in pairs(TabButtons) do
+        button.BackgroundColor3 = name == tabName and Palette.BackgroundPressed or Palette.Background
+    end
+
+    local modulesTab = tabName == "Modules"
+
+    for _, window in pairs(GuiLibrary.Windows) do
+        if window.Refresh then window:Refresh() end
+    end
+
+    SearchWindow.Visible = modulesTab
+    if not modulesTab then
+        closeModuleScreen()
+    end
+end
+
+for index, tabName in ipairs(TabNames) do
+    local button = new("TextButton", {
+        Name = tabName,
+        Size = UDim2.fromOffset(math.ceil(textWidth(tabName, Palette.TextSize)) + TAB_PAD * 2, TAB_HEIGHT),
+        BackgroundColor3 = Palette.Background,
+        BackgroundTransparency = BODY_TRANSPARENCY,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Font = Palette.Font,
+        TextSize = Palette.TextSize,
+        TextColor3 = Palette.Text,
+        Text = tabName,
+        LayoutOrder = index,
+        ZIndex = 30,
+    }, TabBar)
+
+    TabButtons[tabName] = button
+
+    button.MouseEnter:Connect(function()
+        if GuiLibrary.ActiveTab ~= tabName then
+            button.BackgroundColor3 = Palette.BackgroundHovered
+        end
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = GuiLibrary.ActiveTab == tabName and Palette.BackgroundPressed or Palette.Background
+    end)
+    button.MouseButton1Click:Connect(function()
+        setActiveTab(tabName)
+    end)
+end
+
+setActiveTab(GuiLibrary.ActiveTab)
+
+--==============================================================
 -- Visibility
 --==============================================================
 
@@ -1910,6 +2070,7 @@ function GuiLibrary:SetVisible(state)
         Tooltip.Visible = false
         closeModuleScreen()
     end
+    if updateMobileIcon then updateMobileIcon() end
 end
 
 function GuiLibrary:Toggle()
@@ -1921,6 +2082,7 @@ function GuiLibrary:Destroy()
         pcall(function() connection:Disconnect() end)
     end
     self.Connections = {}
+    if self.MobileGui then self.MobileGui:Destroy() end
     ScreenGui:Destroy()
 end
 
