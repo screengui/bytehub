@@ -143,18 +143,29 @@ end
 
 -- Drags `frame` by grabbing `handle`. Movement is accumulated from InputObject.Delta
 -- so it never mixes coordinate spaces (GUI inset / scale) and works for Frames as
--- well as buttons, as long as the handle receives input.
+-- well as buttons, as long as the handle receives input. The position is kept in the
+-- same space as UDim2 offset (never AbsolutePosition, which is shifted by the GUI
+-- inset and made the window jump on the first frame of a drag).
 local function makeDraggable(handle, frame, onEnd)
     local dragging = false
     local position
 
+    -- Top-left of the frame in ScreenGui offset space, independent of its anchor.
+    local function offsetPosition()
+        local viewport = viewportSize()
+        local size = frame.AbsoluteSize
+        return Vector2.new(
+            frame.Position.X.Scale * viewport.X + frame.Position.X.Offset - size.X * frame.AnchorPoint.X,
+            frame.Position.Y.Scale * viewport.Y + frame.Position.Y.Offset - size.Y * frame.AnchorPoint.Y
+        )
+    end
+
     local function start()
         if dragging then return end
 
+        position = offsetPosition()
         frame.AnchorPoint = Vector2.zero
-        local absolute = frame.AbsolutePosition
-        frame.Position = UDim2.fromOffset(absolute.X, absolute.Y)
-        position = Vector2.new(absolute.X, absolute.Y)
+        frame.Position = UDim2.fromOffset(position.X, position.Y)
         dragging = true
     end
 
@@ -194,7 +205,7 @@ local function makeDraggable(handle, frame, onEnd)
             and input.UserInputType ~= Enum.UserInputType.Touch then return end
 
         dragging = false
-        if onEnd then onEnd() end
+        if onEnd then onEnd(position) end
     end)
 end
 
@@ -400,7 +411,7 @@ end)
 -- In Meteor the search field is a window of its own: typing into it lists the
 -- matching modules inside that window instead of hiding the category windows.
 
-local SEARCH_WIDTH = 200
+local SEARCH_WIDTH = 240
 
 local SavedSearch = windowConfig("Search")
 local searchPosition, searchAnchor
@@ -584,7 +595,8 @@ local function refreshSearchList(query)
         for _, window in ipairs(GuiLibrary.WindowOrder) do
             for _, entry in ipairs(window.Modules) do
                 local moduleTab = entry.Module
-                if moduleTab and string.find(string.lower(moduleTab.Name), query, 1, true) then
+                if moduleTab and not moduleTab.SkipSearch
+                    and string.find(string.lower(moduleTab.Name), query, 1, true) then
                     order += 1
                     createSearchRow(moduleTab, order)
                 end
@@ -605,10 +617,10 @@ end)
 
 connect(SearchBody:GetPropertyChangedSignal("AbsoluteSize"), updateSearchWindow)
 
-makeDraggable(SearchHeader, SearchWindow, function()
+makeDraggable(SearchHeader, SearchWindow, function(finalPosition)
     SavedSearch.Position = {
-        X = SearchWindow.AbsolutePosition.X,
-        Y = SearchWindow.AbsolutePosition.Y,
+        X = math.round(finalPosition.X),
+        Y = math.round(finalPosition.Y),
     }
     save()
 end)
@@ -1332,6 +1344,7 @@ function GuiLibrary:CreateWindow(name)
             Description = Table.Description,
             ExtraText = Table.ExtraText,
             Array = Table.Array ~= false,
+            SkipSearch = Table.SkipSearch == true,
             Instance = Row,
             SettingsContainer = SettingsContainer,
             SettingCount = 0,
@@ -1843,10 +1856,10 @@ function GuiLibrary:CreateWindow(name)
         WindowObject:SetCollapsed(not collapsed)
     end)
 
-    makeDraggable(Header, Window, function()
+    makeDraggable(Header, Window, function(finalPosition)
         saved.Position = {
-            X = Window.AbsolutePosition.X,
-            Y = Window.AbsolutePosition.Y,
+            X = math.round(finalPosition.X),
+            Y = math.round(finalPosition.Y),
         }
         save()
     end)
@@ -1934,6 +1947,7 @@ local function categoryToggle(windowName)
         Name = windowName,
         Description = "Shows the " .. windowName .. " window.",
         Array = false,
+        SkipSearch = true,
         Function = function(state)
             local window = GuiLibrary.Windows[windowName]
             if window then
