@@ -37,6 +37,24 @@ local player = Players.LocalPlayer
 
 local Example = GuiLibrary:CreateWindow("Example")
 
+-- Place the example window on its own line below the demo windows so it never
+-- sticks out past the right or bottom edge of the screen.
+do
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local y = 40
+    for _, window in ipairs(GuiLibrary.WindowOrder) do
+        if window ~= Example then
+            -- AbsoluteSize can still be 0 on the frame the window is created,
+            -- so fall back to the size the library just assigned.
+            local height = math.max(window.Frame.AbsoluteSize.Y, window.Frame.Size.Y.Offset)
+            y = math.max(y, window.Frame.Position.Y.Offset + height + 8)
+        end
+    end
+
+    Example.Frame.Position = UDim2.fromOffset(8, math.clamp(y, 40, math.max(viewport.Y - 120, 40)))
+end
+
 -- Plain text and section headers inside a window.
 Example:CreateLabel({
     Text = "This window is built by meteor-example.lua — every widget below is a few lines of Lua.",

@@ -411,12 +411,14 @@ end)
 -- In Meteor the search field is a window of its own: typing into it lists the
 -- matching modules inside that window instead of hiding the category windows.
 
-local SEARCH_WIDTH = 240
-
 local SavedSearch = windowConfig("Search")
 local searchPosition, searchAnchor
 if type(SavedSearch.Position) == "table" and SavedSearch.Position.X and SavedSearch.Position.Y then
-    searchPosition = UDim2.fromOffset(SavedSearch.Position.X, SavedSearch.Position.Y)
+    local viewport = viewportSize()
+    searchPosition = UDim2.fromOffset(
+        math.clamp(SavedSearch.Position.X, 0, math.max(viewport.X - WINDOW_MIN_WIDTH, 0)),
+        math.clamp(SavedSearch.Position.Y, 0, math.max(viewport.Y - HEADER_HEIGHT * 2, 0))
+    )
     searchAnchor = Vector2.zero
 else
     searchPosition = UDim2.new(0.5, 0, 0, 40)
@@ -425,7 +427,7 @@ end
 
 local SearchWindow = new("Frame", {
     Name = "Search",
-    Size = UDim2.fromOffset(SEARCH_WIDTH, HEADER_HEIGHT),
+    Size = UDim2.fromOffset(WINDOW_MIN_WIDTH, HEADER_HEIGHT),
     Position = searchPosition,
     AnchorPoint = searchAnchor,
     BackgroundTransparency = 1,
@@ -444,13 +446,11 @@ local SearchHeader = new("TextButton", {
 }, SearchWindow)
 
 new("TextLabel", {
-    Size = UDim2.new(1, -8, 1, 0),
-    Position = UDim2.fromOffset(8, 0),
+    Size = UDim2.fromScale(1, 1),
     BackgroundTransparency = 1,
     Font = Palette.Font,
     TextSize = Palette.TextSize,
     TextColor3 = Palette.Text,
-    TextXAlignment = Enum.TextXAlignment.Left,
     Text = "Search",
     ZIndex = 8,
 }, SearchHeader)
@@ -510,7 +510,14 @@ local SearchRows = {}
 GuiLibrary.SearchWindow = SearchWindow
 
 local function updateSearchWindow()
-    SearchWindow.Size = UDim2.fromOffset(SEARCH_WIDTH, HEADER_HEIGHT + SearchBody.AbsoluteSize.Y)
+    -- Same width rules as a normal window: size to the widest result, clamped.
+    local width = WINDOW_MIN_WIDTH
+    for moduleTab in pairs(SearchRows) do
+        width = math.max(width,
+            math.clamp(textWidth(moduleTab.Name, Palette.TextSize) + 28, WINDOW_MIN_WIDTH, WINDOW_MAX_WIDTH))
+    end
+
+    SearchWindow.Size = UDim2.fromOffset(width, HEADER_HEIGHT + SearchBody.AbsoluteSize.Y)
 end
 
 local function clearSearchResults()
@@ -1128,6 +1135,11 @@ function GuiLibrary:CreateWindow(name)
     if type(saved.Position) == "table" and saved.Position.X and saved.Position.Y then
         defaultX, defaultY = saved.Position.X, saved.Position.Y
     end
+
+    -- Never start a window (including one restored from config) with its header
+    -- off screen, otherwise it cannot be dragged back.
+    defaultX = math.clamp(defaultX, 0, math.max(viewport.X - WINDOW_MIN_WIDTH, 0))
+    defaultY = math.clamp(defaultY, 0, math.max(viewport.Y - HEADER_HEIGHT * 2, 0))
 
     local Window = new("Frame", {
         Name = name,
