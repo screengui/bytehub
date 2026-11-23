@@ -38,6 +38,11 @@
       module:CreateSettings()                    -- opens the module screen
       module:SetEnabled(bool), module:Toggle(), module:SetKeybind(key)
       GuiLibrary:Toggle() / GuiLibrary:SetVisible(bool)
+      GuiLibrary:ResetLayout()
+
+    The tabs at the top open Meteor's other screens: Config (ConfigScreen),
+    GUI (GuiScreen), HUD (HudScreen), Friends (FriendsScreen) and Macros
+    (MacrosScreen), each as a draggable window of setting rows.
 ]]
 
 local Players = game:GetService("Players")
@@ -60,6 +65,7 @@ GuiLibrary.WindowOrder = {}
 GuiLibrary.Connections = {}
 GuiLibrary.CapturingKeybind = false
 GuiLibrary.ActiveTab = "Modules"
+GuiLibrary.ArraylistVisible = false
 GuiLibrary.Info = {
     Name = "Meteor",
     Version = "2.00",
@@ -709,7 +715,8 @@ local function removeArray(moduleName)
 end
 
 function GuiLibrary:SetArraylistVisible(state)
-    ArrayFrame.Visible = state and true or false
+    self.ArraylistVisible = state and true or false
+    ArrayFrame.Visible = self.ArraylistVisible
 end
 
 
@@ -1328,6 +1335,18 @@ function GuiLibrary:CreateWindow(name)
 
     function WindowObject:Refresh()
         update()
+    end
+
+    function WindowObject:ResetPosition()
+        local view = viewportSize()
+        local perRow = math.max(math.floor((view.X - 16) / 140), 1)
+        local index = table.find(GuiLibrary.WindowOrder, self) or 1
+        local column = (index - 1) % perRow
+        local line = math.floor((index - 1) / perRow)
+
+        saved.Position = nil
+        Window.AnchorPoint = Vector2.zero
+        Window.Position = UDim2.fromOffset(8 + column * 140, 40 + line * 34)
     end
 
     local function ensureWidth(text)
@@ -1979,6 +1998,1053 @@ GuiLibrary.GetWindow = function(self, name)
 end
 
 --==============================================================
+-- Tab screens (Config, GUI, HUD, Friends, Macros)
+--==============================================================
+-- Meteor opens every tab as a single window in the middle of the screen
+-- (see WindowTabScreen), filled with the settings for that system. The rows
+-- below mirror the settings each of those screens shows.
+
+local TAB_WINDOW_WIDTH = 300
+
+local function createTabWindow(tabName, width)
+    width = width or TAB_WINDOW_WIDTH
+
+    local saved = windowConfig(tabName)
+    local hasSaved = type(saved.Position) == "table" and saved.Position.X and saved.Position.Y
+
+    local position
+    if hasSaved then
+        local viewport = viewportSize()
+        position = UDim2.fromOffset(
+            math.clamp(saved.Position.X, 0, math.max(viewport.X - width, 0)),
+            math.clamp(saved.Position.Y, 0, math.max(viewport.Y - HEADER_HEIGHT * 2, 0))
+        )
+    else
+        position = UDim2.new(0.5, 0, 0.5, 0)
+    end
+
+    local window = new("Frame", {
+        Name = tabName .. "Tab",
+        Size = UDim2.fromOffset(width, HEADER_HEIGHT),
+        Position = position,
+        AnchorPoint = hasSaved and Vector2.zero or Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 10,
+    }, ScreenGui)
+    new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.25 }, window)
+
+    local Header = new("TextButton", {
+        Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
+        BackgroundColor3 = Palette.Accent,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Text = "",
+        ZIndex = 11,
+    }, window)
+
+    new("TextLabel", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Font = Palette.Font,
+        TextSize = Palette.TextSize,
+        TextColor3 = Palette.Text,
+        Text = tabName,
+        ZIndex = 12,
+    }, Header)
+
+    local Body = new("Frame", {
+        Position = UDim2.fromOffset(0, HEADER_HEIGHT),
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundColor3 = Palette.Background,
+        BackgroundTransparency = BODY_TRANSPARENCY,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 10,
+    }, window)
+
+    local Scroll = new("ScrollingFrame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = Palette.TextSecondary,
+        ScrollBarImageTransparency = 0.4,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.fromOffset(0, 0),
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ZIndex = 10,
+    }, Body)
+
+    local Content = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        ZIndex = 10,
+    }, Scroll)
+
+    new("UIPadding", {
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 4),
+        PaddingLeft = UDim.new(0, 4),
+        PaddingRight = UDim.new(0, 4),
+    }, Content)
+
+    local Layout = new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 1),
+    }, Content)
+
+    local updating = false
+    local function update()
+        if updating then return end
+        updating = true
+
+        local maxHeight = math.clamp(viewportSize().Y * 0.7, 140, 560)
+        local bodyHeight = math.clamp(Layout.AbsoluteContentSize.Y + 8, 0, maxHeight)
+
+        Body.Size = UDim2.new(1, 0, 0, bodyHeight)
+        window.Size = UDim2.fromOffset(width, HEADER_HEIGHT + bodyHeight)
+
+        updating = false
+    end
+
+    connect(Content:GetPropertyChangedSignal("AbsoluteSize"), update)
+    update()
+
+    makeDraggable(Header, window, function(finalPosition)
+        saved.Position = {
+            X = math.round(finalPosition.X),
+            Y = math.round(finalPosition.Y),
+        }
+        save()
+    end)
+
+    return {
+        Frame = window,
+        Content = Content,
+        Update = update,
+    }
+end
+
+-- Settings rows in Meteor's shapes: a label on the left and the control on the
+-- right, section headers drawn as separators, and full width buttons.
+local function tabRows(parent)
+    local order = 0
+    local rows = {}
+
+    local function nextOrder()
+        order += 1
+        return order
+    end
+
+    function rows:Separator(text)
+        local row = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 18),
+            BackgroundTransparency = 1,
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        local width = textWidth(text, 12) + 14
+        new("Frame", {
+            Size = UDim2.new(0.5, -width / 2, 0, 1),
+            Position = UDim2.new(0, 4, 0.5, 0),
+            BackgroundColor3 = Palette.Separator,
+            BorderSizePixel = 0,
+        }, row)
+        new("Frame", {
+            Size = UDim2.new(0.5, -width / 2, 0, 1),
+            Position = UDim2.new(1, -4, 0.5, 0),
+            AnchorPoint = Vector2.new(1, 0),
+            BackgroundColor3 = Palette.Separator,
+            BorderSizePixel = 0,
+        }, row)
+        new("TextLabel", {
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 12,
+            TextColor3 = Palette.Text,
+            Text = text,
+        }, row)
+
+        return row
+    end
+
+    function rows:Toggle(labelText, value, onChanged)
+        local row = new("TextButton", {
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundTransparency = 1,
+            AutoButtonColor = false,
+            Text = "",
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -30, 1, 0),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = labelText,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+        }, row)
+
+        local box = new("Frame", {
+            Size = UDim2.fromOffset(12, 12),
+            Position = UDim2.new(1, -6, 0.5, 0),
+            AnchorPoint = Vector2.new(1, 0.5),
+            BackgroundColor3 = Palette.Background,
+            BackgroundTransparency = 0.2,
+            BorderSizePixel = 0,
+        }, row)
+
+        local tick = new("Frame", {
+            Size = UDim2.fromOffset(6, 6),
+            Position = UDim2.fromScale(0.5, 0.5),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundColor3 = Palette.Checkbox,
+            BorderSizePixel = 0,
+            Visible = value and true or false,
+        }, box)
+
+        local function set(state)
+            value = state and true or false
+            tick.Visible = value
+            if onChanged then onChanged(value) end
+        end
+
+        row.MouseButton1Click:Connect(function()
+            set(not value)
+        end)
+
+        return row
+    end
+
+    function rows:Slider(labelText, minValue, maxValue, value, decimals, onChanged)
+        minValue = minValue or 0
+        maxValue = maxValue or 1
+        value = math.clamp(tonumber(value) or minValue, minValue, maxValue)
+
+        local row = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 26),
+            BackgroundTransparency = 1,
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -60, 0, 14),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = labelText,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+        }, row)
+
+        local valueLabel = new("TextLabel", {
+            Size = UDim2.fromOffset(54, 14),
+            Position = UDim2.new(1, -6, 0, 0),
+            AnchorPoint = Vector2.new(1, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            Text = "",
+        }, row)
+
+        -- The visible bar is 3px tall like WMeteorSlider, but the button that
+        -- receives input is taller so it can be grabbed with a finger.
+        local track = new("TextButton", {
+            Size = UDim2.new(1, -12, 0, 16),
+            Position = UDim2.fromOffset(6, 11),
+            BackgroundTransparency = 1,
+            AutoButtonColor = false,
+            Text = "",
+        }, row)
+
+        local bar = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 3),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            AnchorPoint = Vector2.new(0, 0.5),
+            BackgroundColor3 = Palette.SliderRight,
+            BorderSizePixel = 0,
+        }, track)
+
+        local fill = new("Frame", {
+            Size = UDim2.fromScale(0, 1),
+            BackgroundColor3 = Palette.SliderLeft,
+            BorderSizePixel = 0,
+        }, bar)
+
+        local handle = new("Frame", {
+            Size = UDim2.fromOffset(7, 7),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundColor3 = Palette.SliderHandle,
+            BorderSizePixel = 0,
+        }, bar)
+        new("UICorner", { CornerRadius = UDim.new(1, 0) }, handle)
+
+        local function format(number)
+            if decimals and decimals > 0 then
+                return string.format("%." .. decimals .. "f", number)
+            end
+            return tostring(math.floor(number + 0.5))
+        end
+
+        local function set(newValue, fire)
+            value = math.clamp(tonumber(newValue) or minValue, minValue, maxValue)
+            local alpha = (value - minValue) / math.max(maxValue - minValue, 1e-6)
+
+            fill.Size = UDim2.fromScale(alpha, 1)
+            handle.Position = UDim2.new(alpha, 0, 0.5, 0)
+            valueLabel.Text = format(value)
+
+            if fire and onChanged then onChanged(value) end
+        end
+
+        set(value, false)
+
+        track.InputBegan:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.MouseButton1
+                and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+            local function updateFromX(x)
+                local start = track.AbsolutePosition.X
+                local size = math.max(track.AbsoluteSize.X, 1)
+                set(minValue + (maxValue - minValue) * math.clamp((x - start) / size, 0, 1), true)
+            end
+
+            updateFromX(input.Position.X)
+
+            local movedConnection
+            local endedConnection
+
+            movedConnection = UserInputService.InputChanged:Connect(function(moveInput)
+                if moveInput.UserInputType == Enum.UserInputType.MouseMovement
+                    or moveInput.UserInputType == Enum.UserInputType.Touch then
+                    updateFromX(moveInput.Position.X)
+                end
+            end)
+
+            endedConnection = UserInputService.InputEnded:Connect(function(endInput)
+                if endInput.UserInputType == Enum.UserInputType.MouseButton1
+                    or endInput.UserInputType == Enum.UserInputType.Touch then
+                    movedConnection:Disconnect()
+                    endedConnection:Disconnect()
+                end
+            end)
+        end)
+
+        return row
+    end
+
+    function rows:Dropdown(labelText, options, index, onChanged)
+        if #options == 0 then options = { "None" } end
+        index = math.clamp(index or 1, 1, #options)
+
+        local row = new("TextButton", {
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundTransparency = 1,
+            AutoButtonColor = false,
+            Text = "",
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -130, 1, 0),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = labelText,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+        }, row)
+
+        local valueLabel = new("TextLabel", {
+            Size = UDim2.new(0, 100, 1, 0),
+            Position = UDim2.new(1, -18, 0, 0),
+            AnchorPoint = Vector2.new(1, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            Text = options[index],
+        }, row)
+
+        new("TextLabel", {
+            Size = UDim2.fromOffset(10, 20),
+            Position = UDim2.new(1, -6, 0, 0),
+            AnchorPoint = Vector2.new(1, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 10,
+            TextColor3 = Palette.TextSecondary,
+            Text = "v",
+        }, row)
+
+        row.MouseButton1Click:Connect(function()
+            index = (index % #options) + 1
+            valueLabel.Text = options[index]
+            if onChanged then onChanged(options[index], index) end
+        end)
+
+        return row
+    end
+
+    function rows:TextInput(labelText, value, onChanged)
+        local row = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 24),
+            BackgroundTransparency = 1,
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        new("TextLabel", {
+            Size = UDim2.fromOffset(96, 24),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = labelText,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+        }, row)
+
+        local box = new("TextBox", {
+            Size = UDim2.new(1, -108, 0, 20),
+            Position = UDim2.fromOffset(104, 2),
+            BackgroundColor3 = Palette.Background,
+            BackgroundTransparency = 0.4,
+            BorderSizePixel = 0,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = tostring(value or ""),
+            ClearTextOnFocus = false,
+            ZIndex = 11,
+        }, row)
+
+        box.FocusLost:Connect(function()
+            if onChanged then onChanged(box.Text) end
+        end)
+
+        return row
+    end
+
+    function rows:Color(labelText, color)
+        local row = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundTransparency = 1,
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -40, 1, 0),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = labelText,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+        }, row)
+
+        local swatch = new("Frame", {
+            Size = UDim2.fromOffset(24, 10),
+            Position = UDim2.new(1, -6, 0.5, 0),
+            AnchorPoint = Vector2.new(1, 0.5),
+            BackgroundColor3 = color,
+            BorderSizePixel = 0,
+        }, row)
+        new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.5 }, swatch)
+
+        return row
+    end
+
+    function rows:Button(text, onClick)
+        local button = new("TextButton", {
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundColor3 = Palette.Background,
+            BackgroundTransparency = BODY_TRANSPARENCY,
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            Text = text,
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        button.MouseEnter:Connect(function()
+            button.BackgroundColor3 = Palette.BackgroundHovered
+        end)
+        button.MouseLeave:Connect(function()
+            button.BackgroundColor3 = Palette.Background
+        end)
+        button.MouseButton1Click:Connect(function()
+            if onClick then onClick() end
+        end)
+
+        return button
+    end
+
+    -- Meteor's confirmed buttons (Clear, Reset, minus) ask once, then run.
+    function rows:ConfirmedButton(text, confirmText, onClick)
+        local confirming = false
+
+        local button
+        button = rows:Button(text, function()
+            if confirming then
+                confirming = false
+                button.Text = text
+                if onClick then onClick() end
+            else
+                confirming = true
+                button.Text = confirmText
+            end
+        end)
+
+        return button
+    end
+
+    function rows:ListValue(labelText, valueText)
+        local row = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundTransparency = 1,
+            LayoutOrder = nextOrder(),
+        }, parent)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -80, 1, 0),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = labelText,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+        }, row)
+
+        new("TextLabel", {
+            Size = UDim2.new(0, 60, 1, 0),
+            Position = UDim2.new(1, -6, 0, 0),
+            AnchorPoint = Vector2.new(1, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.TextSecondary,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            Text = valueText,
+        }, row)
+
+        return row
+    end
+
+    function rows:NextOrder()
+        return nextOrder()
+    end
+
+    return rows
+end
+
+GuiLibrary.TabWindows = {}
+
+-- Config (ConfigTab.ConfigScreen) ------------------------------
+
+local configTab = createTabWindow("Config")
+GuiLibrary.TabWindows.Config = configTab.Frame
+
+do
+    local rows = tabRows(configTab.Content)
+
+    rows:Separator("Visual")
+    rows:Toggle("custom-font", true)
+    rows:Dropdown("font", { "JetBrains Mono", "Iosevka" }, 1)
+    rows:Slider("rainbow-speed", 0, 5, 0.5, 1)
+    rows:Toggle("title-screen-credits", true)
+    rows:Toggle("title-screen-splashes", true)
+    rows:Toggle("custom-window-title", false)
+    rows:TextInput("window-title-text", "Minecraft {mc_version} - {meteor.name} {meteor.version}")
+    rows:Color("friend-color", Color3.fromRGB(0, 255, 180))
+    rows:Toggle("sync-list-setting-widths", false)
+    rows:Dropdown("accounts-button", { "TopLeft", "TopRight", "BottomLeft", "BottomRight", "Hidden" }, 2)
+    rows:Toggle("account-status", true)
+    rows:Dropdown("proxies-button", { "TopLeft", "TopRight", "BottomLeft", "BottomRight", "Hidden" }, 2)
+    rows:Toggle("proxy-status", true)
+
+    rows:Separator("Modules")
+    rows:ListValue("hidden-modules", "None")
+    rows:Slider("module-search-count", 1, 12, 8, 0)
+    rows:Toggle("search-module-aliases", true)
+
+    rows:Separator("Chat")
+    rows:TextInput("prefix", ".")
+    rows:Toggle("chat-feedback", true)
+    rows:Toggle("delete-chat-feedback", true)
+
+    rows:Separator("Misc")
+    rows:Slider("rotation-hold", 0, 10, 4, 0)
+    rows:Toggle("use-team-color", true)
+
+    configTab.Update()
+end
+
+-- GUI (GuiTab.GuiScreen + MeteorGuiTheme settings) --------------
+
+local guiTab = createTabWindow("GUI")
+GuiLibrary.TabWindows.GUI = guiTab.Frame
+
+do
+    local rows = tabRows(guiTab.Content)
+
+    rows:Dropdown("Theme:", { "Meteor" }, 1)
+    rows:Button("Reset Layout", function()
+        GuiLibrary:ResetLayout()
+    end)
+    rows:Button("Reset Colors", function()
+        -- The Roblox theme is fixed, so there is nothing to reset.
+    end)
+    rows:Button("Copy", function()
+        print("Meteor GUI: copied theme settings")
+    end)
+    rows:Button("Paste", function()
+        print("Meteor GUI: pasted theme settings")
+    end)
+
+    rows:Separator("General")
+    rows:Slider("scale", 0.1, 4, 1, 2)
+    rows:Dropdown("module-alignment", { "Left", "Center", "Right" }, 2)
+    rows:Toggle("category-icons", false)
+    rows:Toggle("modules-help-text", true)
+    rows:Toggle("hide-HUD", false)
+
+    rows:Separator("Colors")
+    rows:Color("accent-color", Palette.Accent)
+    rows:Color("checkbox-color", Palette.Checkbox)
+    rows:Color("plus-color", Palette.Plus)
+    rows:Color("minus-color", Palette.Minus)
+    rows:Color("favorite-color", Palette.Favorite)
+
+    rows:Separator("Text")
+    rows:Color("text-color", Palette.Text)
+    rows:Color("text-secondary-text-color", Palette.TextSecondary)
+    rows:Color("text-highlight-color", Color3.fromRGB(45, 125, 245))
+    rows:Color("title-text-color", Palette.Text)
+    rows:Color("logged-in-text-color", Color3.fromRGB(45, 225, 45))
+    rows:Color("placeholder-color", Palette.Text)
+
+    rows:Separator("Background")
+    rows:Color("background-color", Palette.Background)
+    rows:Color("hovered-background-color", Palette.BackgroundHovered)
+    rows:Color("pressed-background-color", Palette.BackgroundPressed)
+    rows:Color("module-background-color", Palette.ModuleBackground)
+
+    rows:Separator("Outline")
+    rows:Color("outline-color", Palette.Outline)
+    rows:Color("hovered-outline-color", Color3.fromRGB(10, 10, 10))
+    rows:Color("pressed-outline-color", Color3.fromRGB(20, 20, 20))
+
+    rows:Separator("Separator")
+    rows:Color("separator-text-color", Palette.Text)
+    rows:Color("separator-center-color", Palette.Text)
+    rows:Color("separator-edges-color", Color3.fromRGB(225, 225, 225))
+
+    rows:Separator("Scrollbar")
+    rows:Color("Scrollbar-color", Color3.fromRGB(30, 30, 30))
+    rows:Color("hovered-Scrollbar-color", Color3.fromRGB(40, 40, 40))
+    rows:Color("pressed-Scrollbar-color", Color3.fromRGB(50, 50, 50))
+
+    rows:Separator("Slider")
+    rows:Color("slider-handle-color", Palette.SliderHandle)
+    rows:Color("hovered-slider-handle-color", Color3.fromRGB(140, 30, 255))
+    rows:Color("pressed-slider-handle-color", Color3.fromRGB(150, 60, 255))
+    rows:Color("slider-left-color", Palette.SliderLeft)
+    rows:Color("slider-right-color", Palette.SliderRight)
+
+    rows:Separator("Starscript")
+    rows:Color("starscript-text-color", Color3.fromRGB(169, 183, 198))
+    rows:Color("starscript-braces-color", Palette.TextSecondary)
+    rows:Color("starscript-parenthesis-color", Color3.fromRGB(169, 183, 198))
+    rows:Color("starscript-dots-color", Color3.fromRGB(169, 183, 198))
+    rows:Color("starscript-commas-color", Color3.fromRGB(169, 183, 198))
+    rows:Color("starscript-operators-color", Color3.fromRGB(169, 183, 198))
+    rows:Color("starscript-strings-color", Color3.fromRGB(106, 135, 89))
+    rows:Color("starscript-numbers-color", Color3.fromRGB(104, 141, 187))
+    rows:Color("starscript-keywords-color", Color3.fromRGB(204, 120, 50))
+    rows:Color("starscript-accessed-objects-color", Color3.fromRGB(152, 118, 170))
+
+    guiTab.Update()
+end
+
+-- HUD (HudTab.HudScreen) ---------------------------------------
+
+local hudTab = createTabWindow("HUD")
+GuiLibrary.TabWindows.HUD = hudTab.Frame
+
+do
+    local rows = tabRows(hudTab.Content)
+
+    rows:Separator("General")
+    rows:Toggle("custom-font", true)
+    rows:Toggle("hide-in-menus", false)
+    rows:Slider("text-scale", 0.5, 3, 1, 1)
+    rows:ListValue("text-colors", "4 colors")
+
+    rows:Separator("Editor")
+    rows:Slider("border", 0, 20, 4, 0)
+    rows:Slider("snapping-range", 0, 20, 10, 0)
+
+    rows:Separator("Bind")
+    rows:ListValue("bind", "None")
+
+    rows:Separator("")
+
+    rows:Button("Edit", function()
+        print("Meteor HUD: open the HUD editor")
+    end)
+
+    rows:ConfirmedButton("Clear", "Confirm", function()
+        print("Meteor HUD: cleared elements")
+    end)
+    rows:ConfirmedButton("Reset to default elements", "Confirm", function()
+        print("Meteor HUD: reset elements")
+    end)
+
+    rows:Separator("")
+
+    rows:Toggle("Active:", GuiLibrary.ArraylistVisible == true, function(state)
+        GuiLibrary:SetArraylistVisible(state)
+    end)
+    rows:Button("Reset", function()
+        print("Meteor HUD: reset settings")
+    end)
+
+    hudTab.Update()
+end
+
+-- Friends (FriendsTab.FriendsScreen) ---------------------------
+
+local friendsTab = createTabWindow("Friends", 360)
+GuiLibrary.TabWindows.Friends = friendsTab.Frame
+
+do
+    local list = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        LayoutOrder = -1,
+    }, friendsTab.Content)
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, list)
+
+    local emptyLabel = new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 18),
+        BackgroundTransparency = 1,
+        Font = Palette.Font,
+        TextSize = 12,
+        TextColor3 = Palette.TextSecondary,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = "No friends added.",
+        LayoutOrder = 0,
+    }, list)
+
+    local friendNames = {}
+    local friendRows = {}
+
+    local function rebuildFriends()
+        for _, record in ipairs(friendRows) do
+            record.Row:Destroy()
+        end
+
+        friendRows = {}
+        emptyLabel.Visible = #friendNames == 0
+
+        for index, name in ipairs(friendNames) do
+            local row = new("Frame", {
+                Size = UDim2.new(1, 0, 0, 20),
+                BackgroundTransparency = 1,
+                LayoutOrder = index,
+            }, list)
+
+            new("TextLabel", {
+                Size = UDim2.new(1, -24, 1, 0),
+                Position = UDim2.fromOffset(6, 0),
+                BackgroundTransparency = 1,
+                Font = Palette.Font,
+                TextSize = 13,
+                TextColor3 = Palette.Text,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Text = name,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+            }, row)
+
+            local remove = new("TextButton", {
+                Size = UDim2.fromOffset(16, 16),
+                Position = UDim2.new(1, -6, 0.5, 0),
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundTransparency = 1,
+                AutoButtonColor = false,
+                Font = Palette.Font,
+                TextSize = 14,
+                TextColor3 = Palette.Minus,
+                Text = "-",
+            }, row)
+
+            remove.MouseButton1Click:Connect(function()
+                table.remove(friendNames, index)
+                rebuildFriends()
+                friendsTab.Update()
+            end)
+
+            table.insert(friendRows, { Row = row })
+        end
+    end
+
+    new("Frame", {
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = Palette.Separator,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+    }, friendsTab.Content)
+
+    local addRow = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 22),
+        BackgroundTransparency = 1,
+        LayoutOrder = 2,
+    }, friendsTab.Content)
+
+    local nameBox = new("TextBox", {
+        Size = UDim2.new(1, -30, 1, 0),
+        BackgroundColor3 = Palette.Background,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        Font = Palette.Font,
+        TextSize = 13,
+        TextColor3 = Palette.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = "",
+        ClearTextOnFocus = false,
+        ZIndex = 11,
+    }, addRow)
+
+    local addButton = new("TextButton", {
+        Size = UDim2.fromOffset(22, 20),
+        Position = UDim2.new(1, -2, 0.5, 0),
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundColor3 = Palette.Background,
+        BackgroundTransparency = BODY_TRANSPARENCY,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Font = Palette.Font,
+        TextSize = 15,
+        TextColor3 = Palette.Plus,
+        Text = "+",
+    }, addRow)
+
+    local function addFriend()
+        local name = string.gsub(nameBox.Text, "^%s*(.-)%s*$", "%1")
+        if name == "" then return end
+
+        table.insert(friendNames, name)
+        nameBox.Text = ""
+        rebuildFriends()
+        friendsTab.Update()
+    end
+
+    addButton.MouseButton1Click:Connect(addFriend)
+    nameBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then addFriend() end
+    end)
+
+    rebuildFriends()
+    friendsTab.Update()
+end
+
+-- Macros (MacrosTab.MacrosScreen) ------------------------------
+
+local macrosTab = createTabWindow("Macros", 360)
+GuiLibrary.TabWindows.Macros = macrosTab.Frame
+
+do
+    local list = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        LayoutOrder = -1,
+    }, macrosTab.Content)
+    new("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, list)
+
+    local emptyLabel = new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 18),
+        BackgroundTransparency = 1,
+        Font = Palette.Font,
+        TextSize = 12,
+        TextColor3 = Palette.TextSecondary,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = "No macros created.",
+        LayoutOrder = 0,
+    }, list)
+
+    local macros = {}
+    local macroRows = {}
+
+    local function macroText(macro)
+        return macro.Name .. " (" .. macro.Keybind .. ")"
+    end
+
+    local function rebuildMacros()
+        for _, record in ipairs(macroRows) do
+            record.Row:Destroy()
+        end
+
+        macroRows = {}
+        emptyLabel.Visible = #macros == 0
+
+        for index, macro in ipairs(macros) do
+            local row = new("Frame", {
+                Size = UDim2.new(1, 0, 0, 22),
+                BackgroundTransparency = 1,
+                LayoutOrder = index,
+            }, list)
+
+            local label = new("TextLabel", {
+                Size = UDim2.new(1, -74, 1, 0),
+                Position = UDim2.fromOffset(6, 0),
+                BackgroundTransparency = 1,
+                Font = Palette.Font,
+                TextSize = 13,
+                TextColor3 = Palette.Text,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Text = macroText(macro),
+                TextTruncate = Enum.TextTruncate.AtEnd,
+            }, row)
+
+            local editBox = new("TextBox", {
+                Size = UDim2.new(1, -74, 0, 18),
+                Position = UDim2.fromOffset(6, 2),
+                BackgroundColor3 = Palette.Background,
+                BackgroundTransparency = 0.4,
+                BorderSizePixel = 0,
+                Font = Palette.Font,
+                TextSize = 13,
+                TextColor3 = Palette.Text,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Text = macro.Name,
+                ClearTextOnFocus = false,
+                Visible = false,
+                ZIndex = 11,
+            }, row)
+
+            local edit = new("TextButton", {
+                Size = UDim2.fromOffset(30, 18),
+                Position = UDim2.new(1, -44, 0.5, 0),
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundColor3 = Palette.Background,
+                BackgroundTransparency = BODY_TRANSPARENCY,
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Font = Palette.Font,
+                TextSize = 12,
+                TextColor3 = Palette.Text,
+                Text = "Edit",
+            }, row)
+
+            local function commit()
+                local name = string.gsub(editBox.Text, "^%s*(.-)%s*$", "%1")
+                if name ~= "" then macro.Name = name end
+                editBox.Visible = false
+                label.Visible = true
+                label.Text = macroText(macro)
+            end
+
+            edit.MouseButton1Click:Connect(function()
+                if editBox.Visible then
+                    commit()
+                else
+                    label.Visible = false
+                    editBox.Text = macro.Name
+                    editBox.Visible = true
+                    editBox:CaptureFocus()
+                end
+            end)
+            editBox.FocusLost:Connect(commit)
+
+            local remove = new("TextButton", {
+                Size = UDim2.fromOffset(14, 16),
+                Position = UDim2.new(1, -6, 0.5, 0),
+                AnchorPoint = Vector2.new(1, 0.5),
+                BackgroundTransparency = 1,
+                AutoButtonColor = false,
+                Font = Palette.Font,
+                TextSize = 14,
+                TextColor3 = Palette.Minus,
+                Text = "-",
+            }, row)
+
+            remove.MouseButton1Click:Connect(function()
+                table.remove(macros, index)
+                rebuildMacros()
+                macrosTab.Update()
+            end)
+
+            table.insert(macroRows, { Row = row })
+        end
+    end
+
+    new("Frame", {
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = Palette.Separator,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+    }, macrosTab.Content)
+
+    local create = new("TextButton", {
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundColor3 = Palette.Background,
+        BackgroundTransparency = BODY_TRANSPARENCY,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Font = Palette.Font,
+        TextSize = 13,
+        TextColor3 = Palette.Text,
+        Text = "Create",
+        LayoutOrder = 2,
+    }, macrosTab.Content)
+
+    create.MouseEnter:Connect(function()
+        create.BackgroundColor3 = Palette.BackgroundHovered
+    end)
+    create.MouseLeave:Connect(function()
+        create.BackgroundColor3 = Palette.Background
+    end)
+    create.MouseButton1Click:Connect(function()
+        table.insert(macros, { Name = "Macro " .. (#macros + 1), Keybind = "None" })
+        rebuildMacros()
+        macrosTab.Update()
+    end)
+
+    rebuildMacros()
+    macrosTab.Update()
+end
+
+--==============================================================
 -- Tab bar (the tabs at the top centre of Meteor's GUI)
 --==============================================================
 
@@ -2019,6 +3085,11 @@ local function setActiveTab(tabName)
     end
 
     SearchWindow.Visible = modulesTab
+
+    for name, frame in pairs(GuiLibrary.TabWindows or {}) do
+        frame.Visible = name == tabName
+    end
+
     if not modulesTab then
         closeModuleScreen()
     end
@@ -2075,6 +3146,26 @@ end
 
 function GuiLibrary:Toggle()
     self:SetVisible(not self.Visible)
+end
+
+function GuiLibrary:ResetLayout()
+    for _, window in ipairs(self.WindowOrder) do
+        if window.ResetPosition then window:ResetPosition() end
+    end
+
+    SearchWindow.AnchorPoint = Vector2.new(0.5, 0)
+    SearchWindow.Position = UDim2.new(0.5, 0, 0, 40)
+
+    for _, frame in pairs(self.TabWindows or {}) do
+        frame.AnchorPoint = Vector2.new(0.5, 0.5)
+        frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    end
+
+    for _, saved in pairs(Config.windows) do
+        saved.Position = nil
+    end
+
+    save()
 end
 
 function GuiLibrary:Destroy()
