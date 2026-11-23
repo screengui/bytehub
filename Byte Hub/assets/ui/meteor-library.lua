@@ -20,9 +20,12 @@
     stay visible.
 
     The top of the screen carries Meteor's tab bar (Modules, Config, GUI, HUD,
-    Friends, Macros). Modules is the only tab with content in this library; the
-    other tabs put the module windows and search away. On touch devices a
-    floating button opens and closes the GUI without a keyboard.
+    Friends, Macros). Only the Modules tab shows the category windows and the
+    search window; every other tab opens Meteor's settings screen for that
+    system, and each of those rows is live: toggles toggle, sliders drag,
+    dropdowns cycle, colour rows open a colour picker, and buttons act on the
+    GUI/HUD/lists. Settings are saved next to the window layout. On touch
+    devices a floating button opens and closes the GUI without a keyboard.
 
     API
       GuiLibrary:CreateWindow(name)              -> window
@@ -38,11 +41,19 @@
       module:CreateSettings()                    -- opens the module screen
       module:SetEnabled(bool), module:Toggle(), module:SetKeybind(key)
       GuiLibrary:Toggle() / GuiLibrary:SetVisible(bool)
-      GuiLibrary:ResetLayout()
+      GuiLibrary:ResetLayout() / GuiLibrary:ArrangeWindows()
+      GuiLibrary:SetScale(number)                 -- GUI scale, 0.5 - 2
+      GuiLibrary:SetFont(font)                    -- recolours every existing text
+      GuiLibrary:SetPaletteColor(key, color)      -- live theme edit
+      GuiLibrary:SetArraylistVisible(bool)
+      GuiLibrary.Settings                         -- saved settings table
 
     The tabs at the top open Meteor's other screens: Config (ConfigScreen),
     GUI (GuiScreen), HUD (HudScreen), Friends (FriendsScreen) and Macros
-    (MacrosScreen), each as a draggable window of setting rows.
+    (MacrosScreen), each as a draggable window of working setting rows.
+    Meteor settings that only make sense in Minecraft (title screen, accounts,
+    proxies, chat prefix/feedback, Starscript colours, rotation/team colour,
+    HUD editor snapping) are left out; everything else is wired up here.
 ]]
 
 local Players = game:GetService("Players")
@@ -95,12 +106,74 @@ local Palette = {
     Plus = Color3.fromRGB(50, 255, 50),
     Minus = Color3.fromRGB(255, 50, 50),
     Favorite = Color3.fromRGB(250, 215, 0),
+    Friend = Color3.fromRGB(0, 255, 180),
 }
 
 -- backwards compatible aliases used by older scripts
 Palette.Color = Palette.Accent
 Palette.Color2 = Palette.SliderLeft
 GuiLibrary.Palette = Palette
+
+--==============================================================
+-- Theme colours
+--==============================================================
+
+-- The palette entries the GUI tab can edit. Entries that share an RGB with an
+-- earlier key (checkbox and slider-right follow accent and module background)
+-- are left out, so one row always owns exactly one colour.
+local ThemeKeys = {
+    "Accent",
+    "Background",
+    "BackgroundHovered",
+    "BackgroundPressed",
+    "ModuleBackground",
+    "Outline",
+    "Separator",
+    "Text",
+    "TextSecondary",
+    "SliderLeft",
+    "SliderHandle",
+    "Plus",
+    "Minus",
+    "Favorite",
+    "Friend",
+}
+
+local PaletteDefaults = {}
+local ThemeKeyByColor = {}
+local ThemeRegistry = {}
+local GuiScale
+
+for _, key in ipairs(ThemeKeys) do
+    PaletteDefaults[key] = Palette[key]
+end
+
+local function rebuildThemeLookup()
+    ThemeKeyByColor = {}
+    for _, key in ipairs(ThemeKeys) do
+        local color = Palette[key]
+        if not ThemeKeyByColor[color] then
+            ThemeKeyByColor[color] = key
+        end
+    end
+end
+
+rebuildThemeLookup()
+
+-- Elements remember which palette colour they were built with, so editing a
+-- colour in the GUI tab can recolour the interface without rebuilding it.
+local function registerThemeColor(instance, property, value)
+    local key = ThemeKeyByColor[value]
+    if not key then return end
+
+    local records = ThemeRegistry[key]
+    if not records then
+        records = {}
+        ThemeRegistry[key] = records
+    end
+
+    table.insert(records, { Instance = instance, Property = property })
+end
 
 local WINDOW_MIN_WIDTH = 108
 local WINDOW_MAX_WIDTH = 220
@@ -120,6 +193,13 @@ local function new(className, properties, parent)
     if parent then
         instance.Parent = parent
     end
+
+    for key, value in pairs(properties or {}) do
+        if typeof(value) == "Color3" then
+            registerThemeColor(instance, key, value)
+        end
+    end
+
     return instance
 end
 
@@ -153,6 +233,18 @@ local function viewportSize()
     return camera and camera.ViewportSize or Vector2.new(1280, 720)
 end
 
+local function uiScale()
+    return GuiScale and GuiScale.Scale or 1
+end
+
+-- Size of the layout in the units UDim2 offsets are measured in. The GUI is
+-- scaled by a UIScale, so at scale 2 one layout unit covers two screen pixels.
+local function layoutSize()
+    local viewport = viewportSize()
+    local scale = uiScale()
+    return Vector2.new(viewport.X / scale, viewport.Y / scale)
+end
+
 -- Drags `frame` by grabbing `handle`. Movement is accumulated from InputObject.Delta
 -- so it never mixes coordinate spaces (GUI inset / scale) and works for Frames as
 -- well as buttons, as long as the handle receives input. The position is kept in the
@@ -164,8 +256,8 @@ local function makeDraggable(handle, frame, onEnd)
 
     -- Top-left of the frame in ScreenGui offset space, independent of its anchor.
     local function offsetPosition()
-        local viewport = viewportSize()
-        local size = frame.AbsoluteSize
+        local viewport = layoutSize()
+        local size = frame.AbsoluteSize / uiScale()
         return Vector2.new(
             frame.Position.X.Scale * viewport.X + frame.Position.X.Offset - size.X * frame.AnchorPoint.X,
             frame.Position.Y.Scale * viewport.Y + frame.Position.Y.Offset - size.Y * frame.AnchorPoint.Y
@@ -197,11 +289,12 @@ local function makeDraggable(handle, frame, onEnd)
         if input.UserInputType ~= Enum.UserInputType.MouseMovement
             and input.UserInputType ~= Enum.UserInputType.Touch then return end
 
-        local delta = input.Delta
+        local scale = uiScale()
+        local delta = input.Delta / scale
         local nextPosition = Vector2.new(position.X + delta.X, position.Y + delta.Y)
 
-        local viewport = viewportSize()
-        local size = frame.AbsoluteSize
+        local viewport = layoutSize()
+        local size = frame.AbsoluteSize / scale
         nextPosition = Vector2.new(
             math.clamp(nextPosition.X, 0, math.max(viewport.X - size.X, 0)),
             math.clamp(nextPosition.Y, 0, math.max(viewport.Y - size.Y, 0))
@@ -270,7 +363,7 @@ end
 
 local ConfigPath = "Meteor/Configs/config.json"
 local LegacyConfigPath = "Blaze/Configs/config.json"
-local Config = { windows = {}, modules = {} }
+local Config = { windows = {}, modules = {}, settings = {}, friends = {}, macros = {} }
 
 local function save()
     if RunService:IsStudio() or not writefile then return end
@@ -306,6 +399,9 @@ local function loadConfig()
     local loaded = {
         windows = type(raw.windows) == "table" and raw.windows or {},
         modules = type(raw.modules) == "table" and raw.modules or {},
+        settings = type(raw.settings) == "table" and raw.settings or {},
+        friends = type(raw.friends) == "table" and raw.friends or {},
+        macros = type(raw.macros) == "table" and raw.macros or {},
     }
 
     -- migrate the old flat format: Config[moduleName] = { Name = windowName, ... }
@@ -354,6 +450,59 @@ end
 loadConfig()
 
 --==============================================================
+-- Settings (saved with the layout in the same config file)
+--==============================================================
+
+local Settings = Config.settings
+GuiLibrary.Settings = Settings
+
+local FontOptions = {
+    { Name = "Jura", Font = Enum.Font.Jura },
+    { Name = "Code", Font = Enum.Font.Code },
+    { Name = "Gotham", Font = Enum.Font.Gotham },
+}
+
+local FontNames = {}
+local FontMap = {}
+for _, option in ipairs(FontOptions) do
+    table.insert(FontNames, option.Name)
+    FontMap[option.Name] = option.Font
+end
+
+local DefaultSettings = {
+    customFont = true,
+    font = "Jura",
+    tooltips = true,
+    scale = 1,
+    moduleAlignment = "Center",
+    hideHud = false,
+    hudTextScale = 1,
+    hudBorder = 4,
+}
+
+for key, value in pairs(DefaultSettings) do
+    if Settings[key] == nil then Settings[key] = value end
+end
+
+-- Restore the colours and font chosen in the GUI and Config tabs before any of
+-- the interface is built, so every element is created with them.
+for key, rgb in pairs(Settings.colors or {}) do
+    if PaletteDefaults[key] and type(rgb) == "table" and rgb[1] and rgb[2] and rgb[3] then
+        Palette[key] = Color3.fromRGB(rgb[1], rgb[2], rgb[3])
+    end
+end
+
+Palette.Checkbox = Palette.Accent
+Palette.Color = Palette.Accent
+Palette.Color2 = Palette.SliderLeft
+rebuildThemeLookup()
+
+Palette.Font = FontMap[Settings.font] or Enum.Font.Jura
+if Settings.customFont == false then
+    Palette.Font = Enum.Font.SourceSans
+end
+
+--==============================================================
 -- Root GUI
 --==============================================================
 
@@ -366,6 +515,28 @@ local ScreenGui = new("ScreenGui", {
 }, lplr:WaitForChild("PlayerGui"))
 GuiLibrary.ScreenGui = ScreenGui
 
+-- Everything is parented to one frame carrying a UIScale, so the GUI tab's
+-- scale setting can grow or shrink the whole interface and keep it centred.
+local GuiRoot = new("Frame", {
+    Name = "Root",
+    Size = UDim2.fromScale(1, 1),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+}, ScreenGui)
+GuiScale = new("UIScale", { Scale = 1 }, GuiRoot)
+GuiLibrary.Root = GuiRoot
+
+-- The HUD (the arraylist) has its own ScreenGui so it can stay on screen while
+-- the ClickGUI itself is closed.
+local HudGui = new("ScreenGui", {
+    Name = "MeteorHud",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    DisplayOrder = 100,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+}, lplr:WaitForChild("PlayerGui"))
+GuiLibrary.HudGui = HudGui
+
 -- Tooltip ------------------------------------------------------
 
 local Tooltip = new("Frame", {
@@ -376,7 +547,7 @@ local Tooltip = new("Frame", {
     BorderSizePixel = 0,
     Visible = false,
     ZIndex = 120,
-}, ScreenGui)
+}, GuiRoot)
 new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.3 }, Tooltip)
 new("UIPadding", {
     PaddingTop = UDim.new(0, 4),
@@ -401,6 +572,7 @@ local function bindTooltip(guiObject, text)
     if not text or text == "" then return end
 
     guiObject.MouseEnter:Connect(function()
+        if Settings.tooltips == false then return end
         TooltipLabel.Text = text
         Tooltip.Visible = true
     end)
@@ -411,11 +583,13 @@ end
 
 connect(RunService.RenderStepped, function()
     if not Tooltip.Visible then return end
-    local mouse = UserInputService:GetMouseLocation()
-    local viewport = viewportSize()
+    local scale = uiScale()
+    local mouse = UserInputService:GetMouseLocation() / scale
+    local viewport = layoutSize()
+    local size = Tooltip.AbsoluteSize / scale
     Tooltip.Position = UDim2.fromOffset(
-        math.clamp(mouse.X + 14, 0, math.max(viewport.X - Tooltip.AbsoluteSize.X - 4, 0)),
-        math.clamp(mouse.Y + 14, 0, math.max(viewport.Y - Tooltip.AbsoluteSize.Y - 4, 0))
+        math.clamp(mouse.X + 14, 0, math.max(viewport.X - size.X - 4, 0)),
+        math.clamp(mouse.Y + 14, 0, math.max(viewport.Y - size.Y - 4, 0))
     )
 end)
 
@@ -426,7 +600,7 @@ end)
 local SavedSearch = windowConfig("Search")
 local searchPosition, searchAnchor
 if type(SavedSearch.Position) == "table" and SavedSearch.Position.X and SavedSearch.Position.Y then
-    local viewport = viewportSize()
+    local viewport = layoutSize()
     searchPosition = UDim2.fromOffset(
         math.clamp(SavedSearch.Position.X, 0, math.max(viewport.X - WINDOW_MIN_WIDTH, 0)),
         math.clamp(SavedSearch.Position.Y, 0, math.max(viewport.Y - HEADER_HEIGHT * 2, 0))
@@ -445,7 +619,7 @@ local SearchWindow = new("Frame", {
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
     ZIndex = 6,
-}, ScreenGui)
+}, GuiRoot)
 new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.25 }, SearchWindow)
 
 local SearchHeader = new("TextButton", {
@@ -654,7 +828,7 @@ local ArrayFrame = new("Frame", {
     BackgroundTransparency = 1,
     Visible = false,
     ZIndex = 1,
-}, ScreenGui)
+}, HudGui)
 
 local ArrayLayout = new("UIListLayout", {
     SortOrder = Enum.SortOrder.LayoutOrder,
@@ -691,10 +865,10 @@ local function createArray(moduleName, extraFunc)
         AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
         Font = Palette.Font,
-        TextSize = 16,
+        TextSize = math.round(16 * (tonumber(Settings.hudTextScale) or 1)),
         TextColor3 = Palette.Accent,
         TextStrokeColor3 = Palette.Outline,
-        TextStrokeTransparency = 0.6,
+        TextStrokeTransparency = 1 - math.clamp((tonumber(Settings.hudBorder) or 4) / 10, 0, 1),
         TextXAlignment = Enum.TextXAlignment.Right,
         Text = text,
     }, ArrayFrame)
@@ -714,9 +888,50 @@ local function removeArray(moduleName)
     updateArrayOrder()
 end
 
+-- Re-applies the HUD tab's text-scale/border settings to every arraylist entry.
+function GuiLibrary:ApplyArraylistSettings()
+    local textScale = tonumber(Settings.hudTextScale) or 1
+    local border = tonumber(Settings.hudBorder) or 4
+
+    for _, item in ipairs(ArrayItems) do
+        item.TextSize = math.round(16 * textScale)
+        item.TextStrokeTransparency = 1 - math.clamp(border / 10, 0, 1)
+    end
+end
+
+function GuiLibrary:UpdateArraylistVisibility()
+    local visible = self.ArraylistVisible == true
+    if Settings.hideHud and self.Visible then
+        visible = false
+    end
+    ArrayFrame.Visible = visible
+end
+
 function GuiLibrary:SetArraylistVisible(state)
     self.ArraylistVisible = state and true or false
-    ArrayFrame.Visible = self.ArraylistVisible
+    self:UpdateArraylistVisibility()
+end
+
+-- HUD tab: "Clear" empties the list, "Reset to default elements" rebuilds it
+-- from the modules that are currently enabled.
+function GuiLibrary:ClearArraylist()
+    for _, item in ipairs(ArrayItems) do
+        item:Destroy()
+    end
+    ArrayItems = {}
+end
+
+function GuiLibrary:ResetArraylistElements()
+    self:ClearArraylist()
+
+    for _, window in ipairs(self.WindowOrder) do
+        for _, entry in ipairs(window.Modules) do
+            local moduleTab = entry.Module
+            if moduleTab and moduleTab.Enabled and moduleTab.Array then
+                createArray(moduleTab.Name, moduleTab.ExtraText)
+            end
+        end
+    end
 end
 
 
@@ -1036,7 +1251,7 @@ local function buildModuleScreen()
         Text = "",
         Visible = false,
         ZIndex = 90,
-    }, ScreenGui)
+    }, GuiRoot)
 
     ModuleFrame = new("Frame", {
         Size = UDim2.fromOffset(280, 300),
@@ -1047,7 +1262,7 @@ local function buildModuleScreen()
         BorderSizePixel = 0,
         Visible = false,
         ZIndex = 91,
-    }, ScreenGui)
+    }, GuiRoot)
     new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.2 }, ModuleFrame)
 
     local header = new("Frame", {
@@ -1209,7 +1424,7 @@ function GuiLibrary:CreateWindow(name)
     local hasMatch = true
     local updating = false
 
-    local viewport = viewportSize()
+    local viewport = layoutSize()
     local perRow = math.max(math.floor((viewport.X - 16) / 140), 1)
     local column = WindowCount % perRow
     local line = math.floor(WindowCount / perRow)
@@ -1234,7 +1449,7 @@ function GuiLibrary:CreateWindow(name)
         Active = true,
         Visible = wantedVisible,
         ZIndex = 2,
-    }, ScreenGui)
+    }, GuiRoot)
     new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.25 }, Window)
 
     local Header = new("TextButton", {
@@ -1322,7 +1537,7 @@ function GuiLibrary:CreateWindow(name)
 
         local bodyHeight = 0
         if not collapsed then
-            local maxHeight = math.clamp(viewportSize().Y * 0.7, 140, 560)
+            local maxHeight = math.clamp(layoutSize().Y * 0.7, 140, 560)
             bodyHeight = math.clamp(Layout.AbsoluteContentSize.Y, 0, maxHeight)
         end
 
@@ -1338,7 +1553,7 @@ function GuiLibrary:CreateWindow(name)
     end
 
     function WindowObject:ResetPosition()
-        local view = viewportSize()
+        local view = layoutSize()
         local perRow = math.max(math.floor((view.X - 16) / 140), 1)
         local index = table.find(GuiLibrary.WindowOrder, self) or 1
         local column = (index - 1) % perRow
@@ -2014,7 +2229,7 @@ local function createTabWindow(tabName, width)
 
     local position
     if hasSaved then
-        local viewport = viewportSize()
+        local viewport = layoutSize()
         position = UDim2.fromOffset(
             math.clamp(saved.Position.X, 0, math.max(viewport.X - width, 0)),
             math.clamp(saved.Position.Y, 0, math.max(viewport.Y - HEADER_HEIGHT * 2, 0))
@@ -2032,7 +2247,7 @@ local function createTabWindow(tabName, width)
         BorderSizePixel = 0,
         Visible = false,
         ZIndex = 10,
-    }, ScreenGui)
+    }, GuiRoot)
     new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.25 }, window)
 
     local Header = new("TextButton", {
@@ -2101,7 +2316,7 @@ local function createTabWindow(tabName, width)
         if updating then return end
         updating = true
 
-        local maxHeight = math.clamp(viewportSize().Y * 0.7, 140, 560)
+        local maxHeight = math.clamp(layoutSize().Y * 0.7, 140, 560)
         local bodyHeight = math.clamp(Layout.AbsoluteContentSize.Y + 8, 0, maxHeight)
 
         Body.Size = UDim2.new(1, 0, 0, bodyHeight)
@@ -2130,6 +2345,8 @@ end
 
 -- Settings rows in Meteor's shapes: a label on the left and the control on the
 -- right, section headers drawn as separators, and full width buttons.
+local openColorPicker
+
 local function tabRows(parent)
     local order = 0
     local rows = {}
@@ -2221,7 +2438,11 @@ local function tabRows(parent)
             set(not value)
         end)
 
-        return row
+        return {
+            Row = row,
+            Set = function(nextValue, fire) set(nextValue, fire) end,
+            Get = function() return value end,
+        }
     end
 
     function rows:Slider(labelText, minValue, maxValue, value, decimals, onChanged)
@@ -2343,7 +2564,11 @@ local function tabRows(parent)
             end)
         end)
 
-        return row
+        return {
+            Row = row,
+            Set = function(nextValue, fire) set(nextValue, fire) end,
+            Get = function() return value end,
+        }
     end
 
     function rows:Dropdown(labelText, options, index, onChanged)
@@ -2443,7 +2668,8 @@ local function tabRows(parent)
         return row
     end
 
-    function rows:Color(labelText, color)
+    -- Colour rows show a swatch for one palette key and open the picker on click.
+    function rows:Color(labelText, paletteKey)
         local row = new("Frame", {
             Size = UDim2.new(1, 0, 0, 20),
             BackgroundTransparency = 1,
@@ -2466,10 +2692,24 @@ local function tabRows(parent)
             Size = UDim2.fromOffset(24, 10),
             Position = UDim2.new(1, -6, 0.5, 0),
             AnchorPoint = Vector2.new(1, 0.5),
-            BackgroundColor3 = color,
+            BackgroundColor3 = Palette[paletteKey] or Palette.Text,
             BorderSizePixel = 0,
         }, row)
         new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.5 }, swatch)
+
+        local button = new("TextButton", {
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            Text = "",
+        }, row)
+
+        button.MouseButton1Click:Connect(function()
+            openColorPicker(labelText, Palette[paletteKey], function(color)
+                GuiLibrary:SetPaletteColor(paletteKey, color)
+            end)
+        end)
 
         return row
     end
@@ -2520,45 +2760,96 @@ local function tabRows(parent)
         return button
     end
 
-    function rows:ListValue(labelText, valueText)
-        local row = new("Frame", {
-            Size = UDim2.new(1, 0, 0, 20),
-            BackgroundTransparency = 1,
-            LayoutOrder = nextOrder(),
-        }, parent)
-
-        new("TextLabel", {
-            Size = UDim2.new(1, -80, 1, 0),
-            Position = UDim2.fromOffset(6, 0),
-            BackgroundTransparency = 1,
-            Font = Palette.Font,
-            TextSize = 13,
-            TextColor3 = Palette.Text,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            Text = labelText,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-        }, row)
-
-        new("TextLabel", {
-            Size = UDim2.new(0, 60, 1, 0),
-            Position = UDim2.new(1, -6, 0, 0),
-            AnchorPoint = Vector2.new(1, 0),
-            BackgroundTransparency = 1,
-            Font = Palette.Font,
-            TextSize = 13,
-            TextColor3 = Palette.TextSecondary,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            Text = valueText,
-        }, row)
-
-        return row
-    end
-
-    function rows:NextOrder()
-        return nextOrder()
-    end
-
     return rows
+end
+
+-- Colour picker -------------------------------------------------
+-- Opened by every colour row: three RGB sliders plus a preview, editing the
+-- theme live (the palette registry recolours the open GUI as it moves).
+
+local function buildColorPicker()
+    local picker = createTabWindow("Color", 240)
+    local rows = tabRows(picker.Content)
+
+    local title = new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Font = Palette.Font,
+        TextSize = 13,
+        TextColor3 = Palette.TextSecondary,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = "",
+        LayoutOrder = 0,
+    }, picker.Content)
+
+    local preview = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+    }, picker.Content)
+    new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.4 }, preview)
+
+    local state = { R = 255, G = 255, B = 255 }
+    local target
+
+    local function apply()
+        local color = Color3.fromRGB(math.floor(state.R + 0.5), math.floor(state.G + 0.5), math.floor(state.B + 0.5))
+        preview.BackgroundColor3 = color
+        if target then target(color) end
+    end
+
+    local function channel(name, label)
+        return rows:Slider(label, 0, 255, state[name], 0, function(value)
+            state[name] = value
+            apply()
+        end)
+    end
+
+    local red = channel("R", "red")
+    local green = channel("G", "green")
+    local blue = channel("B", "blue")
+
+    rows:Button("Close", function()
+        picker.Frame.Visible = false
+    end)
+
+    function picker:Open(titleText, color, onChanged)
+        target = onChanged
+        title.Text = titleText
+
+        state.R = math.round(color.R * 255)
+        state.G = math.round(color.G * 255)
+        state.B = math.round(color.B * 255)
+
+        red:Set(state.R, false)
+        green:Set(state.G, false)
+        blue:Set(state.B, false)
+        preview.BackgroundColor3 = color
+
+        picker.Frame.Visible = true
+        picker.Update()
+    end
+
+    return picker
+end
+
+local colorPicker
+
+openColorPicker = function(titleText, color, onChanged)
+    colorPicker = colorPicker or buildColorPicker()
+
+    -- Tucked in the top right so it does not sit on top of the centred tab
+    -- screen whose colour row was clicked.
+    local view = layoutSize()
+    local width = 240
+    colorPicker.Frame.AnchorPoint = Vector2.zero
+    colorPicker.Frame.Position = UDim2.fromOffset(
+        math.clamp(view.X - width - 16, 8, math.max(view.X - width - 8, 8)),
+        40
+    )
+
+    colorPicker:Open(titleText, color, onChanged)
 end
 
 GuiLibrary.TabWindows = {}
@@ -2571,34 +2862,25 @@ GuiLibrary.TabWindows.Config = configTab.Frame
 do
     local rows = tabRows(configTab.Content)
 
+    local function applyFont()
+        local font = FontMap[Settings.font] or Enum.Font.Jura
+        if Settings.customFont == false then
+            font = Enum.Font.SourceSans
+        end
+        GuiLibrary:SetFont(font)
+        save()
+    end
+
     rows:Separator("Visual")
-    rows:Toggle("custom-font", true)
-    rows:Dropdown("font", { "JetBrains Mono", "Iosevka" }, 1)
-    rows:Slider("rainbow-speed", 0, 5, 0.5, 1)
-    rows:Toggle("title-screen-credits", true)
-    rows:Toggle("title-screen-splashes", true)
-    rows:Toggle("custom-window-title", false)
-    rows:TextInput("window-title-text", "Minecraft {mc_version} - {meteor.name} {meteor.version}")
-    rows:Color("friend-color", Color3.fromRGB(0, 255, 180))
-    rows:Toggle("sync-list-setting-widths", false)
-    rows:Dropdown("accounts-button", { "TopLeft", "TopRight", "BottomLeft", "BottomRight", "Hidden" }, 2)
-    rows:Toggle("account-status", true)
-    rows:Dropdown("proxies-button", { "TopLeft", "TopRight", "BottomLeft", "BottomRight", "Hidden" }, 2)
-    rows:Toggle("proxy-status", true)
-
-    rows:Separator("Modules")
-    rows:ListValue("hidden-modules", "None")
-    rows:Slider("module-search-count", 1, 12, 8, 0)
-    rows:Toggle("search-module-aliases", true)
-
-    rows:Separator("Chat")
-    rows:TextInput("prefix", ".")
-    rows:Toggle("chat-feedback", true)
-    rows:Toggle("delete-chat-feedback", true)
-
-    rows:Separator("Misc")
-    rows:Slider("rotation-hold", 0, 10, 4, 0)
-    rows:Toggle("use-team-color", true)
+    rows:Toggle("custom-font", Settings.customFont ~= false, function(state)
+        Settings.customFont = state
+        applyFont()
+    end)
+    rows:Dropdown("font", FontNames, math.max(table.find(FontNames, Settings.font) or 1, 1), function(name)
+        Settings.font = name
+        applyFont()
+    end)
+    rows:Color("friend-color", "Friend")
 
     configTab.Update()
 end
@@ -2611,81 +2893,52 @@ GuiLibrary.TabWindows.GUI = guiTab.Frame
 do
     local rows = tabRows(guiTab.Content)
 
-    rows:Dropdown("Theme:", { "Meteor" }, 1)
     rows:Button("Reset Layout", function()
         GuiLibrary:ResetLayout()
     end)
     rows:Button("Reset Colors", function()
-        -- The Roblox theme is fixed, so there is nothing to reset.
+        GuiLibrary:ResetColors()
     end)
     rows:Button("Copy", function()
-        print("Meteor GUI: copied theme settings")
+        GuiLibrary:CopyTheme()
     end)
     rows:Button("Paste", function()
-        print("Meteor GUI: pasted theme settings")
+        GuiLibrary:PasteTheme()
     end)
 
     rows:Separator("General")
-    rows:Slider("scale", 0.1, 4, 1, 2)
-    rows:Dropdown("module-alignment", { "Left", "Center", "Right" }, 2)
-    rows:Toggle("category-icons", false)
-    rows:Toggle("modules-help-text", true)
-    rows:Toggle("hide-HUD", false)
+    rows:Slider("scale", 0.5, 2, Settings.scale, 2, function(value)
+        GuiLibrary:SetScale(value)
+    end)
+
+    local alignments = { "Left", "Center", "Right" }
+    rows:Dropdown("module-alignment", alignments, math.max(table.find(alignments, Settings.moduleAlignment) or 2, 1), function(name)
+        Settings.moduleAlignment = name
+        GuiLibrary:ArrangeWindows()
+        save()
+    end)
+
+    rows:Toggle("modules-help-text", Settings.tooltips ~= false, function(state)
+        Settings.tooltips = state
+        if not state then Tooltip.Visible = false end
+        save()
+    end)
 
     rows:Separator("Colors")
-    rows:Color("accent-color", Palette.Accent)
-    rows:Color("checkbox-color", Palette.Checkbox)
-    rows:Color("plus-color", Palette.Plus)
-    rows:Color("minus-color", Palette.Minus)
-    rows:Color("favorite-color", Palette.Favorite)
-
-    rows:Separator("Text")
-    rows:Color("text-color", Palette.Text)
-    rows:Color("text-secondary-text-color", Palette.TextSecondary)
-    rows:Color("text-highlight-color", Color3.fromRGB(45, 125, 245))
-    rows:Color("title-text-color", Palette.Text)
-    rows:Color("logged-in-text-color", Color3.fromRGB(45, 225, 45))
-    rows:Color("placeholder-color", Palette.Text)
-
-    rows:Separator("Background")
-    rows:Color("background-color", Palette.Background)
-    rows:Color("hovered-background-color", Palette.BackgroundHovered)
-    rows:Color("pressed-background-color", Palette.BackgroundPressed)
-    rows:Color("module-background-color", Palette.ModuleBackground)
-
-    rows:Separator("Outline")
-    rows:Color("outline-color", Palette.Outline)
-    rows:Color("hovered-outline-color", Color3.fromRGB(10, 10, 10))
-    rows:Color("pressed-outline-color", Color3.fromRGB(20, 20, 20))
-
-    rows:Separator("Separator")
-    rows:Color("separator-text-color", Palette.Text)
-    rows:Color("separator-center-color", Palette.Text)
-    rows:Color("separator-edges-color", Color3.fromRGB(225, 225, 225))
-
-    rows:Separator("Scrollbar")
-    rows:Color("Scrollbar-color", Color3.fromRGB(30, 30, 30))
-    rows:Color("hovered-Scrollbar-color", Color3.fromRGB(40, 40, 40))
-    rows:Color("pressed-Scrollbar-color", Color3.fromRGB(50, 50, 50))
-
-    rows:Separator("Slider")
-    rows:Color("slider-handle-color", Palette.SliderHandle)
-    rows:Color("hovered-slider-handle-color", Color3.fromRGB(140, 30, 255))
-    rows:Color("pressed-slider-handle-color", Color3.fromRGB(150, 60, 255))
-    rows:Color("slider-left-color", Palette.SliderLeft)
-    rows:Color("slider-right-color", Palette.SliderRight)
-
-    rows:Separator("Starscript")
-    rows:Color("starscript-text-color", Color3.fromRGB(169, 183, 198))
-    rows:Color("starscript-braces-color", Palette.TextSecondary)
-    rows:Color("starscript-parenthesis-color", Color3.fromRGB(169, 183, 198))
-    rows:Color("starscript-dots-color", Color3.fromRGB(169, 183, 198))
-    rows:Color("starscript-commas-color", Color3.fromRGB(169, 183, 198))
-    rows:Color("starscript-operators-color", Color3.fromRGB(169, 183, 198))
-    rows:Color("starscript-strings-color", Color3.fromRGB(106, 135, 89))
-    rows:Color("starscript-numbers-color", Color3.fromRGB(104, 141, 187))
-    rows:Color("starscript-keywords-color", Color3.fromRGB(204, 120, 50))
-    rows:Color("starscript-accessed-objects-color", Color3.fromRGB(152, 118, 170))
+    rows:Color("accent-color", "Accent")
+    rows:Color("text-color", "Text")
+    rows:Color("text-secondary-text-color", "TextSecondary")
+    rows:Color("background-color", "Background")
+    rows:Color("hovered-background-color", "BackgroundHovered")
+    rows:Color("pressed-background-color", "BackgroundPressed")
+    rows:Color("module-background-color", "ModuleBackground")
+    rows:Color("outline-color", "Outline")
+    rows:Color("separator-color", "Separator")
+    rows:Color("slider-handle-color", "SliderHandle")
+    rows:Color("slider-left-color", "SliderLeft")
+    rows:Color("plus-color", "Plus")
+    rows:Color("minus-color", "Minus")
+    rows:Color("favorite-color", "Favorite")
 
     guiTab.Update()
 end
@@ -2699,38 +2952,44 @@ do
     local rows = tabRows(hudTab.Content)
 
     rows:Separator("General")
-    rows:Toggle("custom-font", true)
-    rows:Toggle("hide-in-menus", false)
-    rows:Slider("text-scale", 0.5, 3, 1, 1)
-    rows:ListValue("text-colors", "4 colors")
-
-    rows:Separator("Editor")
-    rows:Slider("border", 0, 20, 4, 0)
-    rows:Slider("snapping-range", 0, 20, 10, 0)
-
-    rows:Separator("Bind")
-    rows:ListValue("bind", "None")
-
-    rows:Separator("")
-
-    rows:Button("Edit", function()
-        print("Meteor HUD: open the HUD editor")
+    local textScale = rows:Slider("text-scale", 0.5, 2, Settings.hudTextScale, 2, function(value)
+        Settings.hudTextScale = value
+        GuiLibrary:ApplyArraylistSettings()
+        save()
     end)
 
+    local border = rows:Slider("border", 0, 10, Settings.hudBorder, 0, function(value)
+        Settings.hudBorder = value
+        GuiLibrary:ApplyArraylistSettings()
+        save()
+    end)
+
+    rows:Toggle("hide-in-menus", Settings.hideHud == true, function(state)
+        Settings.hideHud = state
+        GuiLibrary:UpdateArraylistVisibility()
+        save()
+    end)
+
+    rows:Separator("")
     rows:ConfirmedButton("Clear", "Confirm", function()
-        print("Meteor HUD: cleared elements")
+        GuiLibrary:ClearArraylist()
     end)
     rows:ConfirmedButton("Reset to default elements", "Confirm", function()
-        print("Meteor HUD: reset elements")
+        GuiLibrary:ResetArraylistElements()
     end)
 
     rows:Separator("")
-
     rows:Toggle("Active:", GuiLibrary.ArraylistVisible == true, function(state)
         GuiLibrary:SetArraylistVisible(state)
     end)
     rows:Button("Reset", function()
-        print("Meteor HUD: reset settings")
+        Settings.hudTextScale = 1
+        Settings.hudBorder = 4
+        textScale:Set(1, false)
+        border:Set(4, false)
+        GuiLibrary:ApplyArraylistSettings()
+        GuiLibrary:UpdateArraylistVisibility()
+        save()
     end)
 
     hudTab.Update()
@@ -2763,8 +3022,19 @@ do
         LayoutOrder = 0,
     }, list)
 
-    local friendNames = {}
+    local friendNames = Config.friends
+    for index = #friendNames, 1, -1 do
+        if type(friendNames[index]) ~= "string" then
+            table.remove(friendNames, index)
+        end
+    end
+
     local friendRows = {}
+
+    local function saveFriends()
+        Config.friends = friendNames
+        save()
+    end
 
     local function rebuildFriends()
         for _, record in ipairs(friendRows) do
@@ -2787,7 +3057,7 @@ do
                 BackgroundTransparency = 1,
                 Font = Palette.Font,
                 TextSize = 13,
-                TextColor3 = Palette.Text,
+                TextColor3 = Palette.Friend,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 Text = name,
                 TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2809,6 +3079,7 @@ do
                 table.remove(friendNames, index)
                 rebuildFriends()
                 friendsTab.Update()
+                saveFriends()
             end)
 
             table.insert(friendRows, { Row = row })
@@ -2864,6 +3135,7 @@ do
         nameBox.Text = ""
         rebuildFriends()
         friendsTab.Update()
+        saveFriends()
     end
 
     addButton.MouseButton1Click:Connect(addFriend)
@@ -2876,6 +3148,8 @@ do
 end
 
 -- Macros (MacrosTab.MacrosScreen) ------------------------------
+-- Meteor's macros run commands. The Roblox equivalent is a keybind that
+-- toggles a module, so a macro stores its own key and the module it targets.
 
 local macrosTab = createTabWindow("Macros", 360)
 GuiLibrary.TabWindows.Macros = macrosTab.Frame
@@ -2902,11 +3176,67 @@ do
         LayoutOrder = 0,
     }, list)
 
-    local macros = {}
+    local macros = Config.macros
+    for index = #macros, 1, -1 do
+        local macro = macros[index]
+        if type(macro) ~= "table" then
+            table.remove(macros, index)
+        else
+            macro.Name = tostring(macro.Name or ("Macro " .. index))
+            macro.Keybind = macro.Keybind or "None"
+            macro.Target = macro.Target or "None"
+        end
+    end
+
     local macroRows = {}
 
-    local function macroText(macro)
-        return macro.Name .. " (" .. macro.Keybind .. ")"
+    local function moduleNames()
+        local names = { "None" }
+        for _, window in ipairs(GuiLibrary.WindowOrder) do
+            for _, entry in ipairs(window.Modules) do
+                if entry.Module and not entry.Module.SkipSearch then
+                    table.insert(names, entry.Module.Name)
+                end
+            end
+        end
+        return names
+    end
+
+    local function findModule(moduleName)
+        for _, window in ipairs(GuiLibrary.WindowOrder) do
+            for _, entry in ipairs(window.Modules) do
+                if entry.Module and entry.Module.Name == moduleName then
+                    return entry.Module
+                end
+            end
+        end
+    end
+
+    local function saveMacros()
+        Config.macros = macros
+        save()
+    end
+
+    -- Waits for the next key/mouse press and hands its name back.
+    local function captureKey(callback)
+        local token = (GuiLibrary.KeyCaptureToken or 0) + 1
+        GuiLibrary.KeyCaptureToken = token
+        GuiLibrary.CapturingKeybind = true
+
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input)
+            local name = inputName(input)
+            if not name then return end
+            GuiLibrary.CapturingKeybind = false
+            connection:Disconnect()
+            callback(name)
+        end)
+
+        task.delay(4, function()
+            if GuiLibrary.KeyCaptureToken ~= token then return end
+            GuiLibrary.CapturingKeybind = false
+            pcall(function() connection:Disconnect() end)
+        end)
     end
 
     local function rebuildMacros()
@@ -2924,20 +3254,27 @@ do
                 LayoutOrder = index,
             }, list)
 
-            local label = new("TextLabel", {
-                Size = UDim2.new(1, -74, 1, 0),
+            local nameArea = new("TextButton", {
+                Size = UDim2.new(1, -160, 1, 0),
                 Position = UDim2.fromOffset(6, 0),
+                BackgroundTransparency = 1,
+                AutoButtonColor = false,
+                Text = "",
+            }, row)
+
+            local label = new("TextLabel", {
+                Size = UDim2.fromScale(1, 1),
                 BackgroundTransparency = 1,
                 Font = Palette.Font,
                 TextSize = 13,
                 TextColor3 = Palette.Text,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                Text = macroText(macro),
+                Text = macro.Name,
                 TextTruncate = Enum.TextTruncate.AtEnd,
-            }, row)
+            }, nameArea)
 
             local editBox = new("TextBox", {
-                Size = UDim2.new(1, -74, 0, 18),
+                Size = UDim2.new(1, -160, 0, 18),
                 Position = UDim2.fromOffset(6, 2),
                 BackgroundColor3 = Palette.Background,
                 BackgroundTransparency = 0.4,
@@ -2952,29 +3289,16 @@ do
                 ZIndex = 11,
             }, row)
 
-            local edit = new("TextButton", {
-                Size = UDim2.fromOffset(30, 18),
-                Position = UDim2.new(1, -44, 0.5, 0),
-                AnchorPoint = Vector2.new(1, 0.5),
-                BackgroundColor3 = Palette.Background,
-                BackgroundTransparency = BODY_TRANSPARENCY,
-                BorderSizePixel = 0,
-                AutoButtonColor = false,
-                Font = Palette.Font,
-                TextSize = 12,
-                TextColor3 = Palette.Text,
-                Text = "Edit",
-            }, row)
-
             local function commit()
                 local name = string.gsub(editBox.Text, "^%s*(.-)%s*$", "%1")
                 if name ~= "" then macro.Name = name end
                 editBox.Visible = false
                 label.Visible = true
-                label.Text = macroText(macro)
+                label.Text = macro.Name
+                saveMacros()
             end
 
-            edit.MouseButton1Click:Connect(function()
+            nameArea.MouseButton1Click:Connect(function()
                 if editBox.Visible then
                     commit()
                 else
@@ -2985,6 +3309,51 @@ do
                 end
             end)
             editBox.FocusLost:Connect(commit)
+
+            local target = new("TextButton", {
+                Size = UDim2.fromOffset(68, 18),
+                Position = UDim2.new(1, -152, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundColor3 = Palette.Background,
+                BackgroundTransparency = BODY_TRANSPARENCY,
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Font = Palette.Font,
+                TextSize = 12,
+                TextColor3 = Palette.TextSecondary,
+                Text = macro.Target,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+            }, row)
+
+            target.MouseButton1Click:Connect(function()
+                local names = moduleNames()
+                local current = table.find(names, macro.Target) or 1
+                macro.Target = names[(current % #names) + 1]
+                target.Text = macro.Target
+                saveMacros()
+            end)
+
+            local key = new("TextButton", {
+                Size = UDim2.fromOffset(56, 18),
+                Position = UDim2.new(1, -80, 0.5, 0),
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundTransparency = 1,
+                AutoButtonColor = false,
+                Font = Palette.Font,
+                TextSize = 12,
+                TextColor3 = Palette.Accent,
+                Text = macro.Keybind,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+            }, row)
+
+            key.MouseButton1Click:Connect(function()
+                key.Text = "..."
+                captureKey(function(keyName)
+                    macro.Keybind = keyName
+                    key.Text = keyName
+                    saveMacros()
+                end)
+            end)
 
             local remove = new("TextButton", {
                 Size = UDim2.fromOffset(14, 16),
@@ -3002,6 +3371,7 @@ do
                 table.remove(macros, index)
                 rebuildMacros()
                 macrosTab.Update()
+                saveMacros()
             end)
 
             table.insert(macroRows, { Row = row })
@@ -3035,13 +3405,32 @@ do
         create.BackgroundColor3 = Palette.Background
     end)
     create.MouseButton1Click:Connect(function()
-        table.insert(macros, { Name = "Macro " .. (#macros + 1), Keybind = "None" })
+        table.insert(macros, { Name = "Macro " .. (#macros + 1), Keybind = "None", Target = "None" })
         rebuildMacros()
         macrosTab.Update()
+        saveMacros()
     end)
 
     rebuildMacros()
     macrosTab.Update()
+
+    -- a macro's key toggles the module it points at
+    connect(UserInputService.InputBegan, function(input, gameProcessed)
+        if GuiLibrary.CapturingKeybind then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard and gameProcessed then return end
+        if UserInputService:GetFocusedTextBox() then return end
+
+        local name = inputName(input)
+        if not name then return end
+
+        for _, macro in ipairs(macros) do
+            if macro.Keybind ~= "None" and macro.Keybind == name then
+                local moduleTab = findModule(macro.Target)
+                if moduleTab then moduleTab:Toggle() end
+                break
+            end
+        end
+    end)
 end
 
 --==============================================================
@@ -3061,7 +3450,7 @@ local TabBar = new("Frame", {
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
     ZIndex = 30,
-}, ScreenGui)
+}, GuiRoot)
 
 new("UIListLayout", {
     FillDirection = Enum.FillDirection.Horizontal,
@@ -3088,6 +3477,10 @@ local function setActiveTab(tabName)
 
     for name, frame in pairs(GuiLibrary.TabWindows or {}) do
         frame.Visible = name == tabName
+    end
+
+    if colorPicker then
+        colorPicker.Frame.Visible = false
     end
 
     if not modulesTab then
@@ -3140,12 +3533,149 @@ function GuiLibrary:SetVisible(state)
     if not self.Visible then
         Tooltip.Visible = false
         closeModuleScreen()
+        if colorPicker then colorPicker.Frame.Visible = false end
     end
+    self:UpdateArraylistVisibility()
     if updateMobileIcon then updateMobileIcon() end
 end
 
 function GuiLibrary:Toggle()
     self:SetVisible(not self.Visible)
+end
+
+-- GUI tab: scale ----------------------------------------------
+
+function GuiLibrary:SetScale(value)
+    value = math.clamp(tonumber(value) or 1, 0.5, 2)
+    Settings.scale = value
+
+    GuiScale.Scale = value
+    GuiRoot.Size = UDim2.fromScale(1 / value, 1 / value)
+
+    save()
+end
+
+-- Config tab: font ---------------------------------------------
+
+function GuiLibrary:SetFont(font)
+    local previous = Palette.Font
+    if previous == font then return end
+
+    Palette.Font = font
+
+    for _, descendant in ipairs(GuiRoot:GetDescendants()) do
+        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+            if descendant.Font == previous then
+                descendant.Font = font
+            end
+        end
+    end
+
+    for _, item in ipairs(ArrayItems) do
+        item.Font = font
+    end
+
+    save()
+end
+
+-- GUI tab: colours ---------------------------------------------
+
+function GuiLibrary:SetPaletteColor(key, color)
+    local previous = Palette[key]
+    if typeof(previous) ~= "Color3" or previous == color then return end
+
+    Palette[key] = color
+    if key == "Accent" then
+        Palette.Checkbox = color
+        Palette.Color = color
+    elseif key == "SliderLeft" then
+        Palette.Color2 = color
+    end
+    rebuildThemeLookup()
+
+    for _, record in ipairs(ThemeRegistry[key] or {}) do
+        pcall(function()
+            record.Instance[record.Property] = color
+        end)
+    end
+
+    Settings.colors = Settings.colors or {}
+    Settings.colors[key] = {
+        math.round(color.R * 255),
+        math.round(color.G * 255),
+        math.round(color.B * 255),
+    }
+    save()
+end
+
+function GuiLibrary:ResetColors()
+    for _, key in ipairs(ThemeKeys) do
+        GuiLibrary:SetPaletteColor(key, PaletteDefaults[key])
+    end
+    Settings.colors = nil
+    save()
+end
+
+function GuiLibrary:CopyTheme()
+    local snapshot = {}
+    for _, key in ipairs(ThemeKeys) do
+        local color = Palette[key]
+        snapshot[key] = {
+            math.round(color.R * 255),
+            math.round(color.G * 255),
+            math.round(color.B * 255),
+        }
+    end
+
+    Settings.copiedTheme = snapshot
+    save()
+    print("Meteor GUI: theme copied")
+end
+
+function GuiLibrary:PasteTheme()
+    local snapshot = Settings.copiedTheme
+    if type(snapshot) ~= "table" then
+        print("Meteor GUI: nothing to paste")
+        return
+    end
+
+    for _, key in ipairs(ThemeKeys) do
+        local rgb = snapshot[key]
+        if type(rgb) == "table" and rgb[1] and rgb[2] and rgb[3] then
+            GuiLibrary:SetPaletteColor(key, Color3.fromRGB(rgb[1], rgb[2], rgb[3]))
+        end
+    end
+end
+
+-- GUI tab: module alignment ------------------------------------
+
+function GuiLibrary:ArrangeWindows()
+    local view = layoutSize()
+    local scale = uiScale()
+    local alignment = Settings.moduleAlignment or "Center"
+
+    for _, window in ipairs(self.WindowOrder) do
+        local frame = window.Frame
+        if frame then
+            local size = frame.AbsoluteSize / scale
+            local y = frame.Position.Y.Scale * view.Y + frame.Position.Y.Offset - size.Y * frame.AnchorPoint.Y
+
+            local x
+            if alignment == "Left" then
+                x = 8
+            elseif alignment == "Right" then
+                x = view.X - size.X - 8
+            else
+                x = (view.X - size.X) / 2
+            end
+
+            frame.AnchorPoint = Vector2.zero
+            frame.Position = UDim2.fromOffset(
+                math.round(math.clamp(x, 0, math.max(view.X - size.X, 0))),
+                math.round(math.clamp(y, 0, math.max(view.Y - size.Y, 0)))
+            )
+        end
+    end
 end
 
 function GuiLibrary:ResetLayout()
@@ -3165,8 +3695,13 @@ function GuiLibrary:ResetLayout()
         saved.Position = nil
     end
 
+    self:ArrangeWindows()
     save()
 end
+
+GuiLibrary:SetScale(Settings.scale or 1)
+GuiLibrary:ApplyArraylistSettings()
+GuiLibrary:UpdateArraylistVisibility()
 
 function GuiLibrary:Destroy()
     for _, connection in ipairs(self.Connections) do
@@ -3174,6 +3709,7 @@ function GuiLibrary:Destroy()
     end
     self.Connections = {}
     if self.MobileGui then self.MobileGui:Destroy() end
+    if self.HudGui then self.HudGui:Destroy() end
     ScreenGui:Destroy()
 end
 
