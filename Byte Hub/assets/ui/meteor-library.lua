@@ -46,9 +46,8 @@
 
     Window buttons accept the same Create* settings as modules (Toggle,
     Slider, Picker, TextBox, Button, Label, Separator); right click or a long
-    touch press opens them. Text boxes are drawn like Meteor's StringSetting:
-    one full width field per row, the setting name as the placeholder, and a
-    right click empties it.
+    touch press opens them. Text boxes keep their setting name on the left of
+    the row and put the field on the right, and a right click empties it.
       GuiLibrary:Toggle() / GuiLibrary:SetVisible(bool)
       GuiLibrary:ResetLayout() / GuiLibrary:ArrangeWindows()
       GuiLibrary:SetScale(number)                 -- GUI scale, 0.5 - 2
@@ -1837,17 +1836,30 @@ local function installSettingsWidgets(owner, settingsConfig, SettingsContainer)
             settingsConfig.Settings[Table.Name] = value
         end
 
-        -- Meteor renders StringSetting as a single field that fills the row:
-        -- no label, the setting name is the placeholder, a flat fill with the
+        -- The setting name sits on the left like every other row; the field
+        -- itself only takes the right half of the row, a flat fill with the
         -- theme background and a thin black outline.
         local row = new("Frame", {
             Size = UDim2.new(1, 0, 0, 26),
             BackgroundTransparency = 1,
         }, SettingsContainer)
 
+        new("TextLabel", {
+            Size = UDim2.new(0.5, -16, 1, 0),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 14,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            Text = Table.Name,
+        }, row)
+
         local box = new("TextBox", {
-            Size = UDim2.new(1, 0, 1, -4),
-            Position = UDim2.fromOffset(0, 2),
+            Size = UDim2.new(0.5, -10, 0, 20),
+            Position = UDim2.new(1, -6, 0.5, 0),
+            AnchorPoint = Vector2.new(1, 0.5),
             BackgroundColor3 = Palette.Background,
             BackgroundTransparency = 0.1,
             BorderSizePixel = 0,
