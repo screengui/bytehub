@@ -2783,6 +2783,60 @@ end
 -- right, section headers drawn as separators, and full width buttons.
 local openColorPicker
 
+-- Drop-down list -------------------------------------------------
+-- Meteor shows a drop-down's choices as a list that opens under the row, so a
+-- single shared popup drawn on the root frame serves every rows:Dropdown control.
+
+function GuiLibrary:CloseDropdownPopup()
+    if self.DropdownPopup then self.DropdownPopup.Visible = false end
+    self.DropdownOwner = nil
+end
+
+function GuiLibrary:GetDropdownPopup()
+    if self.DropdownPopup then return self.DropdownPopup end
+
+    local popup = new("Frame", {
+        Name = "Dropdown",
+        Size = UDim2.fromOffset(0, 0),
+        BackgroundColor3 = Palette.Background,
+        BackgroundTransparency = 0.05,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 130,
+    }, GuiRoot)
+    new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.3 }, popup)
+    new("UIListLayout", {
+        FillDirection = Enum.FillDirection.Vertical,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 0),
+    }, popup)
+
+    self.DropdownPopup = popup
+    return popup
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    local popup = GuiLibrary.DropdownPopup
+    local owner = GuiLibrary.DropdownOwner
+    if not popup or not owner or not popup.Visible then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+    local position = input.Position
+    if not position then return end
+
+    local function inside(instance)
+        local origin = instance.AbsolutePosition
+        local size = instance.AbsoluteSize
+        return position.X >= origin.X and position.X <= origin.X + size.X
+            and position.Y >= origin.Y and position.Y <= origin.Y + size.Y
+    end
+
+    if not inside(popup) and not inside(owner.Row) then
+        GuiLibrary:CloseDropdownPopup()
+    end
+end)
+
 local function tabRows(parent)
     local order = 0
     local rows = {}
@@ -3010,6 +3064,7 @@ local function tabRows(parent)
     function rows:Dropdown(labelText, options, index, onChanged)
         if #options == 0 then options = { "None" } end
         index = math.clamp(index or 1, 1, #options)
+        local optionHeight = 20
 
         local row = new("TextButton", {
             Size = UDim2.new(1, 0, 0, 20),
@@ -3054,24 +3109,93 @@ local function tabRows(parent)
             Text = "v",
         }, row)
 
-        row.MouseButton1Click:Connect(function()
-            index = (index % #options) + 1
-            valueLabel.Text = options[index]
-            if onChanged then onChanged(options[index], index) end
-        end)
+        local dropdown
 
-        return {
+        local function select(name, fire)
+            local found = table.find(options, name)
+            if not found then return false end
+            index = found
+            valueLabel.Text = options[index]
+            if fire and onChanged then onChanged(options[index], index) end
+            return true
+        end
+
+        local function openPopup()
+            local popup = GuiLibrary:GetDropdownPopup()
+
+            for _, child in ipairs(popup:GetChildren()) do
+                if child:IsA("TextButton") then child:Destroy() end
+            end
+
+            local scale = uiScale()
+            local viewport = layoutSize()
+            local rowPosition = row.AbsolutePosition
+            local rowSize = row.AbsoluteSize
+            local originX, originY = rowPosition.X / scale, rowPosition.Y / scale
+            local width = math.max(rowSize.X / scale, 140)
+            local height = #options * optionHeight
+
+            for optionIndex, name in ipairs(options) do
+                local option = new("TextButton", {
+                    Size = UDim2.new(1, 0, 0, optionHeight),
+                    BackgroundColor3 = Palette.BackgroundHovered,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    AutoButtonColor = false,
+                    Font = Palette.Font,
+                    TextSize = 13,
+                    TextColor3 = name == options[index] and Palette.Accent or Palette.Text,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    Text = " " .. name,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    LayoutOrder = optionIndex,
+                    ZIndex = 131,
+                }, popup)
+
+                option.MouseEnter:Connect(function()
+                    option.BackgroundTransparency = 0.6
+                end)
+                option.MouseLeave:Connect(function()
+                    option.BackgroundTransparency = 1
+                end)
+                option.MouseButton1Click:Connect(function()
+                    GuiLibrary:CloseDropdownPopup()
+                    select(name, true)
+                end)
+            end
+
+            local x = math.clamp(originX, 0, math.max(viewport.X - width, 0))
+            local y = originY + rowSize.Y / scale
+            if y + height > viewport.Y then
+                y = math.max(originY - height, 0)
+            end
+
+            popup.Size = UDim2.fromOffset(width, height)
+            popup.Position = UDim2.fromOffset(x, y)
+            popup.Visible = true
+            GuiLibrary.DropdownOwner = dropdown
+        end
+
+        dropdown = {
             Row = row,
             Set = function(name, fire)
-                local found = table.find(options, name)
-                if not found then return false end
-                index = found
-                valueLabel.Text = options[index]
-                if fire and onChanged then onChanged(options[index], index) end
-                return true
+                if GuiLibrary.DropdownOwner == dropdown then
+                    GuiLibrary:CloseDropdownPopup()
+                end
+                return select(name, fire)
             end,
             Get = function() return options[index] end,
         }
+
+        row.MouseButton1Click:Connect(function()
+            if GuiLibrary.DropdownOwner == dropdown then
+                GuiLibrary:CloseDropdownPopup()
+            else
+                openPopup()
+            end
+        end)
+
+        return dropdown
     end
 
     function rows:TextInput(labelText, value, onChanged)
@@ -4300,6 +4424,8 @@ local function setActiveTab(tabName)
         colorPicker.Frame.Visible = false
     end
 
+    GuiLibrary:CloseDropdownPopup()
+
     if not modulesTab then
         closeModuleScreen()
     end
@@ -4350,6 +4476,7 @@ function GuiLibrary:SetVisible(state)
     if not self.Visible then
         Tooltip.Visible = false
         closeModuleScreen()
+        self:CloseDropdownPopup()
         if colorPicker then colorPicker.Frame.Visible = false end
     end
     self:UpdateArraylistVisibility()
