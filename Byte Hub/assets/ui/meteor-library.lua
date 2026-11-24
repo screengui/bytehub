@@ -73,6 +73,7 @@ local lplr = Players.LocalPlayer
 local GuiLibrary = {}
 GuiLibrary.Windows = {}
 GuiLibrary.WindowOrder = {}
+GuiLibrary.Modules = {}
 GuiLibrary.Connections = {}
 GuiLibrary.CapturingKeybind = false
 GuiLibrary.ActiveTab = "Modules"
@@ -361,40 +362,76 @@ end
 -- Config
 --==============================================================
 
-local ConfigPath = "Meteor/Configs/config.json"
+local ConfigDirectory = "Meteor/Configs"
+local ConfigPath = ConfigDirectory .. "/config.json"
 local LegacyConfigPath = "Blaze/Configs/config.json"
+local AutoLoadPath = ConfigDirectory .. "/autoload.txt"
+local ActiveConfigName = "config"
 local Config = { windows = {}, modules = {}, settings = {}, friends = {}, macros = {} }
 
-local function save()
-    if RunService:IsStudio() or not writefile then return end
+local function ensureConfigDirectory()
+    if not isfolder or not makefolder then
+        return true
+    end
 
-    local ok = pcall(function()
-        if isfolder then
-            if not isfolder("Meteor") then makefolder("Meteor") end
-            if not isfolder("Meteor/Configs") then makefolder("Meteor/Configs") end
-        end
-        if isfile and isfile(ConfigPath) then delfile(ConfigPath) end
-        writefile(ConfigPath, HttpService:JSONEncode(Config))
+    if not isfolder("Meteor") then makefolder("Meteor") end
+    if not isfolder(ConfigDirectory) then makefolder(ConfigDirectory) end
+    return true
+end
+
+local function cleanConfigName(name)
+    name = tostring(name or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    name = name:gsub("%.json$", "")
+    if name == "" or name == "." or name == ".." then return nil end
+    if name:find("[/\\\\]") or name:find("[%c]") then return nil end
+    return name
+end
+
+local function configFile(name)
+    local safeName = cleanConfigName(name)
+    if not safeName then return nil end
+    return ConfigDirectory .. "/" .. safeName .. ".json"
+end
+
+local function encodeConfig(data)
+    return HttpService:JSONEncode(data)
+end
+
+local function decodeConfig(path)
+    if not readfile or not isfile or not isfile(path) then
+        return nil, "Config file not found."
+    end
+
+    local ok, decoded = pcall(function()
+        return HttpService:JSONDecode(readfile(path))
     end)
+    if not ok or type(decoded) ~= "table" then
+        return nil, "Invalid config file."
+    end
+    return decoded
+end
 
+local function writeConfigFile(path, data)
+    if RunService:IsStudio() or not writefile then
+        return false, "File writing is unavailable."
+    end
+
+    local ok, err = pcall(function()
+        ensureConfigDirectory()
+        writefile(path, encodeConfig(data))
+    end)
+    if ok then return true end
+    return false, tostring(err)
+end
+
+local function save()
+    local path = configFile(ActiveConfigName) or ConfigPath
+    local ok = writeConfigFile(path, Config)
     return ok
 end
 
-local function loadConfig()
-    if RunService:IsStudio() or not isfile then return end
-
-    local path
-    if isfile(ConfigPath) then
-        path = ConfigPath
-    elseif isfile(LegacyConfigPath) then
-        path = LegacyConfigPath
-    end
-    if not path then return end
-
-    local ok, raw = pcall(function()
-        return HttpService:JSONDecode(readfile(path))
-    end)
-    if not ok or type(raw) ~= "table" then return end
+local function normalizeConfig(raw)
+    if type(raw) ~= "table" then return nil end
 
     local loaded = {
         windows = type(raw.windows) == "table" and raw.windows or {},
@@ -404,7 +441,7 @@ local function loadConfig()
         macros = type(raw.macros) == "table" and raw.macros or {},
     }
 
-    -- migrate the old flat format: Config[moduleName] = { Name = windowName, ... }
+    -- Migrate the old flat format: Config[moduleName] = { Name = windowName, ... }
     for moduleName, data in pairs(raw) do
         if type(data) == "table" and type(data.Name) == "string" and data.Name ~= "" then
             if data.Name ~= "windows" and data.Name ~= "modules" then
@@ -420,7 +457,6 @@ local function loadConfig()
                     for settingName, value in pairs(data.Sliders or {}) do
                         if type(value) == "table" then settings[settingName] = value.Value end
                     end
-
                     loaded.modules[key] = {
                         Enabled = data.Enabled,
                         Keybind = data.Keybind,
@@ -430,8 +466,43 @@ local function loadConfig()
             end
         end
     end
+    return loaded
+end
 
-    Config = loaded
+local function loadConfig()
+    if RunService:IsStudio() or not readfile or not isfile then return end
+
+    -- Autoload takes priority; otherwise retain compatibility with the original
+    -- config.json and the older Blaze location.
+    if isfile(AutoLoadPath) then
+        local ok, name = pcall(readfile, AutoLoadPath)
+        if ok then
+            name = cleanConfigName(name)
+            local path = name and configFile(name)
+            if path and isfile(path) then
+                local raw = decodeConfig(path)
+                local normalized = raw and normalizeConfig(raw)
+                if normalized then
+                    Config = normalized
+                    ActiveConfigName = name
+                    return
+                end
+            end
+        end
+    end
+
+    local path
+    if isfile(ConfigPath) then
+        path = ConfigPath
+        ActiveConfigName = "config"
+    elseif isfile(LegacyConfigPath) then
+        path = LegacyConfigPath
+    end
+    if not path then return end
+
+    local raw = decodeConfig(path)
+    local normalized = raw and normalizeConfig(raw)
+    if normalized then Config = normalized end
 end
 
 local function windowConfig(name)
@@ -1520,6 +1591,7 @@ function GuiLibrary:CreateWindow(name)
 
     local WindowObject = {
         Name = name,
+        ConfigData = saved,
         Frame = Window,
         Header = Header,
         Body = Body,
@@ -1676,6 +1748,8 @@ function GuiLibrary:CreateWindow(name)
             SettingsContainer = SettingsContainer,
             SettingCount = 0,
             OnToggle = Table.Function,
+            ConfigData = settingsConfig,
+            ConfigWidgets = {},
         }
 
         local hovering = false
@@ -1770,6 +1844,7 @@ function GuiLibrary:CreateWindow(name)
             Instance = Row,
             Module = ModuleTab,
         })
+        table.insert(GuiLibrary.Modules, ModuleTab)
 
         ensureWidth(Table.Name)
         update()
@@ -1815,6 +1890,12 @@ function GuiLibrary:CreateWindow(name)
                 if Table.Function then pcall(Table.Function, state) end
             end)
 
+            self.ConfigWidgets[Table.Name] = {
+                Kind = "Toggle",
+                Set = function(value, fire)
+                    widget:Set(value == true, fire == true, false)
+                end,
+            }
             self.SettingCount += 1
             return widget
         end
@@ -1909,6 +1990,9 @@ function GuiLibrary:CreateWindow(name)
 
             slider.Value = value
             set(value, false, false)
+            slider.Set = function(nextValue, fire)
+                set(nextValue, fire == true, false)
+            end
 
             track.InputBegan:Connect(function(input)
                 if input.UserInputType ~= Enum.UserInputType.MouseButton1
@@ -1943,6 +2027,12 @@ function GuiLibrary:CreateWindow(name)
                 end)
             end)
 
+            self.ConfigWidgets[Table.Name] = {
+                Kind = "Slider",
+                Set = function(value, fire)
+                    slider.Set(value, fire)
+                end,
+            }
             self.SettingCount += 1
             return slider
         end
@@ -2056,6 +2146,18 @@ function GuiLibrary:CreateWindow(name)
                 set(index - 1, true, true)
             end)
 
+            picker.Set = function(option, fire)
+                local optionIndex = table.find(options, option)
+                if optionIndex then
+                    set(optionIndex, fire == true, false)
+                end
+            end
+            self.ConfigWidgets[Table.Name] = {
+                Kind = "Picker",
+                Set = function(value, fire)
+                    picker.Set(value, fire)
+                end,
+            }
             self.SettingCount += 1
             return picker
         end
@@ -2854,6 +2956,100 @@ end
 
 GuiLibrary.TabWindows = {}
 
+-- Apply a named config to the live UI while preserving table references held by
+-- modules and windows. This lets loading work without restarting the script.
+local function applyConfigData(raw)
+    local loaded = normalizeConfig(raw)
+    if not loaded then return false, "Invalid config data." end
+
+    local function replaceTable(target, source)
+        for key in pairs(target) do target[key] = nil end
+        for key, value in pairs(source) do target[key] = value end
+    end
+
+    -- Preserve the settings table referenced by the GUI systems.
+    replaceTable(Settings, loaded.settings)
+    Config.settings = Settings
+
+    -- Preserve per-module config tables captured by each ModuleTab closure.
+    for key in pairs(Config.modules) do Config.modules[key] = nil end
+    local knownModuleKeys = {}
+    for _, moduleTab in ipairs(GuiLibrary.Modules) do
+        local key = moduleTab.WindowName .. "/" .. moduleTab.Name
+        local incoming = loaded.modules[key] or {}
+        local data = moduleTab.ConfigData
+        data.Enabled = incoming.Enabled == true
+        data.Keybind = incoming.Keybind or "None"
+        data.Settings = data.Settings or {}
+        replaceTable(data.Settings, type(incoming.Settings) == "table" and incoming.Settings or {})
+        Config.modules[key] = data
+        knownModuleKeys[key] = true
+
+        for settingName, widget in pairs(moduleTab.ConfigWidgets) do
+            local value = data.Settings[settingName]
+            if value ~= nil then
+                pcall(widget.Set, value, true)
+            end
+        end
+        moduleTab.Keybind = data.Keybind
+        if moduleTab.BindRow and moduleTab.BindRow.Parent then
+            moduleTab.BindRow:Refresh()
+        end
+        moduleTab:SetEnabled(data.Enabled, true)
+    end
+
+    for key, value in pairs(loaded.modules) do
+        if not knownModuleKeys[key] then Config.modules[key] = value end
+    end
+
+    -- Update saved window data while preserving references captured by windows.
+    local incomingWindows = loaded.windows
+    for key in pairs(Config.windows) do Config.windows[key] = nil end
+    local handledWindows = {}
+    for name, windowObject in pairs(GuiLibrary.Windows) do
+        local incoming = incomingWindows[name]
+        local saved = windowObject.ConfigData
+        if incoming and saved then
+            replaceTable(saved, incoming)
+            Config.windows[name] = saved
+            handledWindows[name] = true
+            if saved.Position and saved.Position.X and saved.Position.Y then
+                windowObject.Frame.Position = UDim2.fromOffset(saved.Position.X, saved.Position.Y)
+            end
+            if saved.Visible ~= nil then windowObject:SetVisible(saved.Visible) end
+            if saved.Collapsed ~= nil then windowObject:SetCollapsed(saved.Collapsed) end
+        end
+    end
+    for name, saved in pairs(incomingWindows) do
+        if not handledWindows[name] then Config.windows[name] = saved end
+    end
+
+    Config.friends = loaded.friends
+    Config.macros = loaded.macros
+    Config.settings = Settings
+    GuiLibrary.Settings = Settings
+
+    if Settings.scale then GuiLibrary:SetScale(tonumber(Settings.scale) or 1) end
+    if Settings.font then
+        local font = FontMap[Settings.font] or Enum.Font.Jura
+        if Settings.customFont == false then font = Enum.Font.SourceSans end
+        GuiLibrary:SetFont(font)
+    end
+    for key, rgb in pairs(Settings.colors or {}) do
+        if PaletteDefaults[key] and type(rgb) == "table"
+            and tonumber(rgb[1]) and tonumber(rgb[2]) and tonumber(rgb[3]) then
+            GuiLibrary:SetPaletteColor(key, Color3.fromRGB(
+                math.clamp(tonumber(rgb[1]), 0, 255),
+                math.clamp(tonumber(rgb[2]), 0, 255),
+                math.clamp(tonumber(rgb[3]), 0, 255)
+            ))
+        end
+    end
+    if GuiLibrary.ApplyArraylistSettings then GuiLibrary:ApplyArraylistSettings() end
+    if GuiLibrary.UpdateArraylistVisibility then GuiLibrary:UpdateArraylistVisibility() end
+    return true
+end
+
 -- Config (ConfigTab.ConfigScreen) ------------------------------
 
 local configTab = createTabWindow("Config")
@@ -2881,6 +3077,215 @@ do
         applyFont()
     end)
     rows:Color("friend-color", "Friend")
+
+    rows:Separator("Config Manager")
+
+    local nameRow = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 28),
+        BackgroundTransparency = 1,
+        LayoutOrder = 5.1,
+    }, configTab.Content)
+    local nameBox = new("TextBox", {
+        Size = UDim2.new(1, -12, 1, -4),
+        Position = UDim2.fromOffset(6, 2),
+        BackgroundColor3 = Palette.ModuleBackground,
+        BackgroundTransparency = 0.1,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        Font = Palette.Font,
+        TextSize = 13,
+        TextColor3 = Palette.Text,
+        PlaceholderColor3 = Palette.TextSecondary,
+        PlaceholderText = "Config name",
+        Text = "config",
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, nameRow)
+    new("UIPadding", {
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
+    }, nameBox)
+
+    local renameRow = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 28),
+        BackgroundTransparency = 1,
+        LayoutOrder = 5.2,
+    }, configTab.Content)
+    local renameBox = new("TextBox", {
+        Size = UDim2.new(1, -12, 1, -4),
+        Position = UDim2.fromOffset(6, 2),
+        BackgroundColor3 = Palette.ModuleBackground,
+        BackgroundTransparency = 0.1,
+        BorderSizePixel = 0,
+        ClearTextOnFocus = false,
+        Font = Palette.Font,
+        TextSize = 13,
+        TextColor3 = Palette.Text,
+        PlaceholderColor3 = Palette.TextSecondary,
+        PlaceholderText = "New name (for rename)",
+        Text = "",
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, renameRow)
+    new("UIPadding", {
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
+    }, renameBox)
+
+    local configStatus = new("TextLabel", {
+        Size = UDim2.new(1, -12, 0, 30),
+        BackgroundTransparency = 1,
+        Font = Palette.Font,
+        TextSize = 12,
+        TextColor3 = Palette.TextSecondary,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Text = "Configs are stored in Meteor/Configs.",
+        LayoutOrder = 5.3,
+    }, configTab.Content)
+
+    local function setConfigStatus(message, success)
+        configStatus.Text = tostring(message)
+        configStatus.TextColor3 = success and Palette.Plus or Palette.Minus
+    end
+
+    local function selectedConfig()
+        local name = cleanConfigName(nameBox.Text)
+        if not name then
+            setConfigStatus("Enter a valid config name.", false)
+            return nil
+        end
+        return name, configFile(name)
+    end
+
+    rows:Button("Save as new", function()
+        local name, path = selectedConfig()
+        if not name then return end
+        if isfile and isfile(path) then
+            setConfigStatus("Config already exists. Use Overwrite.", false)
+            return
+        end
+        local ok, err = writeConfigFile(path, Config)
+        if ok then
+            ActiveConfigName = name
+            setConfigStatus("Saved " .. name .. ".", true)
+        else
+            setConfigStatus("Save failed: " .. tostring(err), false)
+        end
+    end)
+
+    rows:Button("Load", function()
+        local name, path = selectedConfig()
+        if not name then return end
+        local raw, err = decodeConfig(path)
+        if not raw then
+            setConfigStatus(err, false)
+            return
+        end
+        local ok, applyError = applyConfigData(raw)
+        if ok then
+            ActiveConfigName = name
+            nameBox.Text = name
+            setConfigStatus("Loaded " .. name .. ".", true)
+        else
+            setConfigStatus(applyError or "Could not apply config.", false)
+        end
+    end)
+
+    rows:Button("Overwrite", function()
+        local name, path = selectedConfig()
+        if not name then return end
+        local ok, err = writeConfigFile(path, Config)
+        if ok then
+            ActiveConfigName = name
+            setConfigStatus("Overwrote " .. name .. ".", true)
+        else
+            setConfigStatus("Overwrite failed: " .. tostring(err), false)
+        end
+    end)
+
+    rows:Button("Delete", function()
+        local name, path = selectedConfig()
+        if not name then return end
+        if not isfile or not isfile(path) then
+            setConfigStatus("Config does not exist.", false)
+            return
+        end
+        local ok, err = pcall(function()
+            delfile(path)
+            if isfile(AutoLoadPath) and readfile(AutoLoadPath) == name then
+                delfile(AutoLoadPath)
+            end
+        end)
+        if ok then
+            if ActiveConfigName == name then ActiveConfigName = "config" end
+            setConfigStatus("Deleted " .. name .. ".", true)
+        else
+            setConfigStatus("Delete failed: " .. tostring(err), false)
+        end
+    end)
+
+    rows:Button("Rename", function()
+        local oldName, oldPath = selectedConfig()
+        local newName = cleanConfigName(renameBox.Text)
+        if not oldName then return end
+        local newPath = newName and configFile(newName)
+        if not newName then
+            setConfigStatus("Enter a valid new name.", false)
+            return
+        end
+        if not isfile or not isfile(oldPath) then
+            setConfigStatus("Source config does not exist.", false)
+            return
+        end
+        if isfile(newPath) then
+            setConfigStatus("A config with that name already exists.", false)
+            return
+        end
+        local ok, err = pcall(function()
+            ensureConfigDirectory()
+            writefile(newPath, readfile(oldPath))
+            delfile(oldPath)
+            if isfile(AutoLoadPath) and readfile(AutoLoadPath) == oldName then
+                writefile(AutoLoadPath, newName)
+            end
+        end)
+        if ok then
+            if ActiveConfigName == oldName then ActiveConfigName = newName end
+            nameBox.Text = newName
+            renameBox.Text = ""
+            setConfigStatus("Renamed " .. oldName .. " to " .. newName .. ".", true)
+        else
+            setConfigStatus("Rename failed: " .. tostring(err), false)
+        end
+    end)
+
+    rows:Button("Set as autoload", function()
+        local name, path = selectedConfig()
+        if not name then return end
+        if not isfile or not isfile(path) then
+            setConfigStatus("Save this config before setting autoload.", false)
+            return
+        end
+        local ok, err = pcall(function()
+            ensureConfigDirectory()
+            writefile(AutoLoadPath, name)
+        end)
+        if ok then
+            setConfigStatus(name .. " will load automatically on startup.", true)
+        else
+            setConfigStatus("Autoload failed: " .. tostring(err), false)
+        end
+    end)
+
+    rows:Button("Clear autoload", function()
+        local ok, err = pcall(function()
+            if isfile and isfile(AutoLoadPath) then delfile(AutoLoadPath) end
+        end)
+        if ok then
+            setConfigStatus("Autoload cleared.", true)
+        else
+            setConfigStatus("Could not clear autoload: " .. tostring(err), false)
+        end
+    end)
 
     configTab.Update()
 end
