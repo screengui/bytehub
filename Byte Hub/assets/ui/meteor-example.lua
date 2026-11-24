@@ -373,9 +373,11 @@ Example:CreateButton({
 
 -- The GUI tab has a "preset" drop-down with the bundled themes and Export /
 -- Import buttons that read and write Meteor/Themes/<name>.json. The same
--- calls work from code. "Byte" is the stock Meteor theme with a crimson
+-- calls work from code. "Byte" is the stock Meteor theme with a dark crimson
 -- accent — every other colour stays exactly as it is. Configs save the theme
 -- name and all palette colours, so loading one restores the look too.
+-- Right click (or hold on touch) a module in the search results to open its
+-- settings, the same as a module in its category window.
 
 Example:CreateSeparator({ Name = "Themes" })
 

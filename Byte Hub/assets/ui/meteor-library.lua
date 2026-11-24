@@ -172,7 +172,7 @@ end
 local ThemePresets = {
     { Name = "Meteor", Colors = {} },
     { Name = "Byte", Colors = {
-        Accent = Color3.fromRGB(220, 20, 60),
+        Accent = Color3.fromRGB(139, 0, 38),
     } },
     { Name = "Ocean", Colors = {
         Accent = Color3.fromRGB(0, 160, 255),
@@ -252,6 +252,9 @@ local WINDOW_MAX_WIDTH = 220
 local HEADER_HEIGHT = 24
 local ROW_HEIGHT = 22
 local BODY_TRANSPARENCY = 0.22
+-- Module fills and window buttons share one translucency, so an enabled
+-- module, a hovered module and a button all show the panel behind them.
+local MODULE_TRANSPARENCY = 0.35
 
 --==============================================================
 -- Small helpers
@@ -913,7 +916,7 @@ local function refreshSearchRow(moduleTab)
     local record = SearchRows[moduleTab]
     if not record then return end
 
-    record.Fill.BackgroundTransparency = moduleTab.Enabled and 0 or 1
+    record.Fill.BackgroundTransparency = moduleTab.Enabled and MODULE_TRANSPARENCY or 1
     record.Label.TextColor3 = moduleTab.Enabled and Palette.Accent or Palette.Text
 end
 
@@ -952,11 +955,33 @@ local function createSearchRow(moduleTab, order)
     local record = { Row = Row, Fill = Fill, Label = Label, Module = moduleTab }
     SearchRows[moduleTab] = record
 
-    Row.MouseButton1Click:Connect(function()
-        moduleTab:Toggle()
-    end)
-    Row.MouseButton2Click:Connect(function()
-        moduleTab:CreateSettings()
+    local function openSettings()
+        if moduleTab.CreateSettings then
+            moduleTab:CreateSettings()
+        end
+    end
+
+    -- Same input handling as a module row in a category window: presses are
+    -- handled on InputBegan (so a right click does not need to be a clean
+    -- click), and a long touch press opens the settings.
+    Row.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            moduleTab:Toggle()
+        elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+            openSettings()
+        elseif input.UserInputType == Enum.UserInputType.Touch then
+            local pressTime = os.clock()
+            local endedConnection
+            endedConnection = UserInputService.InputEnded:Connect(function(endInput)
+                if endInput.UserInputType ~= Enum.UserInputType.Touch then return end
+                endedConnection:Disconnect()
+                if os.clock() - pressTime >= 0.35 then
+                    openSettings()
+                else
+                    moduleTab:Toggle()
+                end
+            end)
+        end
     end)
     Row.MouseEnter:Connect(function()
         if not moduleTab.Enabled then
@@ -2287,7 +2312,7 @@ function GuiLibrary:CreateWindow(name)
         local Fill = new("Frame", {
             Size = UDim2.fromScale(0, 1),
             BackgroundColor3 = Palette.ModuleBackground,
-            BackgroundTransparency = 0,
+            BackgroundTransparency = MODULE_TRANSPARENCY,
             BorderSizePixel = 0,
             ZIndex = 1,
         }, Row)
@@ -2476,7 +2501,7 @@ function GuiLibrary:CreateWindow(name)
         local Button = new("TextButton", {
             Size = UDim2.new(1, 0, 0, 26),
             BackgroundColor3 = Palette.BackgroundHovered,
-            BackgroundTransparency = 0.2,
+            BackgroundTransparency = MODULE_TRANSPARENCY,
             BorderSizePixel = 0,
             Font = Palette.Font,
             TextSize = 14,
