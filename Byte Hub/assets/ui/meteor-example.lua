@@ -366,3 +366,39 @@ Example:CreateButton({
         shared.GuiLibrary = nil
     end,
 })
+
+--==============================================================
+-- Themes
+--==============================================================
+
+-- The GUI tab has a "preset" drop-down with the bundled themes and Export /
+-- Import buttons that read and write Meteor/Themes/<name>.json. The same
+-- calls work from code. "Byte" is the stock Meteor theme with a crimson
+-- accent — every other colour stays exactly as it is. Configs save the theme
+-- name and all palette colours, so loading one restores the look too.
+
+Example:CreateSeparator({ Name = "Themes" })
+
+Example:CreateButton({
+    Name = "Apply the Byte theme",
+    Function = function()
+        GuiLibrary:ApplyThemePreset("Byte")
+    end,
+})
+
+Example:CreateButton({
+    Name = "Back to Meteor colours",
+    Function = function()
+        GuiLibrary:ApplyThemePreset("Meteor")
+    end,
+})
+
+Example:CreateButton({
+    Name = "Export this theme",
+    Function = function()
+        local ok, pathOrError = GuiLibrary:ExportTheme("ExampleTheme")
+        if not ok then
+            print("Theme export failed: " .. tostring(pathOrError))
+        end
+    end,
+})

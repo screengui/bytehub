@@ -24,8 +24,13 @@
     search window; every other tab opens Meteor's settings screen for that
     system, and each of those rows is live: toggles toggle, sliders drag,
     dropdowns cycle, colour rows open a colour picker, and buttons act on the
-    GUI/HUD/lists. Settings are saved next to the window layout. On touch
-    devices a floating button opens and closes the GUI without a keyboard.
+    GUI/HUD/lists. Settings are saved next to the window layout, including the
+    theme name, every palette colour, the font and the scale, so a config
+    restores the look of the interface as well as the modules. The GUI tab also
+    has a drop-down of bundled themes (Meteor, Byte, Ocean, Forest) and can
+    export the current colours to Meteor/Themes/<name>.json and import them
+    again. On touch devices a floating button opens and closes the GUI without
+    a keyboard.
 
     API
       GuiLibrary:CreateWindow(name)              -> window
@@ -53,6 +58,10 @@
       GuiLibrary:SetScale(number)                 -- GUI scale, 0.5 - 2
       GuiLibrary:SetFont(font)                    -- recolours every existing text
       GuiLibrary:SetPaletteColor(key, color)      -- live theme edit
+      GuiLibrary:ApplyThemePreset(name)           -- bundled theme
+      GuiLibrary:GetThemeNames()                  -- preset names (drop-down)
+      GuiLibrary:ExportTheme(name)                -- Meteor/Themes/<name>.json
+      GuiLibrary:ImportTheme(name)                -- reads one back
       GuiLibrary:SetArraylistVisible(bool)
       GuiLibrary.Settings                         -- saved settings table
 
@@ -155,6 +164,60 @@ local GuiScale
 
 for _, key in ipairs(ThemeKeys) do
     PaletteDefaults[key] = Palette[key]
+end
+
+-- Bundled theme presets. A preset only lists the colours it changes; every
+-- other key falls back to the Meteor default, so "Byte" is the stock theme
+-- with a crimson accent and nothing else touched.
+local ThemePresets = {
+    { Name = "Meteor", Colors = {} },
+    { Name = "Byte", Colors = {
+        Accent = Color3.fromRGB(220, 20, 60),
+    } },
+    { Name = "Ocean", Colors = {
+        Accent = Color3.fromRGB(0, 160, 255),
+        SliderLeft = Color3.fromRGB(0, 90, 160),
+        SliderHandle = Color3.fromRGB(0, 200, 255),
+        ModuleBackground = Color3.fromRGB(32, 45, 60),
+    } },
+    { Name = "Forest", Colors = {
+        Accent = Color3.fromRGB(70, 190, 110),
+        SliderLeft = Color3.fromRGB(35, 110, 65),
+        SliderHandle = Color3.fromRGB(90, 220, 130),
+        ModuleBackground = Color3.fromRGB(38, 52, 42),
+    } },
+}
+
+local PresetByName = {}
+for _, preset in ipairs(ThemePresets) do
+    PresetByName[preset.Name] = preset
+end
+
+-- Colour swatches in the GUI tab, so a preset recolours their preview too.
+local ThemeSwatches = {}
+
+local function colorToRgb(color)
+    return {
+        math.round(color.R * 255),
+        math.round(color.G * 255),
+        math.round(color.B * 255),
+    }
+end
+
+local function themeSnapshot()
+    local snapshot = {}
+    for _, key in ipairs(ThemeKeys) do
+        snapshot[key] = colorToRgb(Palette[key])
+    end
+    return snapshot
+end
+
+function GuiLibrary:GetThemeNames()
+    local names = {}
+    for _, preset in ipairs(ThemePresets) do
+        table.insert(names, preset.Name)
+    end
+    return names
 end
 
 local function rebuildThemeLookup()
@@ -377,6 +440,9 @@ local AutoLoadPath = ConfigDirectory .. "/autoload.txt"
 local ActiveConfigName = "config"
 local Config = { windows = {}, modules = {}, settings = {}, friends = {}, macros = {} }
 
+-- Assigned right after loadConfig() so it always points at the loaded table.
+local Settings
+
 local function ensureConfigDirectory()
     if not isfolder or not makefolder then
         return true
@@ -432,10 +498,60 @@ local function writeConfigFile(path, data)
     return false, tostring(err)
 end
 
+-- Configs carry the UI state as well: theme name, all palette colours, font,
+-- scale and the other GUI settings, so loading one restores the whole look.
+local function syncUiSettings()
+    Settings.colors = themeSnapshot()
+    Settings.theme = Settings.theme or "Meteor"
+end
+
 local function save()
+    syncUiSettings()
     local path = configFile(ActiveConfigName) or ConfigPath
     local ok = writeConfigFile(path, Config)
     return ok
+end
+
+--==============================================================
+-- Theme files (export / import)
+--==============================================================
+
+local ThemeDirectory = "Meteor/Themes"
+
+local function ensureThemeDirectory()
+    if not isfolder or not makefolder then return true end
+    ensureConfigDirectory()
+    if not isfolder(ThemeDirectory) then makefolder(ThemeDirectory) end
+    return true
+end
+
+local function themeFile(name)
+    local safeName = cleanConfigName(name)
+    if not safeName then return nil end
+    return ThemeDirectory .. "/" .. safeName .. ".json"
+end
+
+local function writeThemeFile(name, data)
+    local path = themeFile(name)
+    if not path then return false, "Enter a valid theme name." end
+    if RunService:IsStudio() or not writefile then
+        return false, "File writing is unavailable."
+    end
+
+    local ok, err = pcall(function()
+        ensureThemeDirectory()
+        writefile(path, encodeConfig(data))
+    end)
+    if ok then return true, path end
+    return false, tostring(err)
+end
+
+local function readThemeFile(name)
+    local path = themeFile(name)
+    if not path then return false, "Enter a valid theme name." end
+    local raw = decodeConfig(path)
+    if not raw then return false, "Theme file not found." end
+    return raw, path
 end
 
 local function normalizeConfig(raw)
@@ -532,7 +648,7 @@ loadConfig()
 -- Settings (saved with the layout in the same config file)
 --==============================================================
 
-local Settings = Config.settings
+Settings = Config.settings
 GuiLibrary.Settings = Settings
 
 local FontOptions = {
@@ -551,6 +667,7 @@ end
 local DefaultSettings = {
     customFont = true,
     font = "Jura",
+    theme = "Meteor",
     tooltips = true,
     scale = 1,
     moduleAlignment = "Center",
@@ -2918,7 +3035,18 @@ local function tabRows(parent)
             if onChanged then onChanged(options[index], index) end
         end)
 
-        return row
+        return {
+            Row = row,
+            Set = function(name, fire)
+                local found = table.find(options, name)
+                if not found then return false end
+                index = found
+                valueLabel.Text = options[index]
+                if fire and onChanged then onChanged(options[index], index) end
+                return true
+            end,
+            Get = function() return options[index] end,
+        }
     end
 
     function rows:TextInput(labelText, value, onChanged)
@@ -2955,11 +3083,22 @@ local function tabRows(parent)
             ZIndex = 11,
         }, row)
 
+        local current = tostring(value or "")
         box.FocusLost:Connect(function()
-            if onChanged then onChanged(box.Text) end
+            current = box.Text
+            if onChanged then onChanged(current) end
         end)
 
-        return row
+        return {
+            Row = row,
+            Box = box,
+            Set = function(text, fire)
+                current = tostring(text or "")
+                box.Text = current
+                if fire and onChanged then onChanged(current) end
+            end,
+            Get = function() return current end,
+        }
     end
 
     -- Colour rows show a swatch for one palette key and open the picker on click.
@@ -2990,6 +3129,7 @@ local function tabRows(parent)
             BorderSizePixel = 0,
         }, row)
         new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.5 }, swatch)
+        ThemeSwatches[paletteKey] = swatch
 
         local button = new("TextButton", {
             Size = UDim2.fromScale(1, 1),
@@ -3241,6 +3381,12 @@ local function applyConfigData(raw)
             ))
         end
     end
+    if GuiLibrary.ThemeDropdown and Settings.theme then
+        GuiLibrary.ThemeDropdown:Set(Settings.theme, false)
+    end
+    if GuiLibrary.ThemeNameInput and Settings.theme then
+        GuiLibrary.ThemeNameInput:Set(Settings.theme, true)
+    end
     if GuiLibrary.ApplyArraylistSettings then GuiLibrary:ApplyArraylistSettings() end
     if GuiLibrary.UpdateArraylistVisibility then GuiLibrary:UpdateArraylistVisibility() end
     return true
@@ -3359,6 +3505,7 @@ do
             setConfigStatus("Config already exists. Use Overwrite.", false)
             return
         end
+        syncUiSettings()
         local ok, err = writeConfigFile(path, Config)
         if ok then
             ActiveConfigName = name
@@ -3389,6 +3536,7 @@ do
     rows:Button("Overwrite", function()
         local name, path = selectedConfig()
         if not name then return end
+        syncUiSettings()
         local ok, err = writeConfigFile(path, Config)
         if ok then
             ActiveConfigName = name
@@ -3505,6 +3653,49 @@ do
     end)
     rows:Button("Paste", function()
         GuiLibrary:PasteTheme()
+    end)
+
+    rows:Separator("Themes")
+    local themeNames = GuiLibrary:GetThemeNames()
+    local themeName = Settings.theme or "Meteor"
+
+    local themeDropdown
+    themeDropdown = rows:Dropdown("preset", themeNames,
+        math.max(table.find(themeNames, themeName) or 1, 1), function(name)
+            themeName = name
+            local ok, err = GuiLibrary:ApplyThemePreset(name)
+            if not ok then
+                print("Meteor GUI: " .. tostring(err))
+            end
+        end)
+    GuiLibrary.ThemeDropdown = themeDropdown
+
+    GuiLibrary.ThemeNameInput = rows:TextInput("name", themeName, function(value)
+        themeName = value
+    end)
+
+    rows:Button("Export theme", function()
+        local name = cleanConfigName(themeName)
+        if not name then
+            print("Meteor GUI: enter a valid theme name first.")
+            return
+        end
+        local ok, result = GuiLibrary:ExportTheme(name)
+        if not ok then
+            print("Meteor GUI: export failed: " .. tostring(result))
+        end
+    end)
+
+    rows:Button("Import theme", function()
+        local name = cleanConfigName(themeName)
+        if not name then
+            print("Meteor GUI: enter a valid theme name first.")
+            return
+        end
+        local ok, result = GuiLibrary:ImportTheme(name)
+        if not ok then
+            print("Meteor GUI: import failed: " .. tostring(result))
+        end
     end)
 
     rows:Separator("General")
@@ -4181,7 +4372,7 @@ end
 
 -- GUI tab: colours ---------------------------------------------
 
-function GuiLibrary:SetPaletteColor(key, color)
+function GuiLibrary:SetPaletteColor(key, color, skipSave)
     local previous = Palette[key]
     if typeof(previous) ~= "Color3" or previous == color then return end
 
@@ -4200,19 +4391,19 @@ function GuiLibrary:SetPaletteColor(key, color)
         end)
     end
 
+    local swatch = ThemeSwatches[key]
+    if swatch then swatch.BackgroundColor3 = color end
+
     Settings.colors = Settings.colors or {}
-    Settings.colors[key] = {
-        math.round(color.R * 255),
-        math.round(color.G * 255),
-        math.round(color.B * 255),
-    }
-    save()
+    Settings.colors[key] = colorToRgb(color)
+    if not skipSave then save() end
 end
 
 function GuiLibrary:ResetColors()
     for _, key in ipairs(ThemeKeys) do
         GuiLibrary:SetPaletteColor(key, PaletteDefaults[key])
     end
+    Settings.theme = "Meteor"
     Settings.colors = nil
     save()
 end
@@ -4246,6 +4437,89 @@ function GuiLibrary:PasteTheme()
             GuiLibrary:SetPaletteColor(key, Color3.fromRGB(rgb[1], rgb[2], rgb[3]))
         end
     end
+end
+
+-- GUI tab: theme presets and theme files ----------------------
+
+function GuiLibrary:ApplyThemePreset(name)
+    local preset = PresetByName[name]
+    if not preset then return false, "Unknown theme." end
+
+    for _, key in ipairs(ThemeKeys) do
+        self:SetPaletteColor(key, preset.Colors[key] or PaletteDefaults[key], true)
+    end
+
+    Settings.theme = name
+    if GuiLibrary.ThemeDropdown then GuiLibrary.ThemeDropdown:Set(name, false) end
+    save()
+    return true
+end
+
+function GuiLibrary:GetThemeData()
+    return {
+        name = Settings.theme or "Meteor",
+        colors = themeSnapshot(),
+        font = Settings.font,
+        customFont = Settings.customFont,
+    }
+end
+
+function GuiLibrary:ApplyThemeData(data)
+    if type(data) ~= "table" then return false, "Invalid theme data." end
+
+    local colors = type(data.colors) == "table" and data.colors or data
+    for _, key in ipairs(ThemeKeys) do
+        local rgb = colors[key]
+        if type(rgb) == "table" and rgb[1] and rgb[2] and rgb[3] then
+            self:SetPaletteColor(key, Color3.fromRGB(
+                math.clamp(tonumber(rgb[1]) or 0, 0, 255),
+                math.clamp(tonumber(rgb[2]) or 0, 0, 255),
+                math.clamp(tonumber(rgb[3]) or 0, 0, 255)
+            ), true)
+        end
+    end
+
+    if type(data.font) == "string" and FontMap[data.font] then
+        Settings.font = data.font
+        local font = FontMap[data.font]
+        if data.customFont == false or Settings.customFont == false then
+            font = Enum.Font.SourceSans
+        end
+        self:SetFont(font)
+    end
+
+    save()
+    return true
+end
+
+function GuiLibrary:ExportTheme(name)
+    name = cleanConfigName(name or Settings.theme or "") or "theme"
+    local data = self:GetThemeData()
+    data.name = name
+
+    local ok, path = writeThemeFile(name, data)
+    if not ok then return false, path end
+
+    Settings.theme = name
+    save()
+    print("Meteor GUI: exported theme " .. name .. " to " .. path)
+    return true, path, encodeConfig(data)
+end
+
+function GuiLibrary:ImportTheme(name)
+    local safeName = cleanConfigName(name)
+    if not safeName then return false, "Enter a valid theme name." end
+
+    local raw, path = readThemeFile(safeName)
+    if not raw then return false, path end
+
+    local ok, err = self:ApplyThemeData(raw)
+    if not ok then return false, err end
+
+    Settings.theme = safeName
+    save()
+    print("Meteor GUI: imported theme " .. safeName .. " from " .. path)
+    return true, path
 end
 
 -- GUI tab: module alignment ------------------------------------
