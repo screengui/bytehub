@@ -30,16 +30,25 @@
     API
       GuiLibrary:CreateWindow(name)              -> window
       window:CreateModule{ Name, Description, Function, Array, Default }
-      window:CreateButton{ Name, Function }
+      window:CreateButton{ Name, Description, Function }  -- also returns a
+                                                 -- settings host (button.Button
+                                                 -- is the visible TextButton)
       window:CreateLabel{ Text }
       window:CreateSeparator{ Name }
       module:CreateToggle{ Name, Default, Function }
       module:CreateSlider{ Name, Min, Max, Default, Decimals, Step, Function }
       module:CreatePicker{ Name, Options, Default, Function }
+      module:CreateTextBox{ Name, Default, Placeholder, MaxLength, Function }
       module:CreateButton{ Name, Function }
       module:CreateSeparator{ Name }
       module:CreateSettings()                    -- opens the module screen
       module:SetEnabled(bool), module:Toggle(), module:SetKeybind(key)
+
+    Window buttons accept the same Create* settings as modules (Toggle,
+    Slider, Picker, TextBox, Button, Label, Separator); right click or a long
+    touch press opens them. Text boxes are drawn like Meteor's StringSetting:
+    one full width field per row, the setting name as the placeholder, and a
+    right click empties it.
       GuiLibrary:Toggle() / GuiLibrary:SetVisible(bool)
       GuiLibrary:ResetLayout() / GuiLibrary:ArrangeWindows()
       GuiLibrary:SetScale(number)                 -- GUI scale, 0.5 - 2
@@ -1455,24 +1464,464 @@ openModuleScreen = function(moduleTab)
         }, ModuleContent)
     end
 
-    addSeparator(ModuleContent, "Module")
-    moduleTab.EnabledRow = createToggleRow(ModuleContent, "Enabled", moduleTab.Enabled, function(state)
-        moduleTab:SetEnabled(state)
-    end)
+    -- Only toggling modules get an Enabled row and a bind; a button is an
+    -- action, so its screen holds nothing but its settings.
+    if moduleTab.SetEnabled then
+        addSeparator(ModuleContent, "Module")
+        moduleTab.EnabledRow = createToggleRow(ModuleContent, "Enabled", moduleTab.Enabled, function(state)
+            moduleTab:SetEnabled(state)
+        end)
+    end
 
-    if moduleTab.SettingCount > 0 then
+    if (moduleTab.SettingCount or 0) > 0 then
         addSeparator(ModuleContent, "Settings")
         moduleTab.SettingsContainer.Parent = ModuleContent
     end
 
-    addSeparator(ModuleContent, "Bind")
-    moduleTab.BindRow = createBindRow(ModuleContent,
-        function() return moduleTab.Keybind end,
-        function(value) moduleTab:SetKeybind(value) end
-    )
+    if moduleTab.SetKeybind then
+        addSeparator(ModuleContent, "Bind")
+        moduleTab.BindRow = createBindRow(ModuleContent,
+            function() return moduleTab.Keybind end,
+            function(value) moduleTab:SetKeybind(value) end
+        )
+    end
 
     ModuleOverlay.Visible = true
     ModuleFrame.Visible = true
+end
+
+local function installSettingsWidgets(owner, settingsConfig, SettingsContainer)
+    -- ---- settings widgets ---------------------------------
+    -- Everything below is created inside the settings container, which the
+    -- module screen reparents while it is open. Modules and window buttons
+    -- share these, so a button can hold settings just like a module can.
+
+    function owner:CreateToggle(Table)
+        local configValue = settingsConfig.Settings[Table.Name]
+        if type(configValue) ~= "boolean" then
+            configValue = Table.Default == true
+            settingsConfig.Settings[Table.Name] = configValue
+        end
+
+        local widget = createToggleRow(SettingsContainer, Table.Name, configValue, function(state)
+            settingsConfig.Settings[Table.Name] = state
+            if Table.Function then pcall(Table.Function, state) end
+        end)
+
+        owner.ConfigWidgets[Table.Name] = {
+            Kind = "Toggle",
+            Set = function(value, fire)
+                widget:Set(value == true, fire == true, false)
+            end,
+        }
+        owner.SettingCount += 1
+        return widget
+    end
+
+    function owner:CreateSlider(Table)
+        local minValue = Table.Min or 0
+        local maxValue = Table.Max or 1
+        if maxValue <= minValue then maxValue = minValue + 1 end
+
+        local value = tonumber(settingsConfig.Settings[Table.Name])
+        if value == nil then value = Table.Default or minValue end
+        settingsConfig.Settings[Table.Name] = value
+
+        local row = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 30),
+            BackgroundTransparency = 1,
+        }, SettingsContainer)
+
+        local track = new("TextButton", {
+            Size = UDim2.new(1, -12, 0, 18),
+            Position = UDim2.fromOffset(6, 6),
+            BackgroundColor3 = Palette.SliderRight,
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            Text = "",
+        }, row)
+
+        new("Frame", {
+            Size = UDim2.fromScale(0, 1),
+            BackgroundColor3 = Palette.SliderLeft,
+            BorderSizePixel = 0,
+            Name = "Fill",
+        }, track)
+
+        local fill = track:FindFirstChild("Fill")
+        local handle = new("Frame", {
+            Size = UDim2.new(0, 2, 1, 0),
+            BackgroundColor3 = Palette.SliderHandle,
+            BorderSizePixel = 0,
+        }, track)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -64, 1, 0),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = Table.Name,
+        }, track)
+
+        local valueLabel = new("TextLabel", {
+            Size = UDim2.fromOffset(54, 18),
+            Position = UDim2.new(1, -56, 0, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            Text = "",
+        }, track)
+
+        local slider = {}
+
+        local function format(number)
+            if Table.Decimals and Table.Decimals > 0 then
+                return string.format("%." .. Table.Decimals .. "f", number)
+            end
+            return tostring(math.floor(number + 0.5))
+        end
+
+        local function set(newValue, fire, persist)
+            newValue = math.clamp(tonumber(newValue) or minValue, minValue, maxValue)
+            if Table.Step and Table.Step > 0 then
+                newValue = math.floor((newValue / Table.Step) + 0.5) * Table.Step
+                newValue = math.clamp(newValue, minValue, maxValue)
+            end
+
+            value = newValue
+            slider.Value = newValue
+            settingsConfig.Settings[Table.Name] = newValue
+
+            local alpha = (newValue - minValue) / math.max(maxValue - minValue, 1e-6)
+            fill.Size = UDim2.fromScale(alpha, 1)
+            handle.Position = UDim2.new(alpha, -1, 0, 0)
+            valueLabel.Text = format(newValue)
+
+            if fire and Table.Function then pcall(Table.Function, newValue) end
+            if persist then save() end
+        end
+
+        slider.Value = value
+        set(value, false, false)
+        slider.Set = function(nextValue, fire)
+            set(nextValue, fire == true, false)
+        end
+
+        track.InputBegan:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.MouseButton1
+                and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+            local function updateFromX(x)
+                local start = track.AbsolutePosition.X
+                local size = math.max(track.AbsoluteSize.X, 1)
+                local alpha = math.clamp((x - start) / size, 0, 1)
+                set(minValue + (maxValue - minValue) * alpha, true, false)
+            end
+
+            updateFromX(input.Position.X)
+
+            local movedConnection
+            local endedConnection
+
+            movedConnection = UserInputService.InputChanged:Connect(function(moveInput)
+                if moveInput.UserInputType == Enum.UserInputType.MouseMovement
+                    or moveInput.UserInputType == Enum.UserInputType.Touch then
+                    updateFromX(moveInput.Position.X)
+                end
+            end)
+
+            endedConnection = UserInputService.InputEnded:Connect(function(endInput)
+                if endInput.UserInputType == Enum.UserInputType.MouseButton1
+                    or endInput.UserInputType == Enum.UserInputType.Touch then
+                    movedConnection:Disconnect()
+                    endedConnection:Disconnect()
+                    save()
+                end
+            end)
+        end)
+
+        owner.ConfigWidgets[Table.Name] = {
+            Kind = "Slider",
+            Set = function(value, fire)
+                slider.Set(value, fire)
+            end,
+        }
+        owner.SettingCount += 1
+        return slider
+    end
+
+    function owner:CreatePicker(Table)
+        local options = Table.Options or {}
+        if #options == 0 then
+            options = { "None" }
+        end
+
+        local current = settingsConfig.Settings[Table.Name]
+        local index = table.find(options, current) or table.find(options, Table.Default) or 1
+        settingsConfig.Settings[Table.Name] = options[index]
+
+        local row = new("TextButton", {
+            Size = UDim2.new(1, 0, 0, 26),
+            BackgroundTransparency = 1,
+            AutoButtonColor = false,
+            Text = "",
+        }, SettingsContainer)
+
+        local hover = new("Frame", {
+            Size = UDim2.fromScale(1, 1),
+            BackgroundColor3 = Palette.BackgroundHovered,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+        }, row)
+
+        new("TextLabel", {
+            Size = UDim2.new(1, -100, 1, 0),
+            Position = UDim2.fromOffset(6, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 14,
+            TextColor3 = Palette.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = Table.Name,
+        }, row)
+
+        local valueLabel = new("TextLabel", {
+            Size = UDim2.new(0.5, -8, 1, 0),
+            Position = UDim2.new(1, -6, 0, 0),
+            AnchorPoint = Vector2.new(1, 0),
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 14,
+            TextColor3 = Palette.Accent,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            Text = options[index],
+        }, row)
+
+        local list = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundColor3 = Palette.BackgroundHovered,
+            BackgroundTransparency = 0.35,
+            BorderSizePixel = 0,
+            Visible = false,
+        }, SettingsContainer)
+        new("UIListLayout", {
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        }, list)
+
+        local picker = { Option = options[index] }
+
+        local function set(newIndex, fire, persist)
+            index = ((newIndex - 1) % #options) + 1
+            local option = options[index]
+            picker.Option = option
+            settingsConfig.Settings[Table.Name] = option
+            valueLabel.Text = option
+
+            if fire and Table.Function then pcall(Table.Function, option) end
+            if persist then save() end
+        end
+
+        for optionIndex, option in ipairs(options) do
+            local optionRow = new("TextButton", {
+                Size = UDim2.new(1, 0, 0, 22),
+                BackgroundTransparency = 1,
+                AutoButtonColor = false,
+                Font = Palette.Font,
+                TextSize = 13,
+                TextColor3 = Palette.Text,
+                Text = option,
+                LayoutOrder = optionIndex,
+            }, list)
+
+            optionRow.MouseEnter:Connect(function()
+                optionRow.TextColor3 = Palette.Accent
+            end)
+            optionRow.MouseLeave:Connect(function()
+                optionRow.TextColor3 = Palette.Text
+            end)
+            optionRow.MouseButton1Click:Connect(function()
+                set(optionIndex, true, true)
+                list.Visible = false
+            end)
+        end
+
+        row.MouseEnter:Connect(function()
+            tweenTo(hover, { BackgroundTransparency = 0.55 }, 0.1)
+        end)
+        row.MouseLeave:Connect(function()
+            tweenTo(hover, { BackgroundTransparency = 1 }, 0.1)
+        end)
+        row.MouseButton1Click:Connect(function()
+            list.Visible = not list.Visible
+        end)
+        row.MouseButton2Click:Connect(function()
+            set(index - 1, true, true)
+        end)
+
+        picker.Set = function(option, fire)
+            local optionIndex = table.find(options, option)
+            if optionIndex then
+                set(optionIndex, fire == true, false)
+            end
+        end
+        owner.ConfigWidgets[Table.Name] = {
+            Kind = "Picker",
+            Set = function(value, fire)
+                picker.Set(value, fire)
+            end,
+        }
+        owner.SettingCount += 1
+        return picker
+    end
+
+    function owner:CreateButton(Table)
+        local row = new("TextButton", {
+            Size = UDim2.new(1, 0, 0, 26),
+            BackgroundColor3 = Palette.BackgroundHovered,
+            BackgroundTransparency = 0.2,
+            BorderSizePixel = 0,
+            Font = Palette.Font,
+            TextSize = 14,
+            TextColor3 = Palette.Text,
+            Text = Table.Name,
+            AutoButtonColor = false,
+        }, SettingsContainer)
+
+        row.MouseEnter:Connect(function()
+            tweenTo(row, { BackgroundColor3 = Palette.BackgroundPressed }, 0.1)
+        end)
+        row.MouseLeave:Connect(function()
+            tweenTo(row, { BackgroundColor3 = Palette.BackgroundHovered }, 0.1)
+        end)
+        row.MouseButton1Click:Connect(function()
+            if Table.Function then pcall(Table.Function) end
+        end)
+
+        owner.SettingCount += 1
+        return row
+    end
+
+    function owner:CreateLabel(Table)
+        local label = new("TextLabel", {
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.TextSecondary,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextWrapped = true,
+            Text = Table.Text or Table.Name or "",
+        }, SettingsContainer)
+
+        owner.SettingCount += 1
+        return label
+    end
+
+    function owner:CreateSeparator(Table)
+        local separator = addSeparator(SettingsContainer, Table and Table.Name)
+        owner.SettingCount += 1
+        return separator
+    end
+
+    function owner:CreateTextBox(Table)
+        local value = settingsConfig.Settings[Table.Name]
+        if type(value) ~= "string" then
+            value = tostring(Table.Default or "")
+            settingsConfig.Settings[Table.Name] = value
+        end
+
+        -- Meteor renders StringSetting as a single field that fills the row:
+        -- no label, the setting name is the placeholder, a flat fill with the
+        -- theme background and a thin black outline.
+        local row = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 26),
+            BackgroundTransparency = 1,
+        }, SettingsContainer)
+
+        local box = new("TextBox", {
+            Size = UDim2.new(1, 0, 1, -4),
+            Position = UDim2.fromOffset(0, 2),
+            BackgroundColor3 = Palette.Background,
+            BackgroundTransparency = 0.1,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ClearTextOnFocus = false,
+            Font = Palette.Font,
+            TextSize = 13,
+            TextColor3 = Palette.Text,
+            PlaceholderColor3 = Palette.TextSecondary,
+            PlaceholderText = Table.Placeholder or Table.Name,
+            Text = value,
+            TextXAlignment = Enum.TextXAlignment.Left,
+        }, row)
+        new("UIStroke", { Color = Palette.Outline, Thickness = 1, Transparency = 0.5 }, box)
+        new("UIPadding", {
+            PaddingLeft = UDim.new(0, 4),
+            PaddingRight = UDim.new(0, 4),
+        }, box)
+
+        local textBox = { TextBox = box, Value = value }
+        local updating = false
+
+        local function set(newValue, fire, persist)
+            newValue = tostring(newValue or "")
+            if Table.MaxLength and Table.MaxLength > 0 then
+                newValue = string.sub(newValue, 1, Table.MaxLength)
+            end
+
+            value = newValue
+            textBox.Value = newValue
+            settingsConfig.Settings[Table.Name] = newValue
+
+            if box.Text ~= newValue then
+                updating = true
+                box.Text = newValue
+                updating = false
+            end
+
+            if fire and Table.Function then pcall(Table.Function, newValue) end
+            if persist then save() end
+        end
+
+        set(value, false, false)
+
+        -- Meteor fires the setting on every edit and saves when the field is
+        -- left, so typing never writes the config file once per character.
+        box:GetPropertyChangedSignal("Text"):Connect(function()
+            if updating then return end
+            set(box.Text, true, false)
+        end)
+        box.FocusLost:Connect(function()
+            set(box.Text, true, true)
+        end)
+
+        -- right clicking empties the field, like Meteor's text boxes
+        box.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton2 then
+                set("", true, true)
+            end
+        end)
+
+        textBox.Set = function(nextValue, fire)
+            set(nextValue, fire == true, false)
+        end
+        owner.ConfigWidgets[Table.Name] = {
+            Kind = "TextBox",
+            Set = function(nextValue, fire)
+                textBox.Set(nextValue, fire)
+            end,
+        }
+        owner.SettingCount += 1
+        return textBox
+    end
+
 end
 
 --==============================================================
@@ -1874,348 +2323,27 @@ function GuiLibrary:CreateWindow(name)
             end
         end)
 
-        -- ---- settings widgets ---------------------------------
-        -- everything below is created inside the module's settings container,
-        -- which the module screen reparents while it is open.
-
-        function ModuleTab:CreateToggle(Table)
-            local configValue = settingsConfig.Settings[Table.Name]
-            if type(configValue) ~= "boolean" then
-                configValue = Table.Default == true
-                settingsConfig.Settings[Table.Name] = configValue
-            end
-
-            local widget = createToggleRow(SettingsContainer, Table.Name, configValue, function(state)
-                settingsConfig.Settings[Table.Name] = state
-                if Table.Function then pcall(Table.Function, state) end
-            end)
-
-            self.ConfigWidgets[Table.Name] = {
-                Kind = "Toggle",
-                Set = function(value, fire)
-                    widget:Set(value == true, fire == true, false)
-                end,
-            }
-            self.SettingCount += 1
-            return widget
-        end
-
-        function ModuleTab:CreateSlider(Table)
-            local minValue = Table.Min or 0
-            local maxValue = Table.Max or 1
-            if maxValue <= minValue then maxValue = minValue + 1 end
-
-            local value = tonumber(settingsConfig.Settings[Table.Name])
-            if value == nil then value = Table.Default or minValue end
-            settingsConfig.Settings[Table.Name] = value
-
-            local row = new("Frame", {
-                Size = UDim2.new(1, 0, 0, 30),
-                BackgroundTransparency = 1,
-            }, SettingsContainer)
-
-            local track = new("TextButton", {
-                Size = UDim2.new(1, -12, 0, 18),
-                Position = UDim2.fromOffset(6, 6),
-                BackgroundColor3 = Palette.SliderRight,
-                BorderSizePixel = 0,
-                AutoButtonColor = false,
-                Text = "",
-            }, row)
-
-            new("Frame", {
-                Size = UDim2.fromScale(0, 1),
-                BackgroundColor3 = Palette.SliderLeft,
-                BorderSizePixel = 0,
-                Name = "Fill",
-            }, track)
-
-            local fill = track:FindFirstChild("Fill")
-            local handle = new("Frame", {
-                Size = UDim2.new(0, 2, 1, 0),
-                BackgroundColor3 = Palette.SliderHandle,
-                BorderSizePixel = 0,
-            }, track)
-
-            new("TextLabel", {
-                Size = UDim2.new(1, -64, 1, 0),
-                Position = UDim2.fromOffset(6, 0),
-                BackgroundTransparency = 1,
-                Font = Palette.Font,
-                TextSize = 13,
-                TextColor3 = Palette.Text,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Text = Table.Name,
-            }, track)
-
-            local valueLabel = new("TextLabel", {
-                Size = UDim2.fromOffset(54, 18),
-                Position = UDim2.new(1, -56, 0, 0),
-                BackgroundTransparency = 1,
-                Font = Palette.Font,
-                TextSize = 13,
-                TextColor3 = Palette.Text,
-                TextXAlignment = Enum.TextXAlignment.Right,
-                Text = "",
-            }, track)
-
-            local slider = {}
-
-            local function format(number)
-                if Table.Decimals and Table.Decimals > 0 then
-                    return string.format("%." .. Table.Decimals .. "f", number)
-                end
-                return tostring(math.floor(number + 0.5))
-            end
-
-            local function set(newValue, fire, persist)
-                newValue = math.clamp(tonumber(newValue) or minValue, minValue, maxValue)
-                if Table.Step and Table.Step > 0 then
-                    newValue = math.floor((newValue / Table.Step) + 0.5) * Table.Step
-                    newValue = math.clamp(newValue, minValue, maxValue)
-                end
-
-                value = newValue
-                slider.Value = newValue
-                settingsConfig.Settings[Table.Name] = newValue
-
-                local alpha = (newValue - minValue) / math.max(maxValue - minValue, 1e-6)
-                fill.Size = UDim2.fromScale(alpha, 1)
-                handle.Position = UDim2.new(alpha, -1, 0, 0)
-                valueLabel.Text = format(newValue)
-
-                if fire and Table.Function then pcall(Table.Function, newValue) end
-                if persist then save() end
-            end
-
-            slider.Value = value
-            set(value, false, false)
-            slider.Set = function(nextValue, fire)
-                set(nextValue, fire == true, false)
-            end
-
-            track.InputBegan:Connect(function(input)
-                if input.UserInputType ~= Enum.UserInputType.MouseButton1
-                    and input.UserInputType ~= Enum.UserInputType.Touch then return end
-
-                local function updateFromX(x)
-                    local start = track.AbsolutePosition.X
-                    local size = math.max(track.AbsoluteSize.X, 1)
-                    local alpha = math.clamp((x - start) / size, 0, 1)
-                    set(minValue + (maxValue - minValue) * alpha, true, false)
-                end
-
-                updateFromX(input.Position.X)
-
-                local movedConnection
-                local endedConnection
-
-                movedConnection = UserInputService.InputChanged:Connect(function(moveInput)
-                    if moveInput.UserInputType == Enum.UserInputType.MouseMovement
-                        or moveInput.UserInputType == Enum.UserInputType.Touch then
-                        updateFromX(moveInput.Position.X)
-                    end
-                end)
-
-                endedConnection = UserInputService.InputEnded:Connect(function(endInput)
-                    if endInput.UserInputType == Enum.UserInputType.MouseButton1
-                        or endInput.UserInputType == Enum.UserInputType.Touch then
-                        movedConnection:Disconnect()
-                        endedConnection:Disconnect()
-                        save()
-                    end
-                end)
-            end)
-
-            self.ConfigWidgets[Table.Name] = {
-                Kind = "Slider",
-                Set = function(value, fire)
-                    slider.Set(value, fire)
-                end,
-            }
-            self.SettingCount += 1
-            return slider
-        end
-
-        function ModuleTab:CreatePicker(Table)
-            local options = Table.Options or {}
-            if #options == 0 then
-                options = { "None" }
-            end
-
-            local current = settingsConfig.Settings[Table.Name]
-            local index = table.find(options, current) or table.find(options, Table.Default) or 1
-            settingsConfig.Settings[Table.Name] = options[index]
-
-            local row = new("TextButton", {
-                Size = UDim2.new(1, 0, 0, 26),
-                BackgroundTransparency = 1,
-                AutoButtonColor = false,
-                Text = "",
-            }, SettingsContainer)
-
-            local hover = new("Frame", {
-                Size = UDim2.fromScale(1, 1),
-                BackgroundColor3 = Palette.BackgroundHovered,
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-            }, row)
-
-            new("TextLabel", {
-                Size = UDim2.new(1, -100, 1, 0),
-                Position = UDim2.fromOffset(6, 0),
-                BackgroundTransparency = 1,
-                Font = Palette.Font,
-                TextSize = 14,
-                TextColor3 = Palette.Text,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Text = Table.Name,
-            }, row)
-
-            local valueLabel = new("TextLabel", {
-                Size = UDim2.new(0.5, -8, 1, 0),
-                Position = UDim2.new(1, -6, 0, 0),
-                AnchorPoint = Vector2.new(1, 0),
-                BackgroundTransparency = 1,
-                Font = Palette.Font,
-                TextSize = 14,
-                TextColor3 = Palette.Accent,
-                TextXAlignment = Enum.TextXAlignment.Right,
-                Text = options[index],
-            }, row)
-
-            local list = new("Frame", {
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundColor3 = Palette.BackgroundHovered,
-                BackgroundTransparency = 0.35,
-                BorderSizePixel = 0,
-                Visible = false,
-            }, SettingsContainer)
-            new("UIListLayout", {
-                SortOrder = Enum.SortOrder.LayoutOrder,
-            }, list)
-
-            local picker = { Option = options[index] }
-
-            local function set(newIndex, fire, persist)
-                index = ((newIndex - 1) % #options) + 1
-                local option = options[index]
-                picker.Option = option
-                settingsConfig.Settings[Table.Name] = option
-                valueLabel.Text = option
-
-                if fire and Table.Function then pcall(Table.Function, option) end
-                if persist then save() end
-            end
-
-            for optionIndex, option in ipairs(options) do
-                local optionRow = new("TextButton", {
-                    Size = UDim2.new(1, 0, 0, 22),
-                    BackgroundTransparency = 1,
-                    AutoButtonColor = false,
-                    Font = Palette.Font,
-                    TextSize = 13,
-                    TextColor3 = Palette.Text,
-                    Text = option,
-                    LayoutOrder = optionIndex,
-                }, list)
-
-                optionRow.MouseEnter:Connect(function()
-                    optionRow.TextColor3 = Palette.Accent
-                end)
-                optionRow.MouseLeave:Connect(function()
-                    optionRow.TextColor3 = Palette.Text
-                end)
-                optionRow.MouseButton1Click:Connect(function()
-                    set(optionIndex, true, true)
-                    list.Visible = false
-                end)
-            end
-
-            row.MouseEnter:Connect(function()
-                tweenTo(hover, { BackgroundTransparency = 0.55 }, 0.1)
-            end)
-            row.MouseLeave:Connect(function()
-                tweenTo(hover, { BackgroundTransparency = 1 }, 0.1)
-            end)
-            row.MouseButton1Click:Connect(function()
-                list.Visible = not list.Visible
-            end)
-            row.MouseButton2Click:Connect(function()
-                set(index - 1, true, true)
-            end)
-
-            picker.Set = function(option, fire)
-                local optionIndex = table.find(options, option)
-                if optionIndex then
-                    set(optionIndex, fire == true, false)
-                end
-            end
-            self.ConfigWidgets[Table.Name] = {
-                Kind = "Picker",
-                Set = function(value, fire)
-                    picker.Set(value, fire)
-                end,
-            }
-            self.SettingCount += 1
-            return picker
-        end
-
-        function ModuleTab:CreateButton(Table)
-            local row = new("TextButton", {
-                Size = UDim2.new(1, 0, 0, 26),
-                BackgroundColor3 = Palette.BackgroundHovered,
-                BackgroundTransparency = 0.2,
-                BorderSizePixel = 0,
-                Font = Palette.Font,
-                TextSize = 14,
-                TextColor3 = Palette.Text,
-                Text = Table.Name,
-                AutoButtonColor = false,
-            }, SettingsContainer)
-
-            row.MouseEnter:Connect(function()
-                tweenTo(row, { BackgroundColor3 = Palette.BackgroundPressed }, 0.1)
-            end)
-            row.MouseLeave:Connect(function()
-                tweenTo(row, { BackgroundColor3 = Palette.BackgroundHovered }, 0.1)
-            end)
-            row.MouseButton1Click:Connect(function()
-                if Table.Function then pcall(Table.Function) end
-            end)
-
-            self.SettingCount += 1
-            return row
-        end
-
-        function ModuleTab:CreateLabel(Table)
-            local label = new("TextLabel", {
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                Font = Palette.Font,
-                TextSize = 13,
-                TextColor3 = Palette.TextSecondary,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextWrapped = true,
-                Text = Table.Text or Table.Name or "",
-            }, SettingsContainer)
-
-            self.SettingCount += 1
-            return label
-        end
-
-        function ModuleTab:CreateSeparator(Table)
-            local separator = addSeparator(SettingsContainer, Table and Table.Name)
-            self.SettingCount += 1
-            return separator
-        end
+        installSettingsWidgets(ModuleTab, settingsConfig, SettingsContainer)
 
         return ModuleTab
     end
 
     function WindowObject:CreateButton(Table)
+        assert(type(Table) == "table" and Table.Name, "CreateButton requires a Name")
+
+        -- A button runs an action, but it can carry settings the same way a
+        -- module does: right click (or hold on touch) opens its settings screen.
+        local settingsConfig = moduleConfig(name, Table.Name)
+
+        local SettingsContainer = new("Frame", {
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+        }, nil)
+        new("UIListLayout", {
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        }, SettingsContainer)
+
         local Button = new("TextButton", {
             Size = UDim2.new(1, 0, 0, 26),
             BackgroundColor3 = Palette.BackgroundHovered,
@@ -2229,22 +2357,74 @@ function GuiLibrary:CreateWindow(name)
             LayoutOrder = #self.Modules + 1,
         }, Content)
 
+        local ButtonModule = {
+            Name = Table.Name,
+            WindowName = name,
+            Window = WindowObject,
+            Description = Table.Description,
+            Instance = Button,
+            Button = Button,
+            SettingsContainer = SettingsContainer,
+            SettingCount = 0,
+            ConfigData = settingsConfig,
+            ConfigWidgets = {},
+        }
+
+        installSettingsWidgets(ButtonModule, settingsConfig, SettingsContainer)
+
+        function ButtonModule:CreateSettings()
+            openModuleScreen(self)
+            return ModuleFrame
+        end
+
+        function ButtonModule:HasSettings()
+            return self.SettingCount > 0
+        end
+
         Button.MouseEnter:Connect(function()
             tweenTo(Button, { BackgroundColor3 = Palette.BackgroundPressed }, 0.1)
         end)
         Button.MouseLeave:Connect(function()
             tweenTo(Button, { BackgroundColor3 = Palette.BackgroundHovered }, 0.1)
         end)
+
+        local longPressed = false
+
         Button.MouseButton1Click:Connect(function()
+            if longPressed then
+                longPressed = false
+                return
+            end
             if Table.Function then pcall(Table.Function) end
         end)
 
+        Button.MouseButton2Click:Connect(function()
+            if ButtonModule:HasSettings() then
+                ButtonModule:CreateSettings()
+            end
+        end)
+
+        Button.InputBegan:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.Touch then return end
+            local pressTime = os.clock()
+            local endedConnection
+            endedConnection = UserInputService.InputEnded:Connect(function(endInput)
+                if endInput.UserInputType ~= Enum.UserInputType.Touch then return end
+                endedConnection:Disconnect()
+                if os.clock() - pressTime >= 0.35 and ButtonModule:HasSettings() then
+                    longPressed = true
+                    ButtonModule:CreateSettings()
+                end
+            end)
+        end)
+
         table.insert(self.Modules, { Name = Table.Name, Instance = Button })
+        table.insert(GuiLibrary.Modules, ButtonModule)
         ensureWidth(Table.Name)
         update()
         applySearch(SearchBox.Text)
 
-        return Button
+        return ButtonModule
     end
 
     function WindowObject:CreateLabel(Table)
@@ -2991,11 +3171,15 @@ local function applyConfigData(raw)
                 pcall(widget.Set, value, true)
             end
         end
-        moduleTab.Keybind = data.Keybind
-        if moduleTab.BindRow and moduleTab.BindRow.Parent then
-            moduleTab.BindRow:Refresh()
+        if moduleTab.SetKeybind then
+            moduleTab.Keybind = data.Keybind
+            if moduleTab.BindRow and moduleTab.BindRow.Parent then
+                moduleTab.BindRow:Refresh()
+            end
         end
-        moduleTab:SetEnabled(data.Enabled, true)
+        if moduleTab.SetEnabled then
+            moduleTab:SetEnabled(data.Enabled, true)
+        end
     end
 
     for key, value in pairs(loaded.modules) do
@@ -4222,6 +4406,14 @@ local Extra = GuiLibrary.Windows.Extra:CreateModule({
 Extra:CreateToggle({ Name = "Toggle", Default = false })
 Extra:CreateSlider({ Name = "Slider", Min = 0, Max = 100, Default = 50 })
 Extra:CreatePicker({ Name = "Picker", Options = { "One", "Two", "Three" }, Default = "One" })
+Extra:CreateTextBox({
+    Name = "Text",
+    Placeholder = "Text",
+    Default = "Meteor",
+    Function = function(value)
+        print("Text: " .. value)
+    end,
+})
 Extra:CreateButton({
     Name = "Print",
     Function = function()
@@ -4233,6 +4425,36 @@ GuiLibrary.Windows.Extra:CreateButton({
     Name = "Reset bind",
     Function = function()
         Extra:SetKeybind("None")
+    end,
+})
+
+-- Window buttons can hold settings too: right click (hold on touch) opens them.
+local GreetMessage = "Hello World!"
+
+local Greet = GuiLibrary.Windows.Extra:CreateButton({
+    Name = "Greet",
+    Description = "Prints the message set in its settings.",
+    Function = function()
+        print(GreetMessage)
+    end,
+})
+
+Greet:CreateTextBox({
+    Name = "Message",
+    Placeholder = "Message",
+    Default = GreetMessage,
+    Function = function(value)
+        GreetMessage = value
+    end,
+})
+
+Greet:CreateToggle({
+    Name = "Print twice",
+    Default = false,
+    Function = function(state)
+        if state then
+            print(GreetMessage)
+        end
     end,
 })
 
